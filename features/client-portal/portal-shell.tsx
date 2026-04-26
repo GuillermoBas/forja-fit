@@ -157,10 +157,10 @@ export function PortalShell({
 }) {
   return (
     <div className="portal-mobile-shell mobile-page-shell min-h-screen bg-transparent lg:px-6 lg:py-6">
-      <div className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] gap-4 lg:min-h-screen lg:grid-cols-[292px_minmax(0,1fr)] lg:gap-5">
+      <div className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-rows-[minmax(0,1fr)] gap-4 lg:min-h-screen lg:grid-cols-[292px_minmax(0,1fr)] lg:grid-rows-none lg:gap-5">
         <DesktopClientSidebar clientName={clientName} currentPath={currentPath} />
 
-        <main className="portal-mobile-scroll-region portal-mobile-content-safe mobile-content-safe w-full min-w-0 max-w-full space-y-2.5 pb-3 sm:space-y-3 sm:pb-4 lg:space-y-6 lg:pb-6">
+        <main className="portal-mobile-scroll-region portal-mobile-content-safe mobile-content-safe w-full min-w-0 max-w-full space-y-2.5 sm:space-y-3 lg:space-y-6 lg:pb-6">
           <MobileClientTopbar clientName={clientName} />
 
           <header className="mobile-sticky-panel page-section app-page-header w-full min-w-0 max-w-full px-3.5 py-2 sm:px-4 sm:py-2.5 lg:px-4 lg:py-2.5">

@@ -338,11 +338,12 @@ a {
   }
 
   .portal-mobile-shell {
-    max-height: 100dvh;
+    height: 100dvh;
     overflow: hidden;
   }
 
   .portal-mobile-scroll-region {
+    height: 100%;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -364,11 +365,12 @@ a {
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .portal-mobile-shell {
-    max-height: 100dvh;
+    height: 100dvh;
     overflow: hidden;
   }
 
   .portal-mobile-scroll-region {
+    height: 100%;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
