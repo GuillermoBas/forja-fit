@@ -1,0 +1,256 @@
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  getClientById,
+  getClients,
+  getClientHistory,
+  getNotifications,
+  getClientPortalAccountByClientId,
+  getClientPortalSupportState,
+  getPassTypes,
+  getPasses,
+  getSales
+} from "@/lib/data"
+import { getCurrentProfile } from "@/lib/auth/session"
+import { isAdmin } from "@/lib/permissions/roles"
+import { formatCurrency, formatDate } from "@/lib/utils"
+import {
+  ConsumeSessionForm,
+  CreatePassForm,
+  PausePassForm,
+  RenewPassForm
+} from "@/features/clients/pass-operation-forms"
+import { Button } from "@/components/ui/button"
+import { ClientPortalAdminForm } from "@/features/clients/client-portal-admin-form"
+
+export default async function ClientDetailPage({
+  params
+}: {
+  params: { id: string }
+}) {
+  const client = await getClientById(params.id)
+
+  if (!client) {
+    notFound()
+  }
+
+  const [allClients, allPasses, notifications, sales, passTypes, history, profile, portalAccount, portalSupport] = await Promise.all([
+    getClients(),
+    getPasses(),
+    getNotifications(),
+    getSales(),
+    getPassTypes(),
+    getClientHistory(params.id),
+    getCurrentProfile(),
+    getClientPortalAccountByClientId(params.id),
+    getClientPortalSupportState(params.id)
+  ])
+
+  const passes = allPasses.filter((item) => item.holderClientIds.includes(client.id))
+  const clientNotifications = notifications.filter((item) => item.clientName === client.fullName)
+  const clientSales = sales.filter((item) => item.clientName === client.fullName)
+  const canManagePasses = isAdmin(profile?.role)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <PageHeader
+          title={client.fullName}
+          description="Ficha del cliente, bonos, historial operativo, avisos y ventas."
+        />
+        <Link href={`/clients/${client.id}/edit`}>
+          <Button variant="outline">Editar cliente</Button>
+        </Link>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle>Datos del cliente</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Email</p>
+              <p className="font-medium">{client.email ?? "Sin email"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Telefono</p>
+              <p className="font-medium">{client.phone ?? "Sin telefono"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Notas</p>
+              <p className="font-medium">{client.notes ?? "Sin notas"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle>Estado del portal</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Estado del portal</p>
+                <p className="font-medium">
+                  {portalAccount ? (portalAccount.status === "claimed" ? "Reclamado" : "Desactivado") : "Sin activar"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Proveedor principal</p>
+                <p className="font-medium">
+                  {portalAccount ? (portalAccount.primaryProvider === "google" ? "Google" : "Email y clave") : "Sin provider"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Reclamado el</p>
+                <p className="font-medium">
+                  {portalAccount?.claimedAt ? formatDate(portalAccount.claimedAt) : "Sin reclamar"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ultimo acceso</p>
+                <p className="font-medium">
+                  {portalAccount?.lastLoginAt ? formatDate(portalAccount.lastLoginAt) : "Sin accesos"}
+                </p>
+              </div>
+            </div>
+
+            {isAdmin(profile?.role) ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4">
+                <div>
+                  <p className="font-medium">Soporte de portal</p>
+                  <p className="text-sm text-muted-foreground">
+                    Puedes desvincular la cuenta del portal para forzar un nuevo claim del cliente sin tocar sus datos operativos.
+                  </p>
+                  {portalSupport ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={
+                          portalSupport.readiness === "claimed"
+                            ? "success"
+                            : portalSupport.readiness === "disabled"
+                              ? "warning"
+                              : portalSupport.readiness === "ready_to_claim"
+                                ? "default"
+                                : "danger"
+                        }
+                      >
+                        {portalSupport.readiness === "claimed"
+                          ? "Portal activo"
+                          : portalSupport.readiness === "disabled"
+                            ? "Portal desactivado"
+                            : portalSupport.readiness === "ready_to_claim"
+                              ? "Listo para registro"
+                              : portalSupport.readiness === "duplicate_email"
+                                ? "Email duplicado"
+                                : "Falta email"}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">{portalSupport.message}</p>
+                    </div>
+                  ) : null}
+                </div>
+                <ClientPortalAdminForm clientId={client.id} portalStatus={portalAccount?.status ?? null} />
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <CreatePassForm clientId={client.id} clients={allClients} passTypes={passTypes} />
+        <ConsumeSessionForm clientId={client.id} passes={passes} />
+        <PausePassForm clientId={client.id} passes={passes} />
+        <RenewPassForm clientId={client.id} passes={passes} passTypes={passTypes} />
+      </div>
+
+      <Tabs defaultValue="passes">
+        <TabsList>
+          <TabsTrigger value="passes">Bonos</TabsTrigger>
+          <TabsTrigger value="history">Historial</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="sales">Ventas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="passes">
+          <Card className="rounded-3xl">
+            <CardContent className="space-y-3 p-6">
+              {passes.length ? passes.map((item) => (
+                <div key={item.id} className="rounded-2xl border p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{item.passTypeName}</p>
+                    <p className="text-sm text-muted-foreground">Caduca {formatDate(item.expiresOn)}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Titulares: {item.holderNames.join(" / ")}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {item.passKind === "monthly"
+                      ? "Bono mensual por mes natural"
+                      : `Sesiones restantes: ${item.sessionsLeft ?? 0}`}
+                  </p>
+                  {canManagePasses ? (
+                    <div className="mt-4">
+                      <Link href={`/passes/${item.id}/edit`}>
+                        <Button variant="outline" size="sm">Editar bono</Button>
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Todavia no hay bonos para este cliente.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card className="rounded-3xl">
+            <CardContent className="space-y-3 p-6">
+              {history.length ? history.map((item) => (
+                <div key={item.id} className="rounded-2xl border p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(item.happenedAt)}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Sin movimientos registrados.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card className="rounded-3xl">
+            <CardContent className="space-y-3 p-6">
+              {clientNotifications.length ? clientNotifications.map((item) => (
+                <div key={item.id} className="rounded-2xl border p-4">
+                  <p className="font-medium">{item.message}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</p>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Sin notificaciones para este cliente.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sales">
+          <Card className="rounded-3xl">
+            <CardContent className="space-y-3 p-6">
+              {clientSales.length ? clientSales.map((item) => (
+                <div key={item.id} className="rounded-2xl border p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">Factura #{item.invoiceNumber}</p>
+                    <p>{formatCurrency(item.totalAmount)}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{formatDate(item.soldAt)}</p>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Sin ventas registradas.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

@@ -1,0 +1,190 @@
+import Link from "next/link"
+import { Activity, CalendarDays, LogOut, Settings, Sparkles } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
+import { cn } from "@/lib/utils"
+import { portalSignOutAction } from "@/features/client-portal/auth/actions"
+
+const navItems = [
+  { href: "/cliente/dashboard", label: "Actividad", icon: Activity, matches: ["/cliente/dashboard", "/cliente/actividad"] },
+  { href: "/cliente/agenda", label: "Agenda", icon: CalendarDays, matches: ["/cliente/agenda"] },
+  { href: "/cliente/nutricion", label: "Nutrición", icon: Sparkles, matches: ["/cliente/nutricion"] },
+  { href: "/cliente/ajustes", label: "Ajustes", icon: Settings, matches: ["/cliente/ajustes"] }
+]
+
+function isCurrentNavItem(currentPath: string, matches: string[]) {
+  return matches.some((path) => currentPath === path || currentPath.startsWith(`${path}/`))
+}
+
+function DesktopClientSidebar({
+  clientName,
+  currentPath
+}: {
+  clientName: string
+  currentPath: string
+}) {
+  return (
+    <aside className="page-section hidden flex-col bg-surface/98 p-5 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)]">
+      <div className="mb-6 rounded-[1.3rem] border border-border/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,245,249,0.92))] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <p className="section-kicker">Portal de cliente</p>
+        <h1 className="mt-3 font-heading text-[2rem] font-bold tracking-tight text-text-primary">
+          ForjaFit
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-text-secondary">
+          Tu actividad, agenda, bonos, nutrición y ajustes de contacto.
+        </p>
+        <Badge variant="default" className="mt-4 w-fit max-w-full truncate">
+          {clientName}
+        </Badge>
+      </div>
+
+      <nav
+        aria-label="Navegación del portal de cliente"
+        className="space-y-2"
+      >
+        {navItems.map((item) => {
+          const isActive = isCurrentNavItem(currentPath, item.matches)
+          const Icon = item.icon
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "group flex min-w-0 items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "border-primary/18 bg-primary-soft text-primary-hover shadow-[0_12px_24px_rgba(255,106,0,0.08)]"
+                  : "border-transparent text-text-secondary hover:border-border/80 hover:bg-surface-alt hover:text-text-primary"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-200",
+                  isActive
+                    ? "border-primary/18 bg-surface text-primary-hover shadow-[0_6px_16px_rgba(255,106,0,0.08)]"
+                    : "border-border/80 bg-surface text-text-muted group-hover:border-primary/15 group-hover:text-primary-hover"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 truncate">{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <form action={portalSignOutAction} className="mt-auto pt-5">
+        <Button variant="outline" className="w-full gap-2 rounded-2xl">
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </form>
+    </aside>
+  )
+}
+
+function MobileClientTopbar({ clientName }: { clientName: string }) {
+  return (
+    <div className="page-section portal-mobile-topbar lg:hidden">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0">
+          <p className="section-kicker">Portal de cliente</p>
+          <p className="mt-0.5 truncate font-heading text-base font-bold text-text-primary sm:text-lg">
+            ForjaFit
+          </p>
+        </div>
+        <Badge variant="default" className="max-w-[40vw] shrink truncate px-2.5 py-1 text-[10px] sm:max-w-[42vw]">
+          {clientName}
+        </Badge>
+      </div>
+      <form action={portalSignOutAction} className="shrink-0">
+        <Button
+          type="submit"
+          variant="outline"
+          className="h-11 w-11 rounded-2xl p-0"
+          aria-label="Cerrar sesión"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </form>
+    </div>
+  )
+}
+
+function MobileClientBottomNav({ currentPath }: { currentPath: string }) {
+  return (
+    <nav aria-label="Navegación del portal de cliente" className="portal-mobile-bottom-nav">
+      <div className="portal-mobile-bottom-nav-grid">
+        {navItems.map((item) => {
+          const isActive = isCurrentNavItem(currentPath, item.matches)
+          const Icon = item.icon
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "portal-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                isActive ? "portal-mobile-tab-active" : "hover:bg-surface-alt/75 hover:text-text-primary"
+              )}
+            >
+              <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary-hover" : "text-text-muted")} />
+              <span className="w-full truncate text-center leading-none">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
+export function PortalShell({
+  children,
+  title,
+  description,
+  clientName,
+  currentPath
+}: {
+  children: React.ReactNode
+  title: string
+  description: string
+  clientName: string
+  currentPath: string
+}) {
+  return (
+    <div className="mobile-page-shell min-h-screen bg-transparent lg:px-6 lg:py-6">
+      <div className="mx-auto grid min-h-screen w-full max-w-[1600px] gap-4 lg:grid-cols-[292px_minmax(0,1fr)] lg:gap-5">
+        <DesktopClientSidebar clientName={clientName} currentPath={currentPath} />
+
+        <main className="portal-mobile-content-safe mobile-content-safe w-full min-w-0 max-w-full space-y-2.5 pb-3 sm:space-y-3 sm:pb-4 lg:space-y-6 lg:pb-6">
+          <MobileClientTopbar clientName={clientName} />
+
+          <header className="mobile-sticky-panel page-section app-page-header w-full min-w-0 max-w-full px-3.5 py-2.5 sm:px-4 sm:py-3 lg:px-4 lg:py-3">
+            <div className="app-page-header-copy min-w-0">
+              <p className="section-kicker">Cliente ForjaFit</p>
+              <div className="min-w-0">
+                <h2 className="truncate font-heading text-[1.1rem] font-bold tracking-[-0.03em] text-text-primary sm:text-[1.25rem] lg:text-[1.55rem]">
+                  {title}
+                </h2>
+                <p className="text-[11px] leading-4 text-text-secondary sm:text-[12px] sm:leading-5 lg:text-[13px] lg:leading-5">
+                  {description}
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <Card className="w-full min-w-0 max-w-full rounded-[1.2rem] border-border/90 bg-card p-0.5 sm:rounded-[1.35rem] lg:rounded-[1.75rem] lg:p-1">
+            <div className="min-w-0 space-y-3 p-2.5 sm:space-y-4 sm:p-3 lg:space-y-5 lg:p-4">{children}</div>
+          </Card>
+        </main>
+      </div>
+
+      <MobileClientBottomNav currentPath={currentPath} />
+      <NutritionAssistantEntrypoint />
+    </div>
+  )
+}

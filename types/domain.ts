@@ -1,0 +1,156 @@
+export type AppRole = "admin" | "trainer"
+export type PaymentMethod = "cash" | "card" | "transfer" | "bizum"
+export type CalendarStatus = "scheduled" | "completed" | "cancelled" | "no_show"
+export type NotificationChannel = "internal" | "email"
+export type PassKind = "session" | "monthly"
+export type NotificationType =
+  | "renewal_confirmation"
+  | "expiry_reminder_d7"
+  | "expiry_reminder_d0"
+  | "manual_note"
+
+export interface Profile {
+  id: string
+  email: string
+  fullName: string
+  role: AppRole
+  calendarColor: string
+}
+
+export interface Client {
+  id: string
+  fullName: string
+  firstName?: string
+  lastName?: string
+  email: string | null
+  phone: string | null
+  notes: string | null
+  isActive: boolean
+}
+
+export interface ClientPortalAccountSummary {
+  id: string
+  clientId: string
+  authUserId: string
+  email: string
+  status: "claimed" | "disabled"
+  primaryProvider: "password" | "google"
+  claimedAt: string
+  lastLoginAt: string | null
+}
+
+export interface ClientPortalSupportState {
+  clientId: string
+  email: string | null
+  emailMatchCount: number
+  portalAccount: ClientPortalAccountSummary | null
+  readiness:
+    | "missing_email"
+    | "duplicate_email"
+    | "ready_to_claim"
+    | "claimed"
+    | "disabled"
+  message: string
+}
+
+export interface PassType {
+  id: string
+  name: string
+  kind: PassKind
+  sessionCount: number | null
+  price: number
+  vatRate: number
+  sharedAllowed: boolean
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface Pass {
+  id: string
+  passTypeId: string
+  passTypeName: string
+  passKind: PassKind
+  holderClientIds: string[]
+  holderNames: string[]
+  purchasedByClientId: string | null
+  purchasedByName: string | null
+  contractedOn: string
+  soldPriceGross: number
+  originalSessions: number | null
+  sessionsLeft: number | null
+  expiresOn: string
+  status: "active" | "paused" | "out_of_sessions" | "expired" | "cancelled"
+  notes: string | null
+}
+
+export interface Product {
+  id: string
+  name: string
+  sku?: string | null
+  category?: string | null
+  price: number
+  priceGross: number
+  vatRate: number
+  stock: number
+  stockOnHand: number
+  lowStockThreshold: number
+  minStock: number
+  isActive: boolean
+}
+
+export interface Sale {
+  id: string
+  invoiceNumber: number
+  invoiceCode: string
+  soldAt: string
+  totalAmount: number
+  paymentMethod: PaymentMethod
+  saleType: "pass" | "product"
+  clientName: string | null
+  isVoided: boolean
+  status: "posted" | "void"
+  ticketPublicUrl: string | null
+}
+
+export interface Expense {
+  id: string
+  concept: string
+  category: string
+  supplier: string | null
+  paymentMethod: PaymentMethod
+  baseAmount: number
+  vatAmount: number
+  amount: number
+  totalAmount: number
+  spentOn: string
+  note: string | null
+}
+
+export interface NotificationLogItem {
+  id: string
+  type: NotificationType
+  channel: NotificationChannel
+  status: "queued" | "sent" | "failed" | "skipped"
+  clientName: string | null
+  recipient: string | null
+  subject: string | null
+  createdAt: string
+  message: string
+}
+
+export interface CalendarSession {
+  id: string
+  trainerProfileId?: string
+  trainerName: string
+  trainerColor: string
+  client1Id?: string
+  client2Id?: string | null
+  clientNames: string[]
+  passId?: string | null
+  passIds: string[]
+  passLabels: string[]
+  startsAt: string
+  endsAt: string
+  status: CalendarStatus
+  notes?: string | null
+}
