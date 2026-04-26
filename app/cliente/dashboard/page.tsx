@@ -44,7 +44,7 @@ export default async function ClientPortalDashboardPage({
 
       <section className="grid gap-3 sm:grid-cols-2 lg:gap-4 xl:grid-cols-3">
         <Card className="panel-hover">
-          <CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3 lg:p-6"><CardTitle className="text-base sm:text-lg">Sesiones en 30 dias</CardTitle></CardHeader>
+          <CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3 lg:p-6"><CardTitle className="text-base sm:text-lg">Sesiones en 30 días</CardTitle></CardHeader>
           <CardContent className="p-4 pt-0 font-heading text-[2rem] font-bold sm:p-5 sm:pt-0 sm:text-[2.2rem] lg:p-6 lg:pt-0 lg:text-3xl">{data.kpis.sessionsLast30Days}</CardContent>
         </Card>
         <Card className="panel-hover">
@@ -65,9 +65,9 @@ export default async function ClientPortalDashboardPage({
           <CardContent className="p-4 pt-0 font-heading text-[2rem] font-bold sm:p-5 sm:pt-0 sm:text-[2.2rem] lg:p-6 lg:pt-0 lg:text-3xl">{data.kpis.sessionsRemaining}</CardContent>
         </Card>
         <Card className="panel-hover">
-          <CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3 lg:p-6"><CardTitle className="text-base sm:text-lg">Proxima caducidad</CardTitle></CardHeader>
+          <CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3 lg:p-6"><CardTitle className="text-base sm:text-lg">Próxima caducidad</CardTitle></CardHeader>
           <CardContent className="p-4 pt-0 font-heading text-[2rem] font-bold sm:p-5 sm:pt-0 sm:text-[2.2rem] lg:p-6 lg:pt-0 lg:text-3xl">
-            {data.kpis.daysUntilNearestExpiry === null ? "Sin caducidad" : `${data.kpis.daysUntilNearestExpiry} dias`}
+            {data.kpis.daysUntilNearestExpiry === null ? "Sin caducidad" : `${data.kpis.daysUntilNearestExpiry} días`}
           </CardContent>
         </Card>
         <Card className="panel-hover">
@@ -80,7 +80,7 @@ export default async function ClientPortalDashboardPage({
 
       <section className="grid gap-4 lg:gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <ActivityChart
-          title={`Sesiones por semana en los ultimos ${data.rangeDays} dias`}
+          title={`Sesiones por semana en los últimos ${data.rangeDays} días`}
           points={data.chart}
         />
         <ActivePassesList passes={data.activePasses} />

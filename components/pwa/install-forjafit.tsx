@@ -96,7 +96,7 @@ export function InstallForjaFit({
               variant="ghost"
               size="sm"
               className="h-9 w-9 shrink-0 rounded-xl p-0"
-              aria-label="Ocultar aviso de instalacion"
+              aria-label="Ocultar aviso de instalación"
               onClick={dismiss}
             >
               <X className="h-4 w-4" />

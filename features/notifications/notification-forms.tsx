@@ -11,6 +11,7 @@ import {
 import type { Client } from "@/types/domain"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { nativeSelectClassName } from "@/lib/utils"
 
 function ErrorToast({ message }: { message?: string }) {
   useEffect(() => {
@@ -34,13 +35,13 @@ export function InternalNotificationForm({
       <ErrorToast message={state.error} />
       <CardHeader>
         <CardTitle>Nota interna</CardTitle>
-        <CardDescription>Apunta recordatorios internos o incidencias rapidas del dia.</CardDescription>
+        <CardDescription>Apunta recordatorios internos o incidencias rápidas del día.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
           <div className="field-shell">
             <label className="field-label">Cliente</label>
-            <select name="clientId" className="h-11 w-full">
+            <select name="clientId" className={nativeSelectClassName}>
               <option value="">Sin cliente</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
@@ -83,7 +84,7 @@ export function DailyExpiryScanForm() {
       <CardContent>
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
           <div className="field-shell">
-            <label className="field-label">Fecha de ejecucion</label>
+            <label className="field-label">Fecha de ejecución</label>
             <Input name="runOn" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
           <div className="md:col-span-2">

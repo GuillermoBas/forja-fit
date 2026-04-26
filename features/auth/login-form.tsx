@@ -48,7 +48,7 @@ export function LoginForm({
         <CardContent className="space-y-5 px-5 pb-6 sm:space-y-6 sm:px-6">
           {verifyStatus === "success" ? (
             <div className="rounded-2xl border border-success/20 bg-success/10 p-3 text-sm text-success">
-              Email verificado correctamente. Ya puedes iniciar sesion.
+              Email verificado correctamente. Ya puedes iniciar sesión.
             </div>
           ) : null}
           <form className="space-y-5" action="/api/auth/login" method="post">

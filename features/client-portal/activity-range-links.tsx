@@ -18,9 +18,9 @@ export function ActivityRangeLinks({
           <Button
             variant={currentRange === range ? "default" : "outline"}
             size="sm"
-            className="h-10 shrink-0 whitespace-nowrap rounded-2xl px-4"
+            className="h-10 shrink-0 whitespace-nowrap rounded-2xl px-5"
           >
-            {range} dias
+            {range} días
           </Button>
         </Link>
       ))}

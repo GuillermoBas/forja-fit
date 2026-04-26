@@ -5,10 +5,10 @@ import type { WeeklyNutritionPlan } from "@/features/client-portal/nutrition/ser
 const dayLabels: Array<{ key: keyof WeeklyNutritionPlan["plan"]["days"]; label: string }> = [
   { key: "lunes", label: "Lunes" },
   { key: "martes", label: "Martes" },
-  { key: "miercoles", label: "Miercoles" },
+  { key: "miercoles", label: "Miércoles" },
   { key: "jueves", label: "Jueves" },
   { key: "viernes", label: "Viernes" },
-  { key: "sabado", label: "Sabado" },
+  { key: "sabado", label: "Sábado" },
   { key: "domingo", label: "Domingo" }
 ]
 
@@ -21,11 +21,11 @@ export function WeeklyNutritionPlansList({
     return (
       <Card className="panel-hover">
         <CardHeader>
-          <CardTitle>Menus semanales guardados</CardTitle>
+          <CardTitle>Menús semanales guardados</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-text-secondary">
-            Aun no has guardado ningun menu semanal. Pidele al asistente un menu semanal cuando quieras conservarlo.
+            Aún no has guardado ningún menú semanal. Pídele al asistente un menú semanal cuando quieras conservarlo.
           </p>
         </CardContent>
       </Card>

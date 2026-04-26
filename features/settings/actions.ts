@@ -47,7 +47,7 @@ export async function sendManualPushAction(
 
   if (!clientId || !title || !body || !url.startsWith("/")) {
     return {
-      error: "Selecciona un cliente y completa titulo, mensaje y una ruta interna valida."
+      error: "Selecciona un cliente y completa título, mensaje y una ruta interna válida."
     }
   }
 
@@ -63,13 +63,13 @@ export async function sendManualPushAction(
 
     if (result?.skipped) {
       return {
-        success: "Push procesada como omitida. El cliente no tiene suscripciones activas o el portal aun no esta listo."
+        success: "Push procesada como omitida. El cliente no tiene suscripciones activas o el portal aún no está listo."
       }
     }
   } catch (error) {
-    return toActionError(error, "No se pudo enviar la notificacion push manual")
+    return toActionError(error, "No se pudo enviar la notificación push manual")
   }
 
   revalidatePath("/settings")
-  return { success: "Notificacion push enviada correctamente." }
+  return { success: "Notificación push enviada correctamente." }
 }

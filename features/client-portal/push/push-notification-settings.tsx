@@ -239,19 +239,19 @@ export function PushNotificationSettings({ vapidPublicKey, initialPreferences }:
 
         <div className="space-y-3">
           <PreferenceToggle
-            label="Aviso de bono 7 dias antes de caducar"
+            label="Aviso de bono 7 días antes de caducar"
             checked={preferences.passExpiryEnabled}
             disabled={isPending}
             onChange={(checked) => updatePreference("passExpiryEnabled", checked)}
           />
           <PreferenceToggle
-            label="Confirmacion de nuevo bono o renovacion"
+            label="Confirmación de nuevo bono o renovación"
             checked={preferences.passAssignedEnabled}
             disabled={isPending}
             onChange={(checked) => updatePreference("passAssignedEnabled", checked)}
           />
           <PreferenceToggle
-            label="Recordatorio de sesion 24 horas antes"
+            label="Recordatorio de sesión 24 horas antes"
             checked={preferences.sessionRemindersEnabled}
             disabled={isPending}
             onChange={(checked) => updatePreference("sessionRemindersEnabled", checked)}

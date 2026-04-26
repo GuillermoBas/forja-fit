@@ -11,7 +11,7 @@ const shortcuts = [
   { href: "/clients", label: "Nuevo cliente" },
   { href: "/passes", label: "Crear bono" },
   { href: "/sales", label: "Registrar venta" },
-  { href: "/agenda", label: "Agendar sesion" }
+  { href: "/agenda", label: "Agendar sesión" }
 ]
 
 const kpiIcons = [CalendarClock, AlertTriangle, ArrowUpRight, Box, Wallet, BellRing, Wallet]
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Dashboard"
+        title="Panel"
         description="Resumen diario del negocio, los bonos y las alertas pendientes."
       />
 
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
                     <p className="metric-label">
-                      {isMoney ? "Facturacion" : isAlert ? "Atencion" : "Resumen"}
+                      {isMoney ? "Facturación" : isAlert ? "Atención" : "Resumen"}
                     </p>
                     <CardTitle className="text-[15px] font-semibold text-text-secondary">
                       {item.label}
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
                   />
                   <p className="kpi-meta">
                     {isMoney
-                      ? "Facturacion registrada"
+                      ? "Facturación registrada"
                       : isAlert
                         ? "Requiere seguimiento"
                         : "Estado operativo"}
@@ -92,8 +92,8 @@ export default async function DashboardPage() {
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader className="pb-4">
-            <p className="section-kicker">Navegacion</p>
-            <CardTitle>Accesos rapidos</CardTitle>
+            <p className="section-kicker">Navegación</p>
+            <CardTitle>Accesos rápidos</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3.5 sm:grid-cols-2">
             {shortcuts.map((item) => (
@@ -132,9 +132,9 @@ export default async function DashboardPage() {
               ))
             ) : (
               <div className="empty-state">
-                <p className="empty-state-title">Todo al dia</p>
+                <p className="empty-state-title">Todo al día</p>
                 <p className="empty-state-copy">
-                  No hay notificaciones recientes. Las renovaciones y avisos apareceran aqui.
+                  No hay notificaciones recientes. Las renovaciones y avisos aparecerán aquí.
                 </p>
               </div>
             )}

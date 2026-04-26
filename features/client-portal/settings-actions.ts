@@ -18,7 +18,7 @@ export async function updatePortalPhoneAction(
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
 
   if (!accessToken || !baseUrl) {
-    return { error: "No se ha podido validar la sesion del portal." }
+    return { error: "No se ha podido validar la sesión del portal." }
   }
 
   const response = await fetch(`${baseUrl}/functions/update_client_portal_profile`, {
@@ -36,7 +36,7 @@ export async function updatePortalPhoneAction(
 
   if (!response.ok) {
     return {
-      error: payload?.message ?? "No se pudo actualizar el telefono."
+      error: payload?.message ?? "No se pudo actualizar el teléfono."
     }
   }
 
@@ -44,7 +44,7 @@ export async function updatePortalPhoneAction(
   revalidatePath("/cliente/dashboard")
 
   return {
-    success: "Telefono actualizado correctamente."
+    success: "Teléfono actualizado correctamente."
   }
 }
 
@@ -57,7 +57,7 @@ async function callPortalSettingsFunction(
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
 
   if (!accessToken || !baseUrl) {
-    return { error: "No se ha podido validar la sesion del portal." }
+    return { error: "No se ha podido validar la sesión del portal." }
   }
 
   const response = await fetch(`${baseUrl}/functions/${functionName}`, {
@@ -75,7 +75,7 @@ async function callPortalSettingsFunction(
 
   if (!response.ok) {
     return {
-      error: payload?.message ?? "No se pudo completar la accion avanzada."
+      error: payload?.message ?? "No se pudo completar la acción avanzada."
     }
   }
 

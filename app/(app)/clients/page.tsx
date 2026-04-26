@@ -36,7 +36,7 @@ export default async function ClientsPage({
 
   const filterLinks: { key: ClientFilter; label: string }[] = [
     { key: "all", label: "Todos" },
-    { key: "expiring", label: "Expira <=7 dias" },
+    { key: "expiring", label: "Expira <=7 días" },
     { key: "no_sessions", label: "Sin sesiones" },
     { key: "expired", label: "Caducado" }
   ]
@@ -45,7 +45,7 @@ export default async function ClientsPage({
     <div className="space-y-6">
       <PageHeader
         title="Clientes"
-        description="Busca por nombre, telefono o email y mantén la ficha operativa al dia."
+        description="Busca por nombre, teléfono o email y mantén la ficha operativa al día."
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -57,7 +57,7 @@ export default async function ClientsPage({
           </Link>
         ))}
         <Link href="/clients/new" className="ml-auto">
-          <Button className="whitespace-nowrap">Nuevo cliente</Button>
+          <Button className="whitespace-nowrap px-7">Nuevo cliente</Button>
         </Link>
       </div>
 
@@ -72,7 +72,7 @@ export default async function ClientsPage({
               subtext: row.email ?? "Sin email"
             },
             phone: {
-              text: row.phone ?? "Sin telefono"
+              text: row.phone ?? "Sin teléfono"
             },
             status: {
               text: row.isActive ? "Activo" : "Inactivo",
@@ -82,10 +82,10 @@ export default async function ClientsPage({
         }))}
         columns={[
           { key: "name", label: "Cliente" },
-          { key: "phone", label: "Telefono" },
+          { key: "phone", label: "Teléfono" },
           { key: "status", label: "Estado" }
         ]}
-        searchPlaceholder="Buscar por nombre, telefono o email"
+        searchPlaceholder="Buscar por nombre, teléfono o email"
       />
     </div>
   )

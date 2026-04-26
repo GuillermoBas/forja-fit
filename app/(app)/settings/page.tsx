@@ -88,12 +88,12 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Ajustes"
-        description="Preferencias del perfil, configuracion basica del negocio y gestion interna."
+        description="Preferencias del perfil, configuración básica del negocio y gestión interna."
       />
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="rounded-3xl">
           <CardHeader>
-            <CardTitle>Instalacion PWA</CardTitle>
+            <CardTitle>Instalación PWA</CardTitle>
           </CardHeader>
           <CardContent>
             <InstallForjaFit respectDismissal={false} compact surface="plain" />
@@ -120,7 +120,7 @@ export default async function SettingsPage() {
               <CardContent className="space-y-3 text-sm">
                 <p><span className="font-medium">Nombre:</span> {appConfig.businessName}</p>
                 <p><span className="font-medium">Zona horaria:</span> {appConfig.timezone}</p>
-                <p><span className="font-medium">Aviso por defecto:</span> 7 dias</p>
+                <p><span className="font-medium">Aviso por defecto:</span> 7 días</p>
                 <p><span className="font-medium">IVA por defecto:</span> configurable en UI futura</p>
               </CardContent>
             </Card>
@@ -131,10 +131,10 @@ export default async function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  Crear o promocionar admins, anadir stock, anular ventas y editar precios debe pasar siempre por funciones protegidas.
+                  Crear o promocionar admins, añadir stock, anular ventas y editar precios debe pasar siempre por funciones protegidas.
                 </p>
                 <p>
-                  Si InsForge Schedules no esta disponible, desde aqui puede exponerse la ejecucion manual segura de `run_daily_expiry_scan`.
+                  Si InsForge Schedules no está disponible, desde aquí puede exponerse la ejecución manual segura de `run_daily_expiry_scan`.
                 </p>
               </CardContent>
             </Card>

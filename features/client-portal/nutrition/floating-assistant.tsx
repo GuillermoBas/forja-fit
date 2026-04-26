@@ -23,7 +23,7 @@ export function NutritionFloatingAssistant({
         <Button
           type="button"
           size="lg"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.1rem)] right-[calc(env(safe-area-inset-right)+0.85rem)] z-[70] h-12 max-w-[calc(100vw-1.5rem)] rounded-full px-4 text-[13px] shadow-[0_14px_30px_rgba(255,106,0,0.18)] sm:bottom-[calc(env(safe-area-inset-bottom)+5.35rem)] sm:right-[calc(env(safe-area-inset-right)+1rem)] sm:h-13 sm:max-w-[calc(100vw-2rem)] sm:px-4.5 sm:text-sm lg:bottom-[calc(env(safe-area-inset-bottom)+0.9rem)] lg:h-14 lg:px-5"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.1rem)] right-[calc(env(safe-area-inset-right)+0.85rem)] z-[70] h-12 max-w-[calc(100vw-1.5rem)] rounded-full px-4 text-[13px] shadow-[0_14px_30px_rgba(255,106,0,0.18)] sm:bottom-[calc(env(safe-area-inset-bottom)+5.35rem)] sm:right-[calc(env(safe-area-inset-right)+1rem)] sm:h-13 sm:max-w-[calc(100vw-2rem)] sm:px-5 sm:text-sm lg:bottom-[calc(env(safe-area-inset-bottom)+0.9rem)] lg:h-14 lg:px-5"
         >
           <MessageCircle className="mr-2 h-5 w-5" />
           Asistente Nutricional

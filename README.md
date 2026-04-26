@@ -22,7 +22,7 @@ Estado actual de Fase 2, Fase 1:
 Estado actual de Fase 2, Fase 2:
 - `/cliente/dashboard` queda como Actividad y muestra metricas, grafica semanal, bonos activos e historial reciente
 - `/cliente/actividad` redirige a Actividad para no romper enlaces antiguos
-- `/cliente/agenda` muestra una vista mensual placeholder para futuras citas y recordatorios
+- `/cliente/agenda` ya ofrece vistas de semana y mes, solo muestra sesiones propias y permite cancelar una sesion programada con mas de 24 horas de antelacion
 - `/cliente/ajustes` ya permite editar el telefono mediante Function sin exponer escritura directa desde cliente
 - los bonos compartidos se muestran sin revelar otros titulares, usando `Otro titular`
 
@@ -50,6 +50,18 @@ Estado actual de agenda staff:
 - las citas se asocian a bonos sin consumir sesiones al crearlas; el consumo sigue siendo manual
 - los bonos compartidos asocian automaticamente todos sus titulares a la cita
 - cada perfil staff puede elegir un color pastel para diferenciar visualmente sus citas
+- las citas canceladas se mantienen visibles en gris suave y aparecen al final del dia para no mezclarse con las activas
+
+Estado actual de agenda cliente:
+- `/cliente/agenda` ofrece vistas de semana y mes dentro del portal
+- el cliente solo ve sus propias sesiones o sesiones compartidas sin revelar la identidad del otro titular
+- el cliente puede cancelar una sesion programada solo si faltan mas de 24 horas para el inicio
+- las sesiones canceladas siguen visibles en gris suave y ya no se pueden volver a cancelar
+
+Estado actual de consumo automatico:
+- existe la Function `auto_consume_calendar_sessions` para consumir bonos de sesiones ya finalizadas con 1 hora extra de margen
+- el job solo actua sobre sesiones `scheduled` o `completed`; ignora `cancelled` y `no_show`
+- si encuentra un consumo manual compatible, lo vincula a la sesion para no duplicar el descuento
 
 Nota de UX del asistente:
 - las respuestas del chat nutricional ya renderizan markdown basico con estilos visibles, incluyendo negritas, listas y saltos de linea

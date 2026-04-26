@@ -277,7 +277,7 @@ export async function getDashboardData() {
         value: passes.filter((item) => item.status === "active").length.toString()
       },
       {
-        label: "Caducan en 7 dias",
+        label: "Caducan en 7 días",
         value: passes.filter((item) => item.expiresOn <= nextWeek && item.status === "active").length.toString()
       },
       {
@@ -754,8 +754,8 @@ export async function getClientHistory(clientId: string): Promise<ClientHistoryI
       id: `session-${row.id}`,
       kind: "session",
       happenedAt: String(row.consumed_at ?? row.created_at ?? ""),
-      title: "Sesion consumida",
-      detail: String(row.notes ?? "Consumo manual de sesion")
+      title: "Sesión consumida",
+      detail: String(row.notes ?? "Consumo manual de sesión")
     })
   }
 

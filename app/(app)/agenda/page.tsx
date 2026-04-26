@@ -51,7 +51,7 @@ export default async function AgendaPage({
     <div className="space-y-6">
       <PageHeader
         title="Agenda"
-        description="Programa sesiones por entrenador, dia, semana o mes con vista operativa tipo calendario."
+        description="Programa sesiones por entrenador, día, semana o mes con vista operativa tipo calendario."
       />
       <AgendaBoard
         key={`${view}-${selectedDate}-${selectedTrainerId}`}

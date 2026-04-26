@@ -28,7 +28,7 @@ export default async function PassesPage({
       />
       <div className="flex justify-end">
         <Link href="/clients">
-          <Button className="whitespace-nowrap">Crear bono desde cliente</Button>
+          <Button className="whitespace-nowrap px-7">Crear bono desde cliente</Button>
         </Link>
       </div>
       {canManage ? (
@@ -89,7 +89,7 @@ export default async function PassesPage({
           { key: "sessions", label: "Sesiones" },
           { key: "expires", label: "Caduca" },
           { key: "status", label: "Estado" },
-          { key: "actions", label: "Accion" }
+          { key: "actions", label: "Acción" }
         ]}
         searchPlaceholder="Buscar por cliente o tipo de bono"
       />

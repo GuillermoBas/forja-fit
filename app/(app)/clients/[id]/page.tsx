@@ -78,8 +78,8 @@ export default async function ClientDetailPage({
               <p className="font-medium">{client.email ?? "Sin email"}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Telefono</p>
-              <p className="font-medium">{client.phone ?? "Sin telefono"}</p>
+              <p className="text-sm text-muted-foreground">Teléfono</p>
+              <p className="font-medium">{client.phone ?? "Sin teléfono"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Notas</p>
@@ -103,7 +103,7 @@ export default async function ClientDetailPage({
               <div>
                 <p className="text-sm text-muted-foreground">Proveedor principal</p>
                 <p className="font-medium">
-                  {portalAccount ? (portalAccount.primaryProvider === "google" ? "Google" : "Email y clave") : "Sin provider"}
+                  {portalAccount ? (portalAccount.primaryProvider === "google" ? "Google" : "Email y clave") : "Sin proveedor"}
                 </p>
               </div>
               <div>
@@ -113,7 +113,7 @@ export default async function ClientDetailPage({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Ultimo acceso</p>
+                <p className="text-sm text-muted-foreground">Último acceso</p>
                 <p className="font-medium">
                   {portalAccount?.lastLoginAt ? formatDate(portalAccount.lastLoginAt) : "Sin accesos"}
                 </p>
@@ -201,7 +201,7 @@ export default async function ClientDetailPage({
                     </div>
                   ) : null}
                 </div>
-              )) : <p className="text-sm text-muted-foreground">Todavia no hay bonos para este cliente.</p>}
+              )) : <p className="text-sm text-muted-foreground">Todavía no hay bonos para este cliente.</p>}
             </CardContent>
           </Card>
         </TabsContent>

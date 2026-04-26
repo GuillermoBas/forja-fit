@@ -57,7 +57,7 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <PageHeader
         title="Informes"
-        description="Lecturas rapidas y legibles para ventas, bonos, gastos y stock."
+        description="Lecturas rápidas y legibles para ventas, bonos, gastos y stock."
       />
 
       <Card>
@@ -79,7 +79,7 @@ export default async function ReportsPage({
                 defaultValue={reports.to === "9999-12-31" ? "" : reports.to}
               />
             </div>
-            <Button type="submit" className="md:self-end">
+            <Button type="submit" className="px-7 md:self-end">
               Aplicar rango
             </Button>
           </form>
@@ -100,11 +100,11 @@ export default async function ReportsPage({
           <CardContent className="font-heading text-3xl font-bold">{formatCurrency(reports.totals.estimatedMargin)}</CardContent>
         </Card>
         <Card className="panel-hover">
-          <CardHeader><CardTitle>Stock bajo minimos</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Stock bajo mínimos</CardTitle></CardHeader>
           <CardContent className="font-heading text-3xl font-bold">{reports.lowStockProducts.length} productos</CardContent>
         </Card>
         <Card className="panel-hover">
-          <CardHeader><CardTitle>Bonos proximos a caducar</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Bonos próximos a caducar</CardTitle></CardHeader>
           <CardContent className="font-heading text-3xl font-bold">{reports.expiringPasses.length} bonos</CardContent>
         </Card>
         <Card className="panel-hover">
@@ -117,12 +117,12 @@ export default async function ReportsPage({
         <ReportList title="Ventas por fecha" rows={reports.salesByDate} />
         <ReportList title="Ventas por producto" rows={reports.salesByProduct} />
         <ReportList title="Ventas por tipo de bono" rows={reports.salesByPassType} />
-        <ReportList title="Gastos por categoria" rows={reports.expensesByCategory} />
+        <ReportList title="Gastos por categoría" rows={reports.expensesByCategory} />
         <ReportList title="Métodos de pago" rows={reports.paymentMethodSplit} />
 
         <Card className="panel-hover">
           <CardHeader>
-            <CardTitle>Stock bajo minimos</CardTitle>
+            <CardTitle>Stock bajo mínimos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {reports.lowStockProducts.length ? (
@@ -133,12 +133,12 @@ export default async function ReportsPage({
                 >
                   <span className="text-text-secondary">{product.name}</span>
                   <span className="font-semibold text-text-primary">
-                    {product.stockOnHand} / minimo {product.minStock}
+                    {product.stockOnHand} / mínimo {product.minStock}
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-text-secondary">No hay productos por debajo del minimo.</p>
+              <p className="text-sm text-text-secondary">No hay productos por debajo del mínimo.</p>
             )}
           </CardContent>
         </Card>
@@ -148,7 +148,7 @@ export default async function ReportsPage({
         <section className="space-y-4">
           <PageHeader
             title="Calidad de emails"
-            description="Revision previa al portal de cliente para detectar fichas que necesitan limpieza."
+            description="Revisión previa al portal de cliente para detectar fichas que necesitan limpieza."
           />
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -248,8 +248,8 @@ export default async function ReportsPage({
                 ) : (
                   <p className="text-sm text-text-secondary">
                     {emailQuality.portalAccountsAvailable
-                      ? "No hay clientes reclamados todavia."
-                      : "Aun no existe la tabla de cuentas del portal."}
+                      ? "No hay clientes reclamados todavía."
+                      : "Aún no existe la tabla de cuentas del portal."}
                   </p>
                 )}
               </CardContent>

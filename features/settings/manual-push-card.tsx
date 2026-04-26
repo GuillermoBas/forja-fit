@@ -75,7 +75,7 @@ export function ManualPushCard({
 
           <div className="grid gap-4 lg:grid-cols-[1fr_1.8fr]">
             <label className="space-y-2">
-              <span className="text-sm font-medium text-text-primary">Titulo</span>
+              <span className="text-sm font-medium text-text-primary">Título</span>
               <Input name="title" defaultValue="Mensaje de ForjaFit" maxLength={80} required />
             </label>
 

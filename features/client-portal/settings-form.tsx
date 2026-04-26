@@ -140,7 +140,7 @@ export function PortalSettingsForm({
 
           <form action={formAction} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Telefono</label>
+              <label className="text-sm font-medium">Teléfono</label>
               <Input
                 name="phone"
                 defaultValue={client.phone ?? ""}
@@ -148,7 +148,7 @@ export function PortalSettingsForm({
                 autoComplete="tel"
               />
             </div>
-            <AuthFormSubmit idleLabel="Guardar telefono" pendingLabel="Guardando..." />
+            <AuthFormSubmit idleLabel="Guardar teléfono" pendingLabel="Guardando..." />
           </form>
         </CardContent>
       </Card>

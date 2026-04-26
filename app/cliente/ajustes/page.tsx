@@ -15,7 +15,7 @@ export default async function ClientPortalSettingsPage() {
   return (
     <PortalShell
       title="Tus ajustes"
-      description="Gestiona tu telefono de contacto sin alterar la identidad verificada del portal."
+      description="Gestiona tu teléfono de contacto sin alterar la identidad verificada del portal."
       clientName={data.client.fullName}
       currentPath="/cliente/ajustes"
     >

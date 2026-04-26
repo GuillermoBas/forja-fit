@@ -15,7 +15,7 @@ import {
 } from "date-fns"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
-import type { Client, Pass } from "@/types/domain"
+import type { CalendarStatus, Client, Pass } from "@/types/domain"
 
 type DbRow = Record<string, unknown>
 
@@ -65,6 +65,19 @@ export type PortalDashboardData = {
   chart: PortalChartPoint[]
   history: PortalHistoricalItem[]
   activePasses: PortalPassSummary[]
+}
+
+export type ClientCalendarSession = {
+  id: string
+  startsAt: string
+  endsAt: string
+  durationMin: number
+  status: CalendarStatus
+  trainerName: string | null
+  isShared: boolean
+  displayTitle: string
+  canCancel: boolean
+  cancellationReason: string | null
 }
 
 type SessionItem = {
@@ -314,6 +327,31 @@ function buildHistory(
   return history.sort((left, right) => right.happenedAt.localeCompare(left.happenedAt))
 }
 
+function getClientCalendarCancellationState(status: CalendarStatus, startsAt: string) {
+  if (status !== "scheduled") {
+    return {
+      canCancel: false,
+      cancellationReason:
+        status === "cancelled"
+          ? "Esta sesion ya esta cancelada."
+          : "Esta sesion ya no permite cancelacion."
+    }
+  }
+
+  const limit = Date.now() + 24 * 60 * 60 * 1000
+  if (new Date(startsAt).getTime() <= limit) {
+    return {
+      canCancel: false,
+      cancellationReason: "Solo puedes cancelar una sesion hasta 24 horas antes."
+    }
+  }
+
+  return {
+    canCancel: true,
+    cancellationReason: null
+  }
+}
+
 export async function getPortalDashboardData(rangeParam?: string): Promise<PortalDashboardData> {
   const portalAccount = await requirePortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
@@ -503,4 +541,75 @@ export async function getPortalDashboardData(rangeParam?: string): Promise<Porta
     history: buildHistory(sessions, pauses, renewals, rangeDays, today),
     activePasses
   }
+}
+
+export async function getClientCalendarSessions(
+  rangeStart: string,
+  rangeEnd: string
+): Promise<ClientCalendarSession[]> {
+  const portalAccount = await requirePortalAccount()
+  const accessToken = await getCurrentPortalAccessToken()
+
+  if (!accessToken) {
+    throw new Error("No se ha podido recuperar la sesion del portal.")
+  }
+
+  const client = createServerInsforgeClient({ accessToken }) as any
+  const [sessionsResult, profilesResult] = await Promise.all([
+    client.database
+      .from("calendar_sessions")
+      .select("id,trainer_profile_id,client_1_id,client_2_id,starts_at,ends_at,status")
+      .or(`client_1_id.eq.${portalAccount.clientId},client_2_id.eq.${portalAccount.clientId}`)
+      .gte("starts_at", rangeStart)
+      .lte("starts_at", rangeEnd)
+      .order("starts_at", { ascending: true }),
+    client.database.from("profiles").select("id,full_name")
+  ])
+
+  if (
+    sessionsResult.error ||
+    !sessionsResult.data ||
+    profilesResult.error ||
+    !profilesResult.data
+  ) {
+    throw new Error("No se pudo cargar la agenda del portal.")
+  }
+
+  const trainerNameById = new Map(
+    (profilesResult.data as DbRow[]).map((row) => [String(row.id), String(row.full_name ?? "").trim()])
+  )
+
+  return (sessionsResult.data as DbRow[]).map((row) => {
+    const startsAt = String(row.starts_at ?? "")
+    const endsAt = String(row.ends_at ?? "")
+    const client1Id = row.client_1_id ? String(row.client_1_id) : null
+    const client2Id = row.client_2_id ? String(row.client_2_id) : null
+    const isShared = [client1Id, client2Id].filter(Boolean).some(
+      (clientId) => clientId !== portalAccount.clientId
+    )
+    const cancellationState = getClientCalendarCancellationState(
+      String(row.status ?? "scheduled") as CalendarStatus,
+      startsAt
+    )
+
+    return {
+      id: String(row.id),
+      startsAt,
+      endsAt,
+      durationMin: Math.max(
+        0,
+        Math.round(
+          (new Date(endsAt).getTime() - new Date(startsAt).getTime()) / (60 * 1000)
+        )
+      ),
+      status: String(row.status ?? "scheduled") as CalendarStatus,
+      trainerName: row.trainer_profile_id
+        ? trainerNameById.get(String(row.trainer_profile_id)) ?? null
+        : null,
+      isShared,
+      displayTitle: isShared ? "Sesion compartida" : "Sesion individual",
+      canCancel: cancellationState.canCancel,
+      cancellationReason: cancellationState.cancellationReason
+    } satisfies ClientCalendarSession
+  })
 }

@@ -197,11 +197,11 @@ export function ConsumeSessionForm({
   const [state, formAction] = useFormState(consumeSessionAction, {})
   const sessionPasses = passes.filter((item) => item.passKind === "session")
 
-  useClientActionFeedback(state?.error, state?.success, "Sesion registrada correctamente.")
+  useClientActionFeedback(state?.error, state?.success, "Sesión registrada correctamente.")
 
   return (
     <Card className="rounded-3xl">
-      <CardHeader><CardTitle>Consumir sesion</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Consumir sesión</CardTitle></CardHeader>
       <CardContent>
         {sessionPasses.length ? (
           <form action={formAction} className="grid gap-4 md:grid-cols-2">
@@ -225,7 +225,7 @@ export function ConsumeSessionForm({
               <Input name="notes" />
             </div>
             <div className="md:col-span-2">
-              <AuthFormSubmit idleLabel="Consumir sesion" pendingLabel="Guardando..." />
+              <AuthFormSubmit idleLabel="Consumir sesión" pendingLabel="Guardando..." />
             </div>
           </form>
         ) : (

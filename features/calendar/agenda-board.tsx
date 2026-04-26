@@ -19,7 +19,7 @@ import {
   toDateKeyInAppTimeZone,
   toDateTimeLocalInAppTimeZone
 } from "@/lib/timezone"
-import { cn } from "@/lib/utils"
+import { cn, nativeSelectClassName } from "@/lib/utils"
 import type { CalendarSession, Pass, Profile } from "@/types/domain"
 
 type AgendaView = "day" | "week" | "month"
@@ -143,6 +143,18 @@ function buildAgendaUrl(view: AgendaView, day: string, trainerId: string) {
   return `/agenda?view=${view}&day=${day}&trainer=${trainerId}`
 }
 
+function compareAgendaSessions(left: CalendarSession, right: CalendarSession) {
+  if (left.status === "cancelled" && right.status !== "cancelled") {
+    return 1
+  }
+
+  if (left.status !== "cancelled" && right.status === "cancelled") {
+    return -1
+  }
+
+  return new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+}
+
 function AgendaEventButton({
   session,
   onOpen
@@ -156,7 +168,7 @@ function AgendaEventButton({
       : session.status === "completed"
         ? "Consumida"
         : session.status === "no_show"
-          ? "No asistio"
+          ? "No asistió"
           : "Cancelada"
 
   return (
@@ -165,12 +177,12 @@ function AgendaEventButton({
       onClick={() => onOpen(session)}
       className="w-full rounded-md border px-2 py-1.5 text-left text-[12px] leading-4 shadow-sm transition hover:-translate-y-0.5"
       style={{
-        backgroundColor: session.trainerColor,
-        borderColor: session.trainerColor,
-        color: "#0f172a"
+        backgroundColor: session.status === "cancelled" ? "#E2E8F0" : session.trainerColor,
+        borderColor: session.status === "cancelled" ? "#CBD5E1" : session.trainerColor,
+        color: session.status === "cancelled" ? "#475569" : "#0f172a"
       }}
     >
-      <span className="block truncate font-semibold">{session.clientNames.join(" / ") || "Sesion"}</span>
+      <span className="block truncate font-semibold">{session.clientNames.join(" / ") || "Sesión"}</span>
       <span className="block truncate opacity-80">
         {formatDateInAppTimeZone(session.startsAt, { hour: "2-digit", minute: "2-digit" })} - {statusLabel}
       </span>
@@ -230,11 +242,11 @@ function AgendaModal({
           <div>
             <p className="section-kicker">Agenda ForjaFit</p>
             <h3 className="mt-2 font-heading text-2xl font-bold text-text-primary">
-              {state.mode === "create" ? "Agendar sesion" : "Detalle de sesion"}
+              {state.mode === "create" ? "Agendar sesión" : "Detalle de sesión"}
             </h3>
             {isReadOnly ? (
               <p className="mt-2 text-sm text-text-secondary">
-                Esta cita esta marcada como consumida y queda en solo lectura.
+                Esta cita está marcada como consumida y queda en solo lectura.
               </p>
             ) : null}
           </div>
@@ -255,7 +267,7 @@ function AgendaModal({
               name="trainerProfileId"
               defaultValue={trainerProfileId}
               disabled={!canManage}
-              className="h-11 w-full rounded-xl border border-input bg-surface px-3.5 text-sm disabled:cursor-not-allowed disabled:bg-surface-alt disabled:text-text-muted"
+              className={cn(nativeSelectClassName, "bg-surface disabled:cursor-not-allowed disabled:bg-surface-alt disabled:text-text-muted")}
             >
               {trainers.map((trainer) => (
                 <option key={trainer.id} value={trainer.id}>
@@ -270,11 +282,11 @@ function AgendaModal({
               name="status"
               defaultValue={editingSession?.status ?? "scheduled"}
               disabled={!canManage}
-              className="h-11 w-full rounded-xl border border-input bg-surface px-3.5 text-sm disabled:cursor-not-allowed disabled:bg-surface-alt disabled:text-text-muted"
+              className={cn(nativeSelectClassName, "bg-surface disabled:cursor-not-allowed disabled:bg-surface-alt disabled:text-text-muted")}
             >
               <option value="scheduled">Programada</option>
               <option value="completed">Consumida</option>
-              <option value="no_show">No asistio</option>
+              <option value="no_show">No asistió</option>
               <option value="cancelled">Cancelada</option>
             </select>
           </div>
@@ -336,7 +348,7 @@ function AgendaModal({
             {canManage ? (
               <div className="md:w-auto">
                 <AuthFormSubmit
-                  idleLabel={state.mode === "create" ? "Agendar sesion" : "Guardar cambios"}
+                  idleLabel={state.mode === "create" ? "Agendar sesión" : "Guardar cambios"}
                   pendingLabel="Guardando..."
                 />
               </div>
@@ -348,7 +360,7 @@ function AgendaModal({
             action={deleteAction}
             className="mt-3"
             onSubmit={(event) => {
-              if (!window.confirm("Vas a eliminar esta sesion de la agenda. Quieres continuar?")) {
+              if (!window.confirm("Vas a eliminar esta sesión de la agenda. ¿Quieres continuar?")) {
                 event.preventDefault()
               }
             }}
@@ -357,7 +369,7 @@ function AgendaModal({
             <input type="hidden" name="returnTo" value={returnTo} />
             <Button type="submit" variant="outline" className="w-full gap-2 rounded-2xl md:w-auto">
               <Trash2 className="h-4 w-4" />
-              Eliminar sesion
+              Eliminar sesión
             </Button>
           </form>
         ) : null}
@@ -387,7 +399,9 @@ export function AgendaBoard({
   const [selectedSlot, setSelectedSlot] = useState<AgendaSlot | null>(null)
   const [modalState, setModalState] = useState<ModalState>(null)
   const filteredSessions = useMemo(
-    () => sessions.filter((session) => session.trainerProfileId === selectedTrainerId && session.status !== "cancelled"),
+    () => sessions
+      .filter((session) => session.trainerProfileId === selectedTrainerId)
+      .sort(compareAgendaSessions),
     [selectedTrainerId, sessions]
   )
   const selectedTrainer = trainers.find((trainer) => trainer.id === selectedTrainerId)
@@ -429,7 +443,7 @@ export function AgendaBoard({
           <Button asChild variant={view === "day" ? "default" : "ghost"} size="sm" className="gap-2 rounded-lg">
             <Link href={buildAgendaUrl("day", selectedDate, selectedTrainerId)}>
               <Clock className="h-4 w-4" />
-              Dia
+              Día
             </Link>
           </Button>
           <Button asChild variant={view === "week" ? "default" : "ghost"} size="sm" className="gap-2 rounded-lg">
@@ -452,7 +466,7 @@ export function AgendaBoard({
             <select
               name="trainer"
               defaultValue={selectedTrainerId}
-              className="h-9 rounded-lg border border-border/80 bg-surface px-3 text-sm"
+              className={cn(nativeSelectClassName, "h-9 rounded-lg bg-surface py-0 sm:h-9")}
               onChange={(event) => event.currentTarget.form?.requestSubmit()}
             >
               {trainers.map((trainer) => (
@@ -498,7 +512,7 @@ export function AgendaBoard({
               onClick={() => selectedSlot ? openCreate(selectedSlot) : null}
             >
               <Plus className="h-4 w-4" />
-              Agendar sesion
+              Agendar sesión
             </Button>
           </div>
         </div>

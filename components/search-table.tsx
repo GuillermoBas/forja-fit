@@ -110,7 +110,7 @@ export function SearchTable({ rows, columns, searchPlaceholder }: SearchTablePro
                         No hay resultados con ese filtro
                       </p>
                       <p className="empty-state-copy">
-                        Ajusta el texto de busqueda para localizar clientes, ventas o notificaciones.
+                        Ajusta el texto de búsqueda para localizar clientes, ventas o notificaciones.
                       </p>
                     </div>
                   </TableCell>

@@ -27,6 +27,8 @@ Funciones previstas:
 - `create_expense`
 - `upsert_calendar_session`
 - `delete_calendar_session`
+- `cancel_client_calendar_session`
+- `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
 - `run_daily_expiry_scan`
 - `send_expiry_email`

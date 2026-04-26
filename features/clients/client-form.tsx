@@ -120,7 +120,7 @@ export function ClientForm({
               ) : null}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Telefono</label>
+              <label className="text-sm font-medium">Teléfono</label>
               <Input name="phone" defaultValue={client?.phone ?? ""} />
             </div>
             <div className="space-y-2">
