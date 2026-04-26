@@ -88,19 +88,19 @@ function DesktopClientSidebar({
 
 function MobileClientTopbar({ clientName }: { clientName: string }) {
   return (
-    <div className="page-section portal-mobile-topbar lg:hidden">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="page-section portal-mobile-topbar relative lg:hidden md:grid md:grid-cols-[1fr_auto_1fr] md:items-center">
+      <div className="flex min-w-0 items-center gap-3 md:col-start-2 md:flex-col md:items-center md:justify-center md:gap-2">
         <div className="min-w-0">
           <p className="section-kicker">Portal de cliente</p>
-          <p className="mt-0.5 truncate font-heading text-base font-bold text-text-primary sm:text-lg">
+          <p className="mt-0.5 truncate font-heading text-base font-bold text-text-primary sm:text-lg md:text-center">
             ForjaFit
           </p>
         </div>
-        <Badge variant="default" className="max-w-[40vw] shrink truncate px-2.5 py-1 text-[10px] sm:max-w-[42vw]">
+        <Badge variant="default" className="max-w-[40vw] shrink truncate px-2.5 py-1 text-[10px] sm:max-w-[42vw] md:max-w-full md:px-3 md:text-center">
           {clientName}
         </Badge>
       </div>
-      <form action={portalSignOutAction} className="shrink-0">
+      <form action={portalSignOutAction} className="shrink-0 md:col-start-3 md:justify-self-end">
         <Button
           type="submit"
           variant="outline"
@@ -156,21 +156,20 @@ export function PortalShell({
   currentPath: string
 }) {
   return (
-    <div className="mobile-page-shell min-h-screen bg-transparent lg:px-6 lg:py-6">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1600px] gap-4 lg:grid-cols-[292px_minmax(0,1fr)] lg:gap-5">
+    <div className="portal-mobile-shell mobile-page-shell min-h-screen bg-transparent lg:px-6 lg:py-6">
+      <div className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] gap-4 lg:min-h-screen lg:grid-cols-[292px_minmax(0,1fr)] lg:gap-5">
         <DesktopClientSidebar clientName={clientName} currentPath={currentPath} />
 
-        <main className="portal-mobile-content-safe mobile-content-safe w-full min-w-0 max-w-full space-y-2.5 pb-3 sm:space-y-3 sm:pb-4 lg:space-y-6 lg:pb-6">
+        <main className="portal-mobile-scroll-region portal-mobile-content-safe mobile-content-safe w-full min-w-0 max-w-full space-y-2.5 pb-3 sm:space-y-3 sm:pb-4 lg:space-y-6 lg:pb-6">
           <MobileClientTopbar clientName={clientName} />
 
-          <header className="mobile-sticky-panel page-section app-page-header w-full min-w-0 max-w-full px-3.5 py-2.5 sm:px-4 sm:py-3 lg:px-4 lg:py-3">
+          <header className="mobile-sticky-panel page-section app-page-header w-full min-w-0 max-w-full px-3.5 py-2 sm:px-4 sm:py-2.5 lg:px-4 lg:py-2.5">
             <div className="app-page-header-copy min-w-0">
-              <p className="section-kicker">Cliente ForjaFit</p>
               <div className="min-w-0">
-                <h2 className="truncate font-heading text-[1.1rem] font-bold tracking-[-0.03em] text-text-primary sm:text-[1.25rem] lg:text-[1.55rem]">
+                <h2 className="truncate font-heading text-[1.05rem] font-bold tracking-[-0.03em] text-text-primary sm:text-[1.2rem] lg:text-[1.45rem]">
                   {title}
                 </h2>
-                <p className="text-[11px] leading-4 text-text-secondary sm:text-[12px] sm:leading-5 lg:text-[13px] lg:leading-5">
+                <p className="mt-0.5 text-[11px] leading-4 text-text-secondary sm:text-[12px] sm:leading-[1.35] lg:text-[13px] lg:leading-[1.4]">
                   {description}
                 </p>
               </div>

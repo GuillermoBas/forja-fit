@@ -8,8 +8,8 @@ export default async function ClientPortalNutritionPage() {
 
   return (
     <PortalShell
-      title="Nutricion"
-      description="Habla con el asistente de nutricion y conserva el historial de la conversacion en tu portal."
+      title="Nutrición"
+      description="Habla con el asistente IA de nutrición y conserva el historial de la conversación en tu portal."
       clientName={data.client.fullName}
       currentPath="/cliente/nutricion"
     >

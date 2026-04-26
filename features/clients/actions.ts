@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { getAuthCookies } from "@/lib/auth/cookies"
+import { getCurrentAccessToken } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
 
@@ -134,7 +134,7 @@ export async function deleteClientAction(
   }
 
   try {
-    const { accessToken } = await getAuthCookies()
+    const accessToken = await getCurrentAccessToken()
     const client = accessToken ? (createServerInsforgeClient({ accessToken }) as any) : null
 
     if (!client) {

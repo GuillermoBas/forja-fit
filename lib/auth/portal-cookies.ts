@@ -1,8 +1,19 @@
 import { cookies } from "next/headers"
+import {
+  portalAccessCookieMaxAge,
+  portalAccessCookieName,
+  portalOauthVerifierCookieName,
+  portalRefreshCookieMaxAge,
+  portalRefreshCookieName
+} from "@/lib/auth/cookie-config"
 
-export const portalAccessCookieName = "insforge_cliente_access_token"
-export const portalRefreshCookieName = "insforge_cliente_refresh_token"
-export const portalOauthVerifierCookieName = "insforge_cliente_oauth_verifier"
+export {
+  portalAccessCookieMaxAge,
+  portalAccessCookieName,
+  portalOauthVerifierCookieName,
+  portalRefreshCookieMaxAge,
+  portalRefreshCookieName
+}
 
 const baseCookieOptions = {
   httpOnly: true,
@@ -30,13 +41,13 @@ export async function setPortalAuthCookies(accessToken: string, refreshToken?: s
 
   store.set(portalAccessCookieName, accessToken, {
     ...baseCookieOptions,
-    maxAge: 60 * 15
+    maxAge: portalAccessCookieMaxAge
   })
 
   if (refreshToken) {
     store.set(portalRefreshCookieName, refreshToken, {
       ...baseCookieOptions,
-      maxAge: 60 * 60 * 24 * 7
+      maxAge: portalRefreshCookieMaxAge
     })
   }
 }

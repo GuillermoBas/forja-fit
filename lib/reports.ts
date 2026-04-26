@@ -1,4 +1,4 @@
-import { getAuthCookies } from "@/lib/auth/cookies"
+import { getCurrentAccessToken } from "@/lib/auth/session"
 import { isInsforgeConfigured } from "@/lib/config"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { demoExpenses, demoPasses, demoProducts, demoSales } from "@/lib/demo-data"
@@ -29,7 +29,7 @@ async function createAuthedClient() {
     return null
   }
 
-  const { accessToken } = await getAuthCookies()
+  const accessToken = await getCurrentAccessToken()
   if (!accessToken) {
     return null
   }

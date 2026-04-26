@@ -1,7 +1,12 @@
 import { cookies } from "next/headers"
+import {
+  accessCookieMaxAge,
+  accessCookieName,
+  refreshCookieMaxAge,
+  refreshCookieName
+} from "@/lib/auth/cookie-config"
 
-export const accessCookieName = "insforge_access_token"
-export const refreshCookieName = "insforge_refresh_token"
+export { accessCookieMaxAge, accessCookieName, refreshCookieMaxAge, refreshCookieName }
 
 const baseCookieOptions = {
   httpOnly: true,
@@ -27,13 +32,13 @@ export async function setAuthCookies(accessToken: string, refreshToken?: string 
 
   store.set(accessCookieName, accessToken, {
     ...baseCookieOptions,
-    maxAge: 60 * 15
+    maxAge: accessCookieMaxAge
   })
 
   if (refreshToken) {
     store.set(refreshCookieName, refreshToken, {
       ...baseCookieOptions,
-      maxAge: 60 * 60 * 24 * 7
+      maxAge: refreshCookieMaxAge
     })
   }
 }

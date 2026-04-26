@@ -4,8 +4,7 @@ import { PageHeader } from "@/components/page-header"
 import { InstallForjaFit } from "@/components/pwa/install-forjafit"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
-import { getAuthCookies } from "@/lib/auth/cookies"
-import { requireAuthenticatedProfile } from "@/lib/auth/session"
+import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
 import { appConfig } from "@/lib/config"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 
@@ -15,7 +14,7 @@ type ManualPushClientRow = {
 }
 
 async function getManualPushClients(): Promise<ManualPushClientRow[]> {
-  const { accessToken } = await getAuthCookies()
+  const accessToken = await getCurrentAccessToken()
 
   if (!accessToken) {
     return []

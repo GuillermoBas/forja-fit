@@ -9,6 +9,11 @@ type AuthUser = {
   name?: string | null
 }
 
+type AuthSession = {
+  user: AuthUser
+  accessToken: string
+}
+
 function mapProfileRow(row: Record<string, unknown>): Profile {
   return {
     id: String(row.id),
@@ -19,7 +24,7 @@ function mapProfileRow(row: Record<string, unknown>): Profile {
   }
 }
 
-export async function getCurrentAuthUser(): Promise<AuthUser | null> {
+export async function getCurrentAuthSession(): Promise<AuthSession | null> {
   const { accessToken, refreshToken } = await getAuthCookies()
 
   if (!accessToken && !refreshToken) {
@@ -32,9 +37,12 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
       const current = await client.auth.getCurrentUser()
       if (!current.error && current.data?.user) {
         return {
-          id: String(current.data.user.id),
-          email: current.data.user.email ? String(current.data.user.email) : null,
-          name: current.data.user.name ? String(current.data.user.name) : null
+          accessToken,
+          user: {
+            id: String(current.data.user.id),
+            email: current.data.user.email ? String(current.data.user.email) : null,
+            name: current.data.user.name ? String(current.data.user.name) : null
+          }
         }
       }
     } catch {}
@@ -52,16 +60,21 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
       return null
     }
 
-    await setAuthCookies(
-      refreshed.data.accessToken,
-      refreshed.data.refreshToken ?? refreshToken
-    )
+    try {
+      await setAuthCookies(
+        refreshed.data.accessToken,
+        refreshed.data.refreshToken ?? refreshToken
+      )
+    } catch {}
 
     if (refreshed.data.user) {
       return {
-        id: String(refreshed.data.user.id),
-        email: refreshed.data.user.email ? String(refreshed.data.user.email) : null,
-        name: refreshed.data.user.name ? String(refreshed.data.user.name) : null
+        accessToken: refreshed.data.accessToken,
+        user: {
+          id: String(refreshed.data.user.id),
+          email: refreshed.data.user.email ? String(refreshed.data.user.email) : null,
+          name: refreshed.data.user.name ? String(refreshed.data.user.name) : null
+        }
       }
     }
 
@@ -74,29 +87,33 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
     }
 
     return {
-      id: String(current.data.user.id),
-      email: current.data.user.email ? String(current.data.user.email) : null,
-      name: current.data.user.name ? String(current.data.user.name) : null
+      accessToken: refreshed.data.accessToken,
+      user: {
+        id: String(current.data.user.id),
+        email: current.data.user.email ? String(current.data.user.email) : null,
+        name: current.data.user.name ? String(current.data.user.name) : null
+      }
     }
   } catch {
     return null
   }
 }
 
-export async function getCurrentProfile(): Promise<Profile | null> {
-  const authUser = await getCurrentAuthUser()
-  const { accessToken } = await getAuthCookies()
+export async function getCurrentAuthUser(): Promise<AuthUser | null> {
+  return (await getCurrentAuthSession())?.user ?? null
+}
 
-  if (!authUser || !accessToken) {
-    return null
-  }
+export async function getCurrentAccessToken() {
+  return (await getCurrentAuthSession())?.accessToken ?? null
+}
 
+async function getProfileForSession(session: AuthSession): Promise<Profile | null> {
   try {
-    const client = createServerInsforgeClient({ accessToken }) as any
+    const client = createServerInsforgeClient({ accessToken: session.accessToken }) as any
     const profileResult = await client.database
       .from("profiles")
       .select("*")
-      .eq("auth_user_id", authUser.id)
+      .eq("auth_user_id", session.user.id)
       .maybeSingle()
 
     if (profileResult.error || !profileResult.data) {
@@ -109,11 +126,22 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   }
 }
 
-export async function getSessionContext() {
-  const user = await getCurrentAuthUser()
-  const profile = await getCurrentProfile()
+export async function getCurrentProfile(): Promise<Profile | null> {
+  const session = await getCurrentAuthSession()
 
-  return { user, profile }
+  if (!session) {
+    return null
+  }
+
+  return getProfileForSession(session)
+}
+
+export async function getSessionContext() {
+  const session = await getCurrentAuthSession()
+  const user = session?.user ?? null
+  const profile = session ? await getProfileForSession(session) : null
+
+  return { user, profile, accessToken: session?.accessToken ?? null }
 }
 
 export async function requireAuthenticatedUser() {

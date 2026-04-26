@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
-import { getAuthCookieOptions } from "@/lib/auth/cookies"
+import { accessCookieMaxAge, getAuthCookieOptions, refreshCookieMaxAge } from "@/lib/auth/cookies"
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -25,13 +25,13 @@ export async function POST(request: Request) {
 
     response.cookies.set("insforge_access_token", result.data.accessToken, {
       ...cookieOptions,
-      maxAge: 60 * 15
+      maxAge: accessCookieMaxAge
     })
 
     if (result.data.refreshToken) {
       response.cookies.set("insforge_refresh_token", result.data.refreshToken, {
         ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 7
+        maxAge: refreshCookieMaxAge
       })
     }
 

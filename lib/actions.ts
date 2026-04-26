@@ -1,5 +1,4 @@
-import { getAuthCookies } from "@/lib/auth/cookies"
-import { getCurrentProfile } from "@/lib/auth/session"
+import { getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 
 export type ActionState = {
@@ -33,8 +32,7 @@ function normalizeActionError(message?: string) {
 }
 
 export async function invokeProtectedFunction(slug: string, body: Record<string, unknown>) {
-  const profile = await getCurrentProfile()
-  const { accessToken } = await getAuthCookies()
+  const { accessToken, profile } = await getSessionContext()
 
   if (!profile || !accessToken) {
     throw new Error("La sesión ha caducado. Vuelve a iniciar sesión.")

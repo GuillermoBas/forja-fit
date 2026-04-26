@@ -89,13 +89,7 @@ function AdvancedActionForm({
   )
 }
 
-export function PortalSettingsForm({
-  client,
-  savedPlanCount
-}: {
-  client: Client
-  savedPlanCount: number
-}) {
+export function PortalSettingsForm({ client }: { client: Client }) {
   const [state, formAction] = useFormState(updatePortalPhoneAction, initialState)
 
   useEffect(() => {
@@ -111,79 +105,85 @@ export function PortalSettingsForm({
   }, [state.success])
 
   return (
-    <div className="space-y-5">
-      <Card className="panel-hover">
-        <CardHeader>
-          <CardTitle>Datos de contacto</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre</label>
-              <Input
-                value={client.fullName}
-                readOnly
-                disabled
-                className="cursor-not-allowed border-border/80 bg-surface-alt text-text-muted shadow-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                value={client.email ?? ""}
-                readOnly
-                disabled
-                className="cursor-not-allowed border-border/80 bg-surface-alt text-text-muted shadow-none"
-              />
-            </div>
+    <Card className="panel-hover">
+      <CardHeader>
+        <CardTitle>Datos de contacto</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nombre</label>
+            <Input
+              value={client.fullName}
+              readOnly
+              disabled
+              className="cursor-not-allowed border-border/80 bg-surface-alt text-text-muted shadow-none"
+            />
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email</label>
+            <Input
+              value={client.email ?? ""}
+              readOnly
+              disabled
+              className="cursor-not-allowed border-border/80 bg-surface-alt text-text-muted shadow-none"
+            />
+          </div>
+        </div>
 
-          <form action={formAction} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Teléfono</label>
-              <Input
-                name="phone"
-                defaultValue={client.phone ?? ""}
-                placeholder="600123123"
-                autoComplete="tel"
-              />
-            </div>
-            <AuthFormSubmit idleLabel="Guardar teléfono" pendingLabel="Guardando..." />
-          </form>
-        </CardContent>
-      </Card>
+        <form action={formAction} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Teléfono</label>
+            <Input
+              name="phone"
+              defaultValue={client.phone ?? ""}
+              placeholder="600123123"
+              autoComplete="tel"
+            />
+          </div>
+          <AuthFormSubmit idleLabel="Guardar teléfono" pendingLabel="Guardando..." />
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
 
-      <Card className="panel-hover">
-        <CardHeader>
-          <CardTitle>Acciones avanzadas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <AdvancedActionForm
-            title="Borrar historial del chat nutricional"
-            description="Elimina mensajes, uso registrado y resumen acumulado del asistente."
-            confirmMessage="Vas a borrar todo el historial del chat nutricional. Esta accion no se puede deshacer. ¿Quieres continuar?"
-            idleLabel="Borrar chat"
-            pendingLabel="Borrando..."
-            action={clearPortalNutritionChatAction}
-          />
-          <AdvancedActionForm
-            title="Borrar memoria nutricional permanente"
-            description="Limpia altura, peso, objetivo, preferencias, restricciones y rolling summary."
-            confirmMessage="Vas a borrar la memoria nutricional permanente. Esta accion no se puede deshacer. ¿Quieres continuar?"
-            idleLabel="Borrar memoria"
-            pendingLabel="Borrando..."
-            action={clearPortalNutritionMemoryAction}
-          />
-          <AdvancedActionForm
-            title="Eliminar menus semanales guardados"
-            description={`Actualmente hay ${savedPlanCount} menu(s) semanal(es) guardado(s).`}
-            confirmMessage="Vas a eliminar todos los menus semanales guardados. Esta accion no se puede deshacer. ¿Quieres continuar?"
-            idleLabel="Eliminar menus"
-            pendingLabel="Eliminando..."
-            action={deletePortalWeeklyPlansAction}
-          />
-        </CardContent>
-      </Card>
-    </div>
+export function PortalAdvancedSettingsActions({
+  savedPlanCount
+}: {
+  savedPlanCount: number
+}) {
+  return (
+    <Card className="panel-hover">
+      <CardHeader>
+        <CardTitle>Acciones avanzadas</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <AdvancedActionForm
+          title="Borrar historial del chat nutricional"
+          description="Elimina mensajes, uso registrado y resumen acumulado del asistente."
+          confirmMessage="Vas a borrar todo el historial del chat nutricional. Esta acción no se puede deshacer. ¿Quieres continuar?"
+          idleLabel="Borrar chat"
+          pendingLabel="Borrando..."
+          action={clearPortalNutritionChatAction}
+        />
+        <AdvancedActionForm
+          title="Borrar memoria nutricional permanente"
+          description="Elimina altura, peso, objetivo, preferencias y restricciones."
+          confirmMessage="Vas a borrar la memoria nutricional permanente. Esta acción no se puede deshacer. ¿Quieres continuar?"
+          idleLabel="Borrar memoria"
+          pendingLabel="Borrando..."
+          action={clearPortalNutritionMemoryAction}
+        />
+        <AdvancedActionForm
+          title="Eliminar menús semanales guardados"
+          description={`Actualmente hay ${savedPlanCount} menú(s) semanal(es) guardado(s).`}
+          confirmMessage="Vas a eliminar todos los menús semanales guardados. Esta acción no se puede deshacer. ¿Quieres continuar?"
+          idleLabel="Eliminar menús"
+          pendingLabel="Eliminando..."
+          action={deletePortalWeeklyPlansAction}
+        />
+      </CardContent>
+    </Card>
   )
 }

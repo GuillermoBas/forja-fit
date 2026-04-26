@@ -9,7 +9,7 @@ import {
   demoSales
 } from "@/lib/demo-data"
 import { isInsforgeConfigured } from "@/lib/config"
-import { getAuthCookies } from "@/lib/auth/cookies"
+import { getCurrentAccessToken } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import type {
   CalendarSession,
@@ -39,7 +39,7 @@ async function createAuthedClient() {
     return null
   }
 
-  const { accessToken } = await getAuthCookies()
+  const accessToken = await getCurrentAccessToken()
   if (!accessToken) {
     return null
   }

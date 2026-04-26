@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Send, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -243,55 +242,49 @@ export function NutritionChat({
       )}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-border/70 px-3.5 py-3.5 sm:items-center sm:px-4 sm:py-4">
-          <div className="min-w-0">
-            <p className="section-kicker">Asistente nutricional</p>
-            <h3 className="mt-1 font-heading text-base font-bold text-text-primary sm:text-lg">
-              Nutricion en chat
-            </h3>
-          </div>
-          {mode === "modal" ? (
-            <Button
-              asChild
-              variant="outline"
-              className="h-10 shrink-0 rounded-2xl px-4 text-[13px] font-semibold shadow-[0_6px_18px_rgba(15,23,42,0.06)] sm:h-11 sm:px-5 sm:text-sm"
-            >
-              <Link href="/cliente/nutricion">Ver planes guardados</Link>
-            </Button>
-          ) : (
+        {mode === "page" ? (
+          <div className="flex items-start justify-between gap-3 border-b border-border/70 px-3.5 py-3.5 sm:items-center sm:px-4 sm:py-4">
+            <div className="min-w-0">
+              <p className="section-kicker">Asistente nutricional</p>
+              <h3 className="mt-1 font-heading text-base font-bold text-text-primary sm:text-lg">
+                Nutricion en chat
+              </h3>
+            </div>
             <div className="flex items-center gap-2 rounded-full border border-primary/18 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary-hover">
               <Sparkles className="h-3.5 w-3.5" />
               {threadId ? "Hilo activo" : "Preparando hilo"}
             </div>
-          )}
-        </div>
+          </div>
+        ) : null}
 
-        <div className="grid gap-2 border-b border-border/70 px-3.5 py-3 sm:grid-cols-2 sm:px-4">
-          <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Hoy</p>
-            <p className="mt-1 text-sm font-medium text-text-primary">
-              {quota.dailyUsed}/{quota.dailyLimit} usados
-            </p>
-            <p className="text-xs text-text-secondary">
-              Quedan {quota.dailyRemaining} mensajes
-            </p>
+        {mode === "page" ? (
+          <div className="grid gap-2 border-b border-border/70 px-3.5 py-3 sm:grid-cols-2 sm:px-4">
+            <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Hoy</p>
+              <p className="mt-1 text-sm font-medium text-text-primary">
+                {quota.dailyUsed}/{quota.dailyLimit} usados
+              </p>
+              <p className="text-xs text-text-secondary">
+                Quedan {quota.dailyRemaining} mensajes
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Mes</p>
+              <p className="mt-1 text-sm font-medium text-text-primary">
+                {quota.monthlyUsed}/{quota.monthlyLimit} usados
+              </p>
+              <p className="text-xs text-text-secondary">
+                Quedan {quota.monthlyRemaining} mensajes
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Mes</p>
-            <p className="mt-1 text-sm font-medium text-text-primary">
-              {quota.monthlyUsed}/{quota.monthlyLimit} usados
-            </p>
-            <p className="text-xs text-text-secondary">
-              Quedan {quota.monthlyRemaining} mensajes
-            </p>
-          </div>
-        </div>
+        ) : null}
 
         <div
           ref={scrollRef}
           className={cn(
             "flex-1 space-y-3 overflow-y-auto px-3.5 py-3.5 sm:px-4 sm:py-4",
-            mode === "modal" ? "min-h-0" : "min-h-[56vh] sm:min-h-[60vh]"
+            mode === "modal" ? "min-h-0 pt-3 sm:pt-3.5" : "min-h-[56vh] sm:min-h-[60vh]"
           )}
         >
           {visibleMessages.map((message) => {
@@ -331,7 +324,7 @@ export function NutritionChat({
           })}
         </div>
 
-        <div className="border-t border-border/70 px-3.5 py-3.5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] sm:px-4 sm:py-4 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="border-t border-border/70 px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] sm:px-4 sm:py-3.5 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <div className="mb-3 rounded-2xl border border-dashed border-border/80 bg-surface-alt/70 px-3 py-2 text-xs leading-5 text-text-secondary">
             Solo respondemos dudas de nutricion y habitos saludables. Rechazamos temas fuera de alcance, diagnosticos, TCA y patologia compleja.
           </div>
@@ -362,9 +355,20 @@ export function NutritionChat({
               disabled={quota.blocked}
             />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs leading-5 text-text-muted">
-                Onboarding inicial por chat, sin formularios.
-              </p>
+              {mode === "modal" ? (
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-1 sm:flex-row">
+                  <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
+                    Hoy te quedan {quota.dailyRemaining} mensajes
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
+                    Este mes te quedan {quota.monthlyRemaining} mensajes
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs leading-5 text-text-muted">
+                  Onboarding inicial por chat, sin formularios.
+                </p>
+              )}
               <Button
                 type="submit"
                 className="h-11 w-full gap-2.5 rounded-2xl px-4 sm:min-w-[7.75rem] sm:w-auto sm:self-auto sm:px-5"

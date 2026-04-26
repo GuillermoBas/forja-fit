@@ -9,6 +9,11 @@ type PortalAuthUser = {
   name?: string | null
 }
 
+type PortalAuthSession = {
+  user: PortalAuthUser
+  accessToken: string
+}
+
 function mapPortalAccountRow(row: Record<string, unknown>): ClientPortalAccountSummary {
   return {
     id: String(row.id),
@@ -22,7 +27,7 @@ function mapPortalAccountRow(row: Record<string, unknown>): ClientPortalAccountS
   }
 }
 
-export async function getCurrentPortalAuthUser(): Promise<PortalAuthUser | null> {
+export async function getCurrentPortalAuthSession(): Promise<PortalAuthSession | null> {
   const { accessToken, refreshToken } = await getPortalAuthCookies()
 
   if (!accessToken && !refreshToken) {
@@ -36,9 +41,12 @@ export async function getCurrentPortalAuthUser(): Promise<PortalAuthUser | null>
 
       if (!current.error && current.data?.user) {
         return {
-          id: String(current.data.user.id),
-          email: current.data.user.email ? String(current.data.user.email) : null,
-          name: current.data.user.name ? String(current.data.user.name) : null
+          accessToken,
+          user: {
+            id: String(current.data.user.id),
+            email: current.data.user.email ? String(current.data.user.email) : null,
+            name: current.data.user.name ? String(current.data.user.name) : null
+          }
         }
       }
     } catch {}
@@ -56,35 +64,43 @@ export async function getCurrentPortalAuthUser(): Promise<PortalAuthUser | null>
       return null
     }
 
-    await setPortalAuthCookies(
-      refreshed.data.accessToken,
-      refreshed.data.refreshToken ?? refreshToken
-    )
+    try {
+      await setPortalAuthCookies(
+        refreshed.data.accessToken,
+        refreshed.data.refreshToken ?? refreshToken
+      )
+    } catch {}
 
     return {
-      id: String(refreshed.data.user.id),
-      email: refreshed.data.user.email ? String(refreshed.data.user.email) : null,
-      name: refreshed.data.user.name ? String(refreshed.data.user.name) : null
+      accessToken: refreshed.data.accessToken,
+      user: {
+        id: String(refreshed.data.user.id),
+        email: refreshed.data.user.email ? String(refreshed.data.user.email) : null,
+        name: refreshed.data.user.name ? String(refreshed.data.user.name) : null
+      }
     }
   } catch {
     return null
   }
 }
 
-export async function getCurrentPortalAccount(): Promise<ClientPortalAccountSummary | null> {
-  const { accessToken } = await getPortalAuthCookies()
-  const authUser = await getCurrentPortalAuthUser()
+export async function getCurrentPortalAuthUser(): Promise<PortalAuthUser | null> {
+  return (await getCurrentPortalAuthSession())?.user ?? null
+}
 
-  if (!authUser || !accessToken) {
+export async function getCurrentPortalAccount(): Promise<ClientPortalAccountSummary | null> {
+  const session = await getCurrentPortalAuthSession()
+
+  if (!session) {
     return null
   }
 
   try {
-    const client = createServerInsforgeClient({ accessToken }) as any
+    const client = createServerInsforgeClient({ accessToken: session.accessToken }) as any
     const result = await client.database
       .from("client_portal_accounts")
       .select("*")
-      .eq("auth_user_id", authUser.id)
+      .eq("auth_user_id", session.user.id)
       .maybeSingle()
 
     if (result.error || !result.data) {
@@ -98,8 +114,7 @@ export async function getCurrentPortalAccount(): Promise<ClientPortalAccountSumm
 }
 
 export async function getCurrentPortalAccessToken() {
-  const { accessToken } = await getPortalAuthCookies()
-  return accessToken
+  return (await getCurrentPortalAuthSession())?.accessToken ?? null
 }
 
 export async function requirePortalAccount() {

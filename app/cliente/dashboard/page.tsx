@@ -27,11 +27,8 @@ export default async function ClientPortalDashboardPage({
       <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <h3 className="font-heading text-[1.35rem] font-bold text-text-primary sm:text-[1.55rem] lg:text-2xl">
-            Hola, {data.client.firstName ?? data.client.fullName}
+            Hola {data.client.firstName ?? data.client.fullName}
           </h3>
-          <p className="mt-1 text-[13px] leading-5 text-text-secondary sm:text-sm">
-            Tus metricas se recalculan con actividad real registrada en el gimnasio.
-          </p>
         </div>
         <div className="w-full max-w-full lg:w-auto lg:max-w-none">
           <ActivityRangeLinks

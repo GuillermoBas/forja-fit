@@ -48,6 +48,8 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  --portal-mobile-nav-height: 4.4rem;
+  --portal-mobile-nav-total-height: calc(var(--portal-mobile-nav-height) + var(--safe-bottom));
 }
 
 * {
@@ -241,26 +243,38 @@ a {
     min-height: 56px;
   }
 
+  .portal-mobile-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   .portal-mobile-bottom-nav {
-    @apply fixed inset-x-0 z-[60] border-t border-border/90 bg-surface shadow-[0_-10px_30px_rgba(15,23,42,0.08)] lg:hidden;
+    @apply fixed inset-x-0 z-[60] border-t border-border/90 bg-surface shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md lg:hidden;
+    background-color: hsl(var(--surface) / 0.98);
     bottom: 0;
     padding-bottom: var(--safe-bottom);
   }
 
   .portal-mobile-bottom-nav-grid {
-    @apply mx-auto grid h-[4.25rem] max-w-screen-md grid-cols-4 gap-1 px-2;
+    @apply grid grid-cols-4;
+    min-height: var(--portal-mobile-nav-height);
   }
 
   .portal-mobile-tab {
-    @apply flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium text-text-muted transition-all duration-200;
+    @apply flex min-h-[var(--portal-mobile-nav-height)] min-w-0 flex-col items-center justify-center gap-1 border-r border-border/70 px-2 py-2 text-[11px] font-medium text-text-muted transition-all duration-200;
+  }
+
+  .portal-mobile-tab:last-child {
+    border-right: 0;
   }
 
   .portal-mobile-tab-active {
-    @apply bg-primary-soft text-primary-hover;
+    @apply bg-primary-soft/85 text-primary-hover;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
   }
 
   .portal-mobile-content-safe {
-    padding-bottom: calc(var(--safe-bottom) + 6rem);
+    padding-bottom: calc(var(--portal-mobile-nav-total-height) + 0.75rem);
   }
 
   .kpi-value {
@@ -323,15 +337,41 @@ a {
     min-height: 52px;
   }
 
+  .portal-mobile-shell {
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .portal-mobile-scroll-region {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .portal-mobile-bottom-nav-grid {
-    @apply h-16 px-1;
+    min-height: 4.1rem;
   }
 
   .portal-mobile-tab {
-    @apply gap-0.5 px-1.5 text-[10px];
+    @apply gap-0.5 px-1 text-[10px];
   }
 
   .kpi-value {
     @apply text-[2.2rem];
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .portal-mobile-shell {
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .portal-mobile-scroll-region {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }

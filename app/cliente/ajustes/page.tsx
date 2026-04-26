@@ -1,5 +1,5 @@
 import { PortalShell } from "@/features/client-portal/portal-shell"
-import { PortalSettingsForm } from "@/features/client-portal/settings-form"
+import { PortalAdvancedSettingsActions, PortalSettingsForm } from "@/features/client-portal/settings-form"
 import { getPortalDashboardData } from "@/features/client-portal/data"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { PushNotificationSettings } from "@/features/client-portal/push/push-notification-settings"
@@ -14,17 +14,18 @@ export default async function ClientPortalSettingsPage() {
 
   return (
     <PortalShell
-      title="Tus ajustes"
-      description="Gestiona tu teléfono de contacto sin alterar la identidad verificada del portal."
+      title="Ajustes"
+      description="Gestiona tus datos personales, datos del historial de nutrición y los ajustes de notificaciones push."
       clientName={data.client.fullName}
       currentPath="/cliente/ajustes"
     >
       <div className="space-y-5">
-        <PortalSettingsForm client={data.client} savedPlanCount={nutritionData.savedPlans.length} />
+        <PortalSettingsForm client={data.client} />
         <PushNotificationSettings
           vapidPublicKey={pushData.vapidPublicKey}
           initialPreferences={pushData.preferences}
         />
+        <PortalAdvancedSettingsActions savedPlanCount={nutritionData.savedPlans.length} />
       </div>
     </PortalShell>
   )
