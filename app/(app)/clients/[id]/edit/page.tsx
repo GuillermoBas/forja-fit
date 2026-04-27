@@ -8,11 +8,12 @@ import { isAdmin } from "@/lib/permissions/roles"
 export default async function EditClientPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }> | { id: string }
 }) {
-  const client = await getClientById(params.id)
+  const { id } = await Promise.resolve(params)
+  const client = await getClientById(id)
   const profile = await getCurrentProfile()
-  const portalSupport = await getClientPortalSupportState(params.id)
+  const portalSupport = await getClientPortalSupportState(id)
 
   if (!client) {
     notFound()

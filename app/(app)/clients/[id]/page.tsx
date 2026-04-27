@@ -30,9 +30,10 @@ import { ClientPortalAdminForm } from "@/features/clients/client-portal-admin-fo
 export default async function ClientDetailPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }> | { id: string }
 }) {
-  const client = await getClientById(params.id)
+  const { id } = await Promise.resolve(params)
+  const client = await getClientById(id)
 
   if (!client) {
     notFound()
@@ -44,10 +45,10 @@ export default async function ClientDetailPage({
     getNotifications(),
     getSales(),
     getPassTypes(),
-    getClientHistory(params.id),
+    getClientHistory(id),
     getCurrentProfile(),
-    getClientPortalAccountByClientId(params.id),
-    getClientPortalSupportState(params.id)
+    getClientPortalAccountByClientId(id),
+    getClientPortalSupportState(id)
   ])
 
   const passes = allPasses.filter((item) => item.holderClientIds.includes(client.id))
@@ -62,9 +63,9 @@ export default async function ClientDetailPage({
           title={client.fullName}
           description="Ficha del cliente, bonos, historial operativo, avisos y ventas."
         />
-        <Link href={`/clients/${client.id}/edit`}>
-          <Button variant="outline">Editar cliente</Button>
-        </Link>
+        <Button asChild variant="outline">
+          <Link href={`/clients/${client.id}/edit`}>Editar cliente</Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -195,9 +196,9 @@ export default async function ClientDetailPage({
                   </p>
                   {canManagePasses ? (
                     <div className="mt-4">
-                      <Link href={`/passes/${item.id}/edit`}>
-                        <Button variant="outline" size="sm">Editar bono</Button>
-                      </Link>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/passes/${item.id}/edit`}>Editar bono</Link>
+                      </Button>
                     </div>
                   ) : null}
                 </div>

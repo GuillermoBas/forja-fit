@@ -9,8 +9,15 @@ import {
   refreshCookieMaxAge,
   refreshCookieName
 } from "@/lib/auth/cookie-config"
+import {
+  isVisualPreviewEnvEnabled,
+  parseVisualPreviewMode,
+  visualPreviewCookieName,
+  visualPreviewSearchParam
+} from "@/lib/preview-config"
 
 const refreshThresholdSeconds = 60 * 5
+const previewCookieMaxAge = 60 * 60 * 8
 
 type SessionCookieNames = {
   access: string
@@ -163,6 +170,73 @@ function writeResponseCookies(response: NextResponse, result: SessionRefreshResu
   })
 }
 
+function resolvePreviewMode(request: NextRequest) {
+  if (!isVisualPreviewEnvEnabled()) {
+    return null
+  }
+
+  return parseVisualPreviewMode(request.nextUrl.searchParams.get(visualPreviewSearchParam))
+}
+
+function applyPreviewRequestCookie(request: NextRequest, requestHeaders: Headers) {
+  const currentPreview = request.cookies.get(visualPreviewCookieName)?.value
+  const requestedPreview = resolvePreviewMode(request)
+
+  if (process.env.NODE_ENV === "production" || !isVisualPreviewEnvEnabled()) {
+    if (currentPreview) {
+      const nextCookieHeader = applyRequestCookie(
+        requestHeaders.get("cookie") ?? "",
+        visualPreviewCookieName,
+        null
+      )
+      if (nextCookieHeader) {
+        requestHeaders.set("cookie", nextCookieHeader)
+      } else {
+        requestHeaders.delete("cookie")
+      }
+      return { clear: true, mode: null as string | null }
+    }
+    return { clear: false, mode: null as string | null }
+  }
+
+  if (!requestedPreview) {
+    return { clear: false, mode: null as string | null }
+  }
+
+  requestHeaders.set(
+    "cookie",
+    applyRequestCookie(
+      requestHeaders.get("cookie") ?? "",
+      visualPreviewCookieName,
+      requestedPreview
+    )
+  )
+
+  return { clear: false, mode: requestedPreview }
+}
+
+function writePreviewCookie(
+  response: NextResponse,
+  result: ReturnType<typeof applyPreviewRequestCookie>
+) {
+  if (result.clear) {
+    response.cookies.delete(visualPreviewCookieName)
+    return
+  }
+
+  if (!result.mode) {
+    return
+  }
+
+  response.cookies.set(visualPreviewCookieName, result.mode, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: previewCookieMaxAge
+  })
+}
+
 export async function proxy(request: NextRequest) {
   const results = await Promise.all([
     refreshSessionCookies(request, {
@@ -200,6 +274,8 @@ export async function proxy(request: NextRequest) {
     requestHeaders.delete("cookie")
   }
 
+  const previewCookieResult = applyPreviewRequestCookie(request, requestHeaders)
+
   const response = NextResponse.next({
     request: {
       headers: requestHeaders
@@ -209,6 +285,8 @@ export async function proxy(request: NextRequest) {
   for (const result of results) {
     writeResponseCookies(response, result)
   }
+
+  writePreviewCookie(response, previewCookieResult)
 
   return response
 }

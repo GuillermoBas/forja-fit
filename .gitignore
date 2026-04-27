@@ -20,6 +20,8 @@ node_modules
 out
 dist
 coverage
+playwright-report
+test-results
 
 # Local env files
 .env
@@ -32,6 +34,10 @@ coverage
 # Logs and temp files
 *.log
 *.tsbuildinfo
+.tmp*
+tmp-*
+tmp.*
+*.tmp
 .DS_Store
 Thumbs.db
 npm-debug.log*

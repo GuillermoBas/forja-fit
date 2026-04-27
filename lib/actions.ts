@@ -1,5 +1,6 @@
 import { getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isStaffPreview } from "@/lib/preview-mode"
 
 export type ActionState = {
   error?: string
@@ -32,6 +33,16 @@ function normalizeActionError(message?: string) {
 }
 
 export async function invokeProtectedFunction(slug: string, body: Record<string, unknown>) {
+  if (await isStaffPreview()) {
+    return {
+      ok: true,
+      preview: true,
+      saleId: slug === "create_sale" ? "preview-sale" : undefined,
+      skipped: slug === "send_push_to_client" ? true : undefined,
+      body
+    }
+  }
+
   const { accessToken, profile } = await getSessionContext()
 
   if (!profile || !accessToken) {

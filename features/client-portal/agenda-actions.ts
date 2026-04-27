@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
+import { isClientPreview } from "@/lib/preview-mode"
 
 export type PortalAgendaActionState = {
   error?: string
@@ -33,6 +34,10 @@ function normalizePortalAgendaError(message?: string) {
 
 async function invokePortalFunction(slug: string, body: Record<string, unknown>) {
   await requirePortalAccount()
+  if (await isClientPreview()) {
+    return { ok: true, preview: true, slug, body }
+  }
+
   const accessToken = await getCurrentPortalAccessToken()
 
   if (!accessToken) {

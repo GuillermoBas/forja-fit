@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation"
+import { cache } from "react"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { getPortalAuthCookies, setPortalAuthCookies } from "@/lib/auth/portal-cookies"
+import { getPreviewPortalAccount } from "@/features/client-portal/preview-data"
+import { isClientPreview } from "@/lib/preview-mode"
 import type { ClientPortalAccountSummary } from "@/types/domain"
 
 type PortalAuthUser = {
@@ -27,7 +30,19 @@ function mapPortalAccountRow(row: Record<string, unknown>): ClientPortalAccountS
   }
 }
 
-export async function getCurrentPortalAuthSession(): Promise<PortalAuthSession | null> {
+export const getCurrentPortalAuthSession = cache(async function getCurrentPortalAuthSession(): Promise<PortalAuthSession | null> {
+  if (await isClientPreview()) {
+    const account = getPreviewPortalAccount()
+    return {
+      accessToken: "visual-preview-cliente",
+      user: {
+        id: account.authUserId,
+        email: account.email,
+        name: "Guillermo Bas Portal"
+      }
+    }
+  }
+
   const { accessToken, refreshToken } = await getPortalAuthCookies()
 
   if (!accessToken && !refreshToken) {
@@ -82,13 +97,17 @@ export async function getCurrentPortalAuthSession(): Promise<PortalAuthSession |
   } catch {
     return null
   }
-}
+})
 
 export async function getCurrentPortalAuthUser(): Promise<PortalAuthUser | null> {
   return (await getCurrentPortalAuthSession())?.user ?? null
 }
 
-export async function getCurrentPortalAccount(): Promise<ClientPortalAccountSummary | null> {
+export const getCurrentPortalAccount = cache(async function getCurrentPortalAccount(): Promise<ClientPortalAccountSummary | null> {
+  if (await isClientPreview()) {
+    return getPreviewPortalAccount()
+  }
+
   const session = await getCurrentPortalAuthSession()
 
   if (!session) {
@@ -111,7 +130,7 @@ export async function getCurrentPortalAccount(): Promise<ClientPortalAccountSumm
   } catch {
     return null
   }
-}
+})
 
 export async function getCurrentPortalAccessToken() {
   return (await getCurrentPortalAuthSession())?.accessToken ?? null

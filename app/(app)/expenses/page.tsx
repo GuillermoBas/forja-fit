@@ -8,10 +8,13 @@ import { formatCurrency, formatDate, formatPaymentMethod } from "@/lib/utils"
 export default async function ExpensesPage({
   searchParams
 }: {
-  searchParams?: { edit?: string | string[] }
+  searchParams?: Promise<{ edit?: string | string[] }> | { edit?: string | string[] }
 }) {
   const expenses = await getExpenses()
-  const editId = Array.isArray(searchParams?.edit) ? searchParams?.edit[0] : searchParams?.edit
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const editId = Array.isArray(resolvedSearchParams?.edit)
+    ? resolvedSearchParams?.edit[0]
+    : resolvedSearchParams?.edit
   const selectedExpense = editId ? expenses.find((expense) => expense.id === editId) ?? null : null
   const totalMonth = expenses
     .filter((expense) => expense.spentOn.startsWith(new Date().toISOString().slice(0, 7)))

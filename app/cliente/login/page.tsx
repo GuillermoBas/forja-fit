@@ -5,8 +5,9 @@ import { getCurrentPortalAccount } from "@/lib/auth/portal-session"
 export default async function ClientPortalLoginPage({
   searchParams
 }: {
-  searchParams?: { error?: string; reset?: string }
+  searchParams?: Promise<{ error?: string; reset?: string }> | { error?: string; reset?: string }
 }) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
   const portalAccount = await getCurrentPortalAccount()
 
   if (portalAccount) {
@@ -15,8 +16,8 @@ export default async function ClientPortalLoginPage({
 
   return (
     <PortalLoginForm
-      errorMessage={searchParams?.error}
-      resetStatus={searchParams?.reset}
+      errorMessage={resolvedSearchParams?.error}
+      resetStatus={resolvedSearchParams?.reset}
     />
   )
 }

@@ -1,6 +1,8 @@
+import { Suspense } from "react"
 import { addDays, endOfMonth } from "date-fns"
+import { CalendarSkeleton } from "@/components/skeletons"
 import { AgendaCalendar } from "@/features/client-portal/agenda-calendar"
-import { getClientCalendarSessions, getPortalDashboardData } from "@/features/client-portal/data"
+import { getClientCalendarSessions, getPortalShellData } from "@/features/client-portal/data"
 import { PortalShell } from "@/features/client-portal/portal-shell"
 
 type AgendaView = "week" | "month"
@@ -39,17 +41,13 @@ function endOfWeek(date: Date) {
   return next
 }
 
-export default async function ClientPortalAgendaPage({
-  searchParams
+async function AgendaData({
+  view,
+  selectedDate
 }: {
-  searchParams?:
-    | Promise<{ view?: string | string[]; day?: string | string[] }>
-    | { view?: string | string[]; day?: string | string[] }
+  view: AgendaView
+  selectedDate: string
 }) {
-  const data = await getPortalDashboardData()
-  const resolvedSearchParams = await Promise.resolve(searchParams)
-  const view = parseView(parseParam(resolvedSearchParams?.view))
-  const selectedDate = parseParam(resolvedSearchParams?.day) ?? new Date().toISOString().slice(0, 10)
   const baseDate = parseDateKey(selectedDate)
   const rangeStart =
     view === "month"
@@ -65,17 +63,36 @@ export default async function ClientPortalAgendaPage({
   )
 
   return (
+    <AgendaCalendar
+      sessions={sessions}
+      view={view}
+      selectedDate={toDateKey(baseDate)}
+    />
+  )
+}
+
+export default async function ClientPortalAgendaPage({
+  searchParams
+}: {
+  searchParams?:
+    | Promise<{ view?: string | string[]; day?: string | string[] }>
+    | { view?: string | string[]; day?: string | string[] }
+}) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const shellData = await getPortalShellData()
+  const view = parseView(parseParam(resolvedSearchParams?.view))
+  const selectedDate = parseParam(resolvedSearchParams?.day) ?? new Date().toISOString().slice(0, 10)
+
+  return (
     <PortalShell
       title="Agenda"
       description="Consulta tus sesiones por semana o mes y cancela solo con mas de 24 horas de antelacion."
-      clientName={data.client.fullName}
+      clientName={shellData.client.fullName}
       currentPath="/cliente/agenda"
     >
-      <AgendaCalendar
-        sessions={sessions}
-        view={view}
-        selectedDate={toDateKey(baseDate)}
-      />
+      <Suspense fallback={<CalendarSkeleton />}>
+        <AgendaData view={view} selectedDate={selectedDate} />
+      </Suspense>
     </PortalShell>
   )
 }

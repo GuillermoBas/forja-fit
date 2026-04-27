@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { upsertExpenseAction } from "@/features/expenses/actions"
 import type { Expense } from "@/types/domain"
@@ -17,7 +16,7 @@ export function ExpenseForm({
 }: {
   expense?: Expense | null
 }) {
-  const [state, formAction] = useFormState(upsertExpenseAction, {})
+  const [state, formAction] = useActionState(upsertExpenseAction, {})
 
   useEffect(() => {
     if (state.error) {

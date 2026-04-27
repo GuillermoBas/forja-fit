@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation"
+import { cache } from "react"
 import { getAuthCookies, setAuthCookies } from "@/lib/auth/cookies"
+import { demoProfile } from "@/lib/demo-data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isStaffPreview } from "@/lib/preview-mode"
 import type { Profile } from "@/types/domain"
 
 type AuthUser = {
@@ -24,7 +27,18 @@ function mapProfileRow(row: Record<string, unknown>): Profile {
   }
 }
 
-export async function getCurrentAuthSession(): Promise<AuthSession | null> {
+export const getCurrentAuthSession = cache(async function getCurrentAuthSession(): Promise<AuthSession | null> {
+  if (await isStaffPreview()) {
+    return {
+      accessToken: "visual-preview-staff",
+      user: {
+        id: "visual-preview-staff",
+        email: demoProfile.email,
+        name: demoProfile.fullName
+      }
+    }
+  }
+
   const { accessToken, refreshToken } = await getAuthCookies()
 
   if (!accessToken && !refreshToken) {
@@ -97,7 +111,7 @@ export async function getCurrentAuthSession(): Promise<AuthSession | null> {
   } catch {
     return null
   }
-}
+})
 
 export async function getCurrentAuthUser(): Promise<AuthUser | null> {
   return (await getCurrentAuthSession())?.user ?? null
@@ -108,6 +122,10 @@ export async function getCurrentAccessToken() {
 }
 
 async function getProfileForSession(session: AuthSession): Promise<Profile | null> {
+  if (await isStaffPreview()) {
+    return demoProfile
+  }
+
   try {
     const client = createServerInsforgeClient({ accessToken: session.accessToken }) as any
     const profileResult = await client.database
@@ -126,7 +144,7 @@ async function getProfileForSession(session: AuthSession): Promise<Profile | nul
   }
 }
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+export const getCurrentProfile = cache(async function getCurrentProfile(): Promise<Profile | null> {
   const session = await getCurrentAuthSession()
 
   if (!session) {
@@ -134,15 +152,15 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   }
 
   return getProfileForSession(session)
-}
+})
 
-export async function getSessionContext() {
+export const getSessionContext = cache(async function getSessionContext() {
   const session = await getCurrentAuthSession()
   const user = session?.user ?? null
   const profile = session ? await getProfileForSession(session) : null
 
   return { user, profile, accessToken: session?.accessToken ?? null }
-}
+})
 
 export async function requireAuthenticatedUser() {
   const user = await getCurrentAuthUser()

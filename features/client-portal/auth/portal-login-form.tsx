@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +19,7 @@ export function PortalLoginForm({
   errorMessage?: string
   resetStatus?: string
 }) {
-  const [state, formAction] = useFormState(portalSignInAction, initialState)
+  const [state, formAction] = useActionState(portalSignInAction, initialState)
 
   useEffect(() => {
     if (errorMessage) {

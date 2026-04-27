@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,8 +16,8 @@ import type { PortalActionState } from "@/features/client-portal/auth/server"
 const initialState: PortalActionState = {}
 
 export function PortalRegisterForm() {
-  const [registerState, registerAction] = useFormState(portalSignUpAction, initialState)
-  const [verifyState, verifyAction] = useFormState(portalVerifyEmailAction, initialState)
+  const [registerState, registerAction] = useActionState(portalSignUpAction, initialState)
+  const [verifyState, verifyAction] = useActionState(portalVerifyEmailAction, initialState)
 
   const verificationEmail =
     (verifyState.email as string | undefined) ??

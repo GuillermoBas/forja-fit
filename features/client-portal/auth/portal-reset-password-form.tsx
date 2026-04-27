@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
@@ -17,9 +16,9 @@ import type { PortalActionState } from "@/features/client-portal/auth/server"
 const initialState: PortalActionState = {}
 
 export function PortalResetPasswordForm() {
-  const [sendState, sendAction] = useFormState(portalSendResetPasswordAction, initialState)
-  const [codeState, codeAction] = useFormState(portalExchangeResetCodeAction, initialState)
-  const [resetState, resetAction] = useFormState(portalResetPasswordAction, initialState)
+  const [sendState, sendAction] = useActionState(portalSendResetPasswordAction, initialState)
+  const [codeState, codeAction] = useActionState(portalExchangeResetCodeAction, initialState)
+  const [resetState, resetAction] = useActionState(portalResetPasswordAction, initialState)
 
   const email =
     (resetState.email as string | undefined) ??

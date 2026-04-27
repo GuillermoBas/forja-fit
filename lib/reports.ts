@@ -3,6 +3,7 @@ import { isInsforgeConfigured } from "@/lib/config"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { demoExpenses, demoPasses, demoProducts, demoSales } from "@/lib/demo-data"
 import { formatPaymentMethod } from "@/lib/utils"
+import { isStaffPreview } from "@/lib/preview-mode"
 
 type DbRow = Record<string, unknown>
 
@@ -25,6 +26,10 @@ type ClientEmailQualityReport = {
 }
 
 async function createAuthedClient() {
+  if (await isStaffPreview()) {
+    return null
+  }
+
   if (!isInsforgeConfigured()) {
     return null
   }

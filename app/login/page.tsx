@@ -5,13 +5,14 @@ import { getCurrentAuthUser } from "@/lib/auth/session"
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams?: { insforge_status?: string; error?: string }
+  searchParams?: Promise<{ insforge_status?: string; error?: string }> | { insforge_status?: string; error?: string }
 }) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
   const currentUser = await getCurrentAuthUser()
 
   if (currentUser) {
     redirect("/dashboard")
   }
 
-  return <LoginForm verifyStatus={searchParams?.insforge_status} errorMessage={searchParams?.error} />
+  return <LoginForm verifyStatus={resolvedSearchParams?.insforge_status} errorMessage={resolvedSearchParams?.error} />
 }

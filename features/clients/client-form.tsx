@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Client, ClientPortalSupportState } from "@/types/domain"
@@ -22,8 +21,8 @@ export function ClientForm({
   canDelete?: boolean
   portalSupport?: ClientPortalSupportState | null
 }) {
-  const [state, formAction] = useFormState(upsertClientAction, {})
-  const [deleteState, deleteFormAction] = useFormState(deleteClientAction, {})
+  const [state, formAction] = useActionState(upsertClientAction, {})
+  const [deleteState, deleteFormAction] = useActionState(deleteClientAction, {})
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const router = useRouter()
 

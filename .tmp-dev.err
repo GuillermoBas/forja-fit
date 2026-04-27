@@ -1,8 +1,0 @@
-⨯ Another next dev server is already running.
-
-- Local:        http://localhost:3000
-- PID:          23672
-- Dir:          C:\Users\guill\OneDrive\CodeDev\ForjaFit
-- Log:          .next\dev\logs\next-development.log
-
-Run taskkill /PID 23672 /F to stop it.

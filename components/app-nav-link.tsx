@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Bell,
@@ -14,6 +13,7 @@ import {
   Users,
   Wallet
 } from "lucide-react"
+import { getPathnameFromHref, InstantLink, useInstantNavigation } from "@/components/instant-navigation"
 import { cn } from "@/lib/utils"
 
 const iconByHref = {
@@ -39,11 +39,13 @@ export function AppNavLink({
   icon?: LucideIcon
 }) {
   const pathname = usePathname()
-  const isActive = pathname === href || pathname.startsWith(`${href}/`)
+  const { pendingHref } = useInstantNavigation()
+  const optimisticPathname = getPathnameFromHref(pendingHref) ?? pathname
+  const isActive = optimisticPathname === href || optimisticPathname.startsWith(`${href}/`)
   const Icon = icon ?? iconByHref[href as keyof typeof iconByHref] ?? LayoutDashboard
 
   return (
-    <Link
+    <InstantLink
       href={href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
@@ -67,6 +69,6 @@ export function AppNavLink({
       {isActive ? (
         <span className="h-1.5 w-1.5 rounded-full bg-primary lg:ml-auto" />
       ) : null}
-    </Link>
+    </InstantLink>
   )
 }

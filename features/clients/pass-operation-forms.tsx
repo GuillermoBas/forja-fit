@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Client, Pass, PassType } from "@/types/domain"
@@ -83,7 +82,7 @@ export function CreatePassForm({
   clients: Client[]
   passTypes: PassType[]
 }) {
-  const [state, formAction] = useFormState(createPassAction, {})
+  const [state, formAction] = useActionState(createPassAction, {})
   const [selectedPassTypeId, setSelectedPassTypeId] = useState(passTypes[0]?.id ?? "")
   const [priceGross, setPriceGross] = useState(
     passTypes[0] ? String(Math.round(passTypes[0].price)) : ""
@@ -194,7 +193,7 @@ export function ConsumeSessionForm({
   clientId: string
   passes: Pass[]
 }) {
-  const [state, formAction] = useFormState(consumeSessionAction, {})
+  const [state, formAction] = useActionState(consumeSessionAction, {})
   const sessionPasses = passes.filter((item) => item.passKind === "session")
 
   useClientActionFeedback(state?.error, state?.success, "Sesión registrada correctamente.")
@@ -245,7 +244,7 @@ export function PausePassForm({
   clientId: string
   passes: Pass[]
 }) {
-  const [state, formAction] = useFormState(pausePassAction, {})
+  const [state, formAction] = useActionState(pausePassAction, {})
   useClientActionFeedback(state?.error, state?.success, "Bono pausado correctamente.")
 
   return (
@@ -294,7 +293,7 @@ export function RenewPassForm({
   passes: Pass[]
   passTypes: PassType[]
 }) {
-  const [state, formAction] = useFormState(renewPassAction, {})
+  const [state, formAction] = useActionState(renewPassAction, {})
   const [selectedPassId, setSelectedPassId] = useState(passes[0]?.id ?? "")
   const selectedPass = useMemo(
     () => passes.find((item) => item.id === selectedPassId) ?? passes[0] ?? null,

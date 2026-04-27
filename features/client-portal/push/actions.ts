@@ -1,6 +1,7 @@
 "use server"
 
 import { getCurrentPortalAccessToken } from "@/lib/auth/portal-session"
+import { isClientPreview } from "@/lib/preview-mode"
 
 type ActionResult<T = unknown> = {
   ok: boolean
@@ -12,6 +13,10 @@ async function invokePortalPushFunction<T>(
   slug: string,
   body: Record<string, unknown>
 ): Promise<ActionResult<T>> {
+  if (await isClientPreview()) {
+    return { ok: true, data: { preview: true } as T }
+  }
+
   const accessToken = await getCurrentPortalAccessToken()
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
 

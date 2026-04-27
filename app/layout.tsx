@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Space_Grotesk } from "next/font/google"
 import { Toaster } from "sonner"
+import { InstantNavigationProvider } from "@/components/instant-navigation"
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import "./globals.css"
 
@@ -51,11 +52,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" data-scroll-behavior="smooth">
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans text-text-primary`}>
-        <ServiceWorkerRegister />
-        {children}
-        <Toaster richColors theme="light" position="top-right" />
+        <InstantNavigationProvider>
+          <ServiceWorkerRegister />
+          {children}
+          <Toaster richColors theme="light" position="top-right" />
+        </InstantNavigationProvider>
       </body>
     </html>
   )

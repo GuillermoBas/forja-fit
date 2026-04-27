@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 import { updateProfileCalendarColorAction } from "@/features/settings/actions"
@@ -46,7 +45,7 @@ function FormToast({ error, success }: { error?: string; success?: string }) {
 }
 
 export function ProfileColorForm({ profile }: { profile: Profile }) {
-  const [state, formAction] = useFormState(updateProfileCalendarColorAction, {})
+  const [state, formAction] = useActionState(updateProfileCalendarColorAction, {})
   const [selectedColor, setSelectedColor] = useState(profile.calendarColor)
 
   return (

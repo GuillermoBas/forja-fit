@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect, useMemo, useState } from "react"
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, ListFilter, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -209,8 +208,8 @@ function AgendaModal({
   canManageSelectedTrainer: boolean
   onClose: () => void
 }) {
-  const [formState, formAction] = useFormState(upsertCalendarSessionAction, {})
-  const [deleteState, deleteAction] = useFormState(cancelCalendarSessionAction, {})
+  const [formState, formAction] = useActionState(upsertCalendarSessionAction, {})
+  const [deleteState, deleteAction] = useActionState(cancelCalendarSessionAction, {})
   const editingSession = state?.mode === "edit" ? state.session : null
   const isReadOnly = editingSession?.status === "completed"
   const canManage = Boolean(!isReadOnly && (editingSession

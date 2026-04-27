@@ -2,8 +2,8 @@
 
 import * as Dialog from "@radix-ui/react-dialog"
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useFormState, useFormStatus } from "react-dom"
+import { useActionState, useEffect, useState } from "react"
+import { useFormStatus } from "react-dom"
 import { useRouter } from "next/navigation"
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, X } from "lucide-react"
 import { toast } from "sonner"
@@ -265,7 +265,7 @@ function SessionDetailDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [state, formAction] = useFormState(cancelClientCalendarSessionAction, initialActionState)
+  const [state, formAction] = useActionState(cancelClientCalendarSessionAction, initialActionState)
   const router = useRouter()
 
   useEffect(() => {

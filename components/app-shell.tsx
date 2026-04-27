@@ -1,9 +1,10 @@
-import Link from "next/link"
+import { Suspense } from "react"
 import { Bell } from "lucide-react"
 import { appConfig } from "@/lib/config"
 import { getNotifications } from "@/lib/data"
 import { signOutAction } from "@/features/auth/actions"
 import { AppNavLink } from "@/components/app-nav-link"
+import { InstantLink } from "@/components/instant-navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { Profile } from "@/types/domain"
@@ -21,15 +22,35 @@ const navItems = [
   { href: "/settings", label: "Ajustes" }
 ]
 
-export async function AppShell({
+async function NotificationShortcut() {
+  const notifications = await getNotifications()
+
+  return (
+    <InstantLink href="/notifications">
+      <Button variant="outline" className="h-10 w-full gap-2 rounded-2xl px-4 sm:w-auto">
+        <Bell className="h-4 w-4" />
+        {notifications.length > 0 ? `${notifications.length} avisos` : "Sin avisos"}
+      </Button>
+    </InstantLink>
+  )
+}
+
+function NotificationShortcutFallback() {
+  return (
+    <Button variant="outline" className="h-10 w-full gap-2 rounded-2xl px-4 sm:w-auto">
+      <Bell className="h-4 w-4" />
+      Avisos
+    </Button>
+  )
+}
+
+export function AppShell({
   children,
   profile
 }: {
   children: React.ReactNode
   profile: Profile
 }) {
-  const notifications = await getNotifications()
-
   return (
     <div className="min-h-screen bg-transparent">
       <div className="mobile-page-shell mx-auto grid min-h-screen max-w-[1600px] gap-5 lg:grid-cols-[248px_1fr] lg:px-6 lg:py-6">
@@ -66,12 +87,9 @@ export async function AppShell({
               </div>
             </div>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-              <Link href="/notifications">
-                <Button variant="outline" className="h-10 w-full gap-2 rounded-2xl px-4 sm:w-auto">
-                  <Bell className="h-4 w-4" />
-                  {notifications.length > 0 ? `${notifications.length} avisos` : "Sin avisos"}
-                </Button>
-              </Link>
+              <Suspense fallback={<NotificationShortcutFallback />}>
+                <NotificationShortcut />
+              </Suspense>
               <div className="toolbar-shell min-w-0 text-sm sm:min-w-[15rem]">
                 <p className="font-semibold text-text-primary">{profile.fullName}</p>
                 <p className="text-text-secondary">{profile.email}</p>

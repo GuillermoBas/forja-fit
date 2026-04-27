@@ -11,8 +11,9 @@ import { formatDate, formatPassStatus } from "@/lib/utils"
 export default async function PassesPage({
   searchParams
 }: {
-  searchParams?: { typeId?: string }
+  searchParams?: Promise<{ typeId?: string }> | { typeId?: string }
 }) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
   const [passes, passTypes, profile] = await Promise.all([
     getPasses(),
     getPassTypes({ includeInactive: true }),
@@ -33,7 +34,7 @@ export default async function PassesPage({
       </div>
       {canManage ? (
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <PassTypeForm passTypes={passTypes} selectedPassTypeId={searchParams?.typeId} />
+          <PassTypeForm passTypes={passTypes} selectedPassTypeId={resolvedSearchParams?.typeId} />
           <div className="rounded-3xl border bg-card p-6">
             <h2 className="text-lg font-semibold">Tipos de bono existentes</h2>
             <p className="mt-1 text-sm text-muted-foreground">

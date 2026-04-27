@@ -19,7 +19,7 @@ export function WeeklyNutritionPlansList({
 }) {
   if (!plans.length) {
     return (
-      <Card className="panel-hover">
+      <Card id="menu-semanal" className="panel-hover scroll-mt-4">
         <CardHeader>
           <CardTitle>Menús semanales guardados</CardTitle>
         </CardHeader>
@@ -33,7 +33,7 @@ export function WeeklyNutritionPlansList({
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div id="menu-semanal" className="scroll-mt-4 space-y-3 sm:space-y-4">
       {plans.map((plan) => (
         <Card key={plan.id} className="panel-hover">
           <CardHeader className="space-y-2 p-4 sm:p-5 lg:p-6">

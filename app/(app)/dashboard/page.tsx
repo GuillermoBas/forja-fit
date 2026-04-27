@@ -1,8 +1,10 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { AlertTriangle, ArrowUpRight, BellRing, Box, CalendarClock, Wallet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
 import { InstallForjaFit } from "@/components/pwa/install-forjafit"
+import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
 import { getDashboardData } from "@/lib/data"
 import { cn } from "@/lib/utils"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -16,18 +18,23 @@ const shortcuts = [
 
 const kpiIcons = [CalendarClock, AlertTriangle, ArrowUpRight, Box, Wallet, BellRing, Wallet]
 
-export default async function DashboardPage() {
+function DashboardDataFallback() {
+  return (
+    <div className="space-y-6">
+      <KpiGridSkeleton count={6} />
+      <section className="grid gap-6 xl:grid-cols-2">
+        <CardListSkeleton items={3} />
+        <CardListSkeleton items={3} />
+      </section>
+    </div>
+  )
+}
+
+async function DashboardData() {
   const { kpis, notifications } = await getDashboardData()
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Panel"
-        description="Resumen diario del negocio, los bonos y las alertas pendientes."
-      />
-
-      <InstallForjaFit />
-
+    <>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {kpis.map((item, index) => {
           const Icon = kpiIcons[index % kpiIcons.length]
@@ -141,6 +148,23 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+    </>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Panel"
+        description="Resumen diario del negocio, los bonos y las alertas pendientes."
+      />
+
+      <InstallForjaFit />
+
+      <Suspense fallback={<DashboardDataFallback />}>
+        <DashboardData />
+      </Suspense>
     </div>
   )
 }

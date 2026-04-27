@@ -1,27 +1,37 @@
+import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InstallForjaFit } from "@/components/pwa/install-forjafit"
+import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
 import { PortalShell } from "@/features/client-portal/portal-shell"
 import { ActivityChart } from "@/features/client-portal/activity-chart"
 import { ActivityHistoryList } from "@/features/client-portal/activity-history-list"
 import { ActivityRangeLinks } from "@/features/client-portal/activity-range-links"
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
-import { getPortalDashboardData } from "@/features/client-portal/data"
+import { getPortalDashboardData, getPortalShellData } from "@/features/client-portal/data"
 
-export default async function ClientPortalDashboardPage({
-  searchParams
-}: {
-  searchParams?: { range?: string }
-}) {
-  const data = await getPortalDashboardData(searchParams?.range)
+function parseParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function DashboardDataFallback() {
+  return (
+    <div className="space-y-4">
+      <KpiGridSkeleton count={6} />
+      <section className="grid gap-4 lg:gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <CardListSkeleton items={4} />
+        <CardListSkeleton items={4} />
+      </section>
+      <CardListSkeleton items={3} />
+    </div>
+  )
+}
+
+async function DashboardData({ rangeParam }: { rangeParam?: string }) {
+  const data = await getPortalDashboardData(rangeParam)
   const monthlyConsistencyPercent = Math.round(data.kpis.monthlyConsistency.ratio * 100)
 
   return (
-    <PortalShell
-      title="Actividad"
-      description="Resumen de entrenamientos, regularidad y bonos vigentes."
-      clientName={data.client.fullName}
-      currentPath="/cliente/dashboard"
-    >
+    <>
       <InstallForjaFit />
 
       <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -88,6 +98,28 @@ export default async function ClientPortalDashboardPage({
         items={data.history.slice(0, 6)}
         emptyMessage="No hay movimientos recientes en el rango seleccionado."
       />
+    </>
+  )
+}
+
+export default async function ClientPortalDashboardPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ range?: string | string[] }> | { range?: string | string[] }
+}) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const shellData = await getPortalShellData()
+
+  return (
+    <PortalShell
+      title="Actividad"
+      description="Resumen de entrenamientos, regularidad y bonos vigentes."
+      clientName={shellData.client.fullName}
+      currentPath="/cliente/dashboard"
+    >
+      <Suspense fallback={<DashboardDataFallback />}>
+        <DashboardData rangeParam={parseParam(resolvedSearchParams?.range)} />
+      </Suspense>
     </PortalShell>
   )
 }

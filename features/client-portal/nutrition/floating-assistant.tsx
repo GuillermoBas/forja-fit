@@ -41,16 +41,21 @@ export function NutritionFloatingAssistant({
                 <Dialog.Title className="mt-1 truncate font-heading text-lg font-bold text-text-primary sm:text-xl">
                   Asistente Nutricional
                 </Dialog.Title>
+                <Dialog.Description className="sr-only">
+                  Chat modal a pantalla completa para consultar el asistente nutricional del portal de cliente.
+                </Dialog.Description>
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-10 rounded-2xl px-4 text-[13px] font-semibold shadow-[0_6px_18px_rgba(15,23,42,0.06)] sm:h-11 sm:px-5 sm:text-sm"
-                >
-                  <Link href="/cliente/nutricion">Ver planes guardados</Link>
-                </Button>
+                <Dialog.Close asChild>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 rounded-2xl px-4 text-[13px] font-semibold shadow-[0_6px_18px_rgba(15,23,42,0.06)] sm:h-11 sm:px-5 sm:text-sm"
+                  >
+                    <Link href="/cliente/nutricion#menu-semanal">Ver planes guardados</Link>
+                  </Button>
+                </Dialog.Close>
                 <Dialog.Close asChild>
                   <Button
                     type="button"

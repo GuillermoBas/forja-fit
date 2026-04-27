@@ -1,6 +1,8 @@
 import { startOfWeek } from "date-fns"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { getCurrentPortalAccessToken, getCurrentPortalAccount } from "@/lib/auth/portal-session"
+import { getPreviewChatResponse } from "@/features/client-portal/preview-data"
+import { isClientPreview } from "@/lib/preview-mode"
 import {
   appendPortalNutritionMessage,
   buildNutritionContextMessages,
@@ -673,6 +675,46 @@ async function maybeRefreshRollingSummary(
 }
 
 export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}))
+  const userMessage = typeof body?.message === "string" ? body.message.trim() : ""
+
+  if (await isClientPreview()) {
+    if (!userMessage) {
+      return Response.json(
+        { message: "Escribe un mensaje para hablar con nutricion." },
+        { status: 400 }
+      )
+    }
+
+    const encoder = new TextEncoder()
+    const previewResponse = getPreviewChatResponse(userMessage)
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({
+            type: "chunk",
+            content: previewResponse.assistantMessage.content
+          })}\n\n`)
+        )
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({
+            type: "complete",
+            ...previewResponse
+          })}\n\n`)
+        )
+        controller.close()
+      }
+    })
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive"
+      }
+    })
+  }
+
   const portalAccount = await getCurrentPortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
 
@@ -682,9 +724,6 @@ export async function POST(request: Request) {
       { status: 401 }
     )
   }
-
-  const body = await request.json().catch(() => ({}))
-  const userMessage = typeof body?.message === "string" ? body.message.trim() : ""
 
   if (!userMessage) {
     return Response.json(

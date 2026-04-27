@@ -1,22 +1,21 @@
-import Link from "next/link"
-import { Activity, CalendarDays, LogOut, Settings, Sparkles } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
-import { cn } from "@/lib/utils"
 import { portalSignOutAction } from "@/features/client-portal/auth/actions"
+import {
+  PortalDesktopNavLink,
+  PortalMobileNavLink,
+  type PortalNavIcon
+} from "@/features/client-portal/portal-nav-link"
 
-const navItems = [
-  { href: "/cliente/dashboard", label: "Actividad", icon: Activity, matches: ["/cliente/dashboard", "/cliente/actividad"] },
-  { href: "/cliente/agenda", label: "Agenda", icon: CalendarDays, matches: ["/cliente/agenda"] },
-  { href: "/cliente/nutricion", label: "Nutrición", icon: Sparkles, matches: ["/cliente/nutricion"] },
-  { href: "/cliente/ajustes", label: "Ajustes", icon: Settings, matches: ["/cliente/ajustes"] }
+const navItems: Array<{ href: string; label: string; icon: PortalNavIcon; matches: string[] }> = [
+  { href: "/cliente/dashboard", label: "Actividad", icon: "activity", matches: ["/cliente/dashboard", "/cliente/actividad"] },
+  { href: "/cliente/agenda", label: "Agenda", icon: "calendar", matches: ["/cliente/agenda"] },
+  { href: "/cliente/nutricion", label: "Nutrición", icon: "nutrition", matches: ["/cliente/nutricion"] },
+  { href: "/cliente/ajustes", label: "Ajustes", icon: "settings", matches: ["/cliente/ajustes"] }
 ]
-
-function isCurrentNavItem(currentPath: string, matches: string[]) {
-  return matches.some((path) => currentPath === path || currentPath.startsWith(`${path}/`))
-}
 
 function DesktopClientSidebar({
   clientName,
@@ -44,36 +43,16 @@ function DesktopClientSidebar({
         aria-label="Navegación del portal de cliente"
         className="space-y-2"
       >
-        {navItems.map((item) => {
-          const isActive = isCurrentNavItem(currentPath, item.matches)
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "group flex min-w-0 items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "border-primary/18 bg-primary-soft text-primary-hover shadow-[0_12px_24px_rgba(255,106,0,0.08)]"
-                  : "border-transparent text-text-secondary hover:border-border/80 hover:bg-surface-alt hover:text-text-primary"
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-200",
-                  isActive
-                    ? "border-primary/18 bg-surface text-primary-hover shadow-[0_6px_16px_rgba(255,106,0,0.08)]"
-                    : "border-border/80 bg-surface text-text-muted group-hover:border-primary/15 group-hover:text-primary-hover"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 truncate">{item.label}</span>
-            </Link>
-          )
-        })}
+        {navItems.map((item) => (
+          <PortalDesktopNavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            matches={item.matches}
+            currentPath={currentPath}
+          />
+        ))}
       </nav>
 
       <form action={portalSignOutAction} className="mt-auto pt-5">
@@ -118,25 +97,16 @@ function MobileClientBottomNav({ currentPath }: { currentPath: string }) {
   return (
     <nav aria-label="Navegación del portal de cliente" className="portal-mobile-bottom-nav">
       <div className="portal-mobile-bottom-nav-grid">
-        {navItems.map((item) => {
-          const isActive = isCurrentNavItem(currentPath, item.matches)
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "portal-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                isActive ? "portal-mobile-tab-active" : "hover:bg-surface-alt/75 hover:text-text-primary"
-              )}
-            >
-              <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary-hover" : "text-text-muted")} />
-              <span className="w-full truncate text-center leading-none">{item.label}</span>
-            </Link>
-          )
-        })}
+        {navItems.map((item) => (
+          <PortalMobileNavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            matches={item.matches}
+            currentPath={currentPath}
+          />
+        ))}
       </div>
     </nav>
   )

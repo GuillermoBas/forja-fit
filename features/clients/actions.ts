@@ -5,6 +5,7 @@ import { z } from "zod"
 import { getCurrentAccessToken } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
+import { isStaffPreview } from "@/lib/preview-mode"
 
 export type ClientActionState = {
   error?: string
@@ -134,6 +135,10 @@ export async function deleteClientAction(
   }
 
   try {
+    if (await isStaffPreview()) {
+      return { success: true, redirectTo: "/clients" }
+    }
+
     const accessToken = await getCurrentAccessToken()
     const client = accessToken ? (createServerInsforgeClient({ accessToken }) as any) : null
 

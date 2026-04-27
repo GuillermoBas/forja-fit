@@ -468,6 +468,9 @@ Expected commands:
 - lint: `npm run lint`
 - typecheck: `npm run typecheck` if available
 - test: `npm run test` if available
+- e2e visual preview: `npm run test:e2e`
+- e2e visual preview UI: `npm run test:e2e:ui`
+- e2e visual preview headed: `npm run test:e2e:headed`
 - generate PWA icons: `npm run generate:pwa-icons`
 - deploy: `npm run deploy`
 
@@ -494,6 +497,7 @@ Expected variables:
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT`
+- `FORJAFIT_VISUAL_PREVIEW=0`
 
 MCP assumptions:
 - InsForge project link may exist in `.insforge/project.json`
@@ -501,6 +505,12 @@ MCP assumptions:
 - If Schedules are not available in the workspace, the daily expiry scan must remain executable via a protected manual path
 
 Only add more when needed. Document every new variable in both `AGENTS.md` and `.env.example`.
+
+Local visual preview:
+- set `FORJAFIT_VISUAL_PREVIEW=1` only in local/test environments
+- start staff preview with `/dashboard?preview=staff`
+- start client preview with `/cliente/dashboard?preview=cliente`
+- never rely on preview mode for permission, mutation, accounting or production validation
 
 ---
 

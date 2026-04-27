@@ -1,19 +1,15 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/page-header"
 import { SearchTable } from "@/components/search-table"
+import { TableSkeleton } from "@/components/skeletons"
 import { getClients, getPasses } from "@/lib/data"
 
 type ClientFilter = "all" | "expiring" | "no_sessions" | "expired"
 
-export default async function ClientsPage({
-  searchParams
-}: {
-  searchParams?: { filter?: ClientFilter }
-}) {
-  const clients = await getClients()
-  const passes = await getPasses()
-  const filter = searchParams?.filter ?? "all"
+async function ClientsTable({ filter }: { filter: ClientFilter }) {
+  const [clients, passes] = await Promise.all([getClients(), getPasses()])
   const today = new Date().toISOString().slice(0, 10)
   const plus7 = new Date()
   plus7.setDate(plus7.getDate() + 7)
@@ -34,9 +30,46 @@ export default async function ClientsPage({
     return true
   })
 
+  return (
+    <SearchTable
+      rows={filteredClients.map((row) => ({
+        id: row.id,
+        searchText: `${row.fullName} ${row.phone ?? ""} ${row.email ?? ""}`,
+        cells: {
+          name: {
+            text: row.fullName,
+            href: `/clients/${row.id}`,
+            subtext: row.email ?? "Sin email"
+          },
+          phone: {
+            text: row.phone ?? "Sin telefono"
+          },
+          status: {
+            text: row.isActive ? "Activo" : "Inactivo",
+            badgeVariant: row.isActive ? "success" : "warning"
+          }
+        }
+      }))}
+      columns={[
+        { key: "name", label: "Cliente" },
+        { key: "phone", label: "Telefono" },
+        { key: "status", label: "Estado" }
+      ]}
+      searchPlaceholder="Buscar por nombre, telefono o email"
+    />
+  )
+}
+
+export default async function ClientsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ filter?: ClientFilter }> | { filter?: ClientFilter }
+}) {
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const filter = resolvedSearchParams?.filter ?? "all"
   const filterLinks: { key: ClientFilter; label: string }[] = [
     { key: "all", label: "Todos" },
-    { key: "expiring", label: "Expira <=7 días" },
+    { key: "expiring", label: "Expira <=7 dias" },
     { key: "no_sessions", label: "Sin sesiones" },
     { key: "expired", label: "Caducado" }
   ]
@@ -45,7 +78,7 @@ export default async function ClientsPage({
     <div className="space-y-6">
       <PageHeader
         title="Clientes"
-        description="Busca por nombre, teléfono o email y mantén la ficha operativa al día."
+        description="Busca por nombre, telefono o email y manten la ficha operativa al dia."
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -61,32 +94,9 @@ export default async function ClientsPage({
         </Link>
       </div>
 
-      <SearchTable
-        rows={filteredClients.map((row) => ({
-          id: row.id,
-          searchText: `${row.fullName} ${row.phone ?? ""} ${row.email ?? ""}`,
-          cells: {
-            name: {
-              text: row.fullName,
-              href: `/clients/${row.id}`,
-              subtext: row.email ?? "Sin email"
-            },
-            phone: {
-              text: row.phone ?? "Sin teléfono"
-            },
-            status: {
-              text: row.isActive ? "Activo" : "Inactivo",
-              badgeVariant: row.isActive ? "success" : "warning"
-            }
-          }
-        }))}
-        columns={[
-          { key: "name", label: "Cliente" },
-          { key: "phone", label: "Teléfono" },
-          { key: "status", label: "Estado" }
-        ]}
-        searchPlaceholder="Buscar por nombre, teléfono o email"
-      />
+      <Suspense fallback={<TableSkeleton rows={7} columns={3} />}>
+        <ClientsTable filter={filter} />
+      </Suspense>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { ProfileColorForm } from "@/features/settings/profile-color-form"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
 import { appConfig } from "@/lib/config"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isStaffPreview } from "@/lib/preview-mode"
 
 type ManualPushClientRow = {
   id: string
@@ -14,6 +15,15 @@ type ManualPushClientRow = {
 }
 
 async function getManualPushClients(): Promise<ManualPushClientRow[]> {
+  if (await isStaffPreview()) {
+    return [
+      {
+        id: "preview-client-guillermo",
+        label: "Guillermo Bas Portal - 1 dispositivo activo"
+      }
+    ]
+  }
+
   const accessToken = await getCurrentAccessToken()
 
   if (!accessToken) {

@@ -1,6 +1,8 @@
 import { format, subDays } from "date-fns"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isClientPreview } from "@/lib/preview-mode"
+import { getPreviewPortalNutritionData } from "@/features/client-portal/preview-data"
 import type { Client } from "@/types/domain"
 import { nutritionAssistantConfig } from "@/features/client-portal/nutrition/config"
 
@@ -442,6 +444,10 @@ export async function loadPortalNutritionConversation(
 }
 
 export async function getPortalNutritionData(): Promise<PortalNutritionData> {
+  if (await isClientPreview()) {
+    return getPreviewPortalNutritionData()
+  }
+
   const portalAccount = await requirePortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
 

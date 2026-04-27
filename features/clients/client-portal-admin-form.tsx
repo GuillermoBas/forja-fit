@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,8 +18,8 @@ export function ClientPortalAdminForm({
   clientId: string
   portalStatus?: "claimed" | "disabled" | null
 }) {
-  const [statusState, statusFormAction] = useFormState(setClientPortalAccountStatusAction, initialState)
-  const [unlinkState, unlinkFormAction] = useFormState(unlinkClientPortalAccountAction, initialState)
+  const [statusState, statusFormAction] = useActionState(setClientPortalAccountStatusAction, initialState)
+  const [unlinkState, unlinkFormAction] = useActionState(unlinkClientPortalAccountAction, initialState)
   const hasPortalAccount = Boolean(portalStatus)
 
   useEffect(() => {

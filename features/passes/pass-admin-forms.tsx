@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Client, Pass, PassType } from "@/types/domain"
@@ -87,7 +86,7 @@ export function PassTypeForm({
     [passTypes, selectedPassTypeId]
   )
   const [kind, setKind] = useState<PassType["kind"]>(selectedPassType?.kind ?? "session")
-  const [state, formAction] = useFormState(upsertPassTypeAction, {})
+  const [state, formAction] = useActionState(upsertPassTypeAction, {})
 
   useEffect(() => {
     setKind(selectedPassType?.kind ?? "session")
@@ -178,8 +177,8 @@ export function PassEditorForm({
   passTypes: PassType[]
   clients: Client[]
 }) {
-  const [state, formAction] = useFormState(updatePassAction, {})
-  const [deleteState, deleteFormAction] = useFormState(deletePassAction, {})
+  const [state, formAction] = useActionState(updatePassAction, {})
+  const [deleteState, deleteFormAction] = useActionState(deletePassAction, {})
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedPassTypeId, setSelectedPassTypeId] = useState(pass.passTypeId)
   const selectedPassType = useMemo(

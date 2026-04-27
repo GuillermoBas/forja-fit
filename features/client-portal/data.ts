@@ -13,8 +13,14 @@ import {
   subDays,
   subMonths
 } from "date-fns"
+import { cache } from "react"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isClientPreview } from "@/lib/preview-mode"
+import {
+  getPreviewClientCalendarSessions,
+  getPreviewPortalDashboardData
+} from "@/features/client-portal/preview-data"
 import type { CalendarStatus, Client, Pass } from "@/types/domain"
 
 type DbRow = Record<string, unknown>
@@ -65,6 +71,10 @@ export type PortalDashboardData = {
   chart: PortalChartPoint[]
   history: PortalHistoricalItem[]
   activePasses: PortalPassSummary[]
+}
+
+export type PortalShellData = {
+  client: Client
 }
 
 export type ClientCalendarSession = {
@@ -352,7 +362,40 @@ function getClientCalendarCancellationState(status: CalendarStatus, startsAt: st
   }
 }
 
-export async function getPortalDashboardData(rangeParam?: string): Promise<PortalDashboardData> {
+export const getPortalShellData = cache(async function getPortalShellData(): Promise<PortalShellData> {
+  if (await isClientPreview()) {
+    const preview = getPreviewPortalDashboardData()
+    return { client: preview.client }
+  }
+
+  const portalAccount = await requirePortalAccount()
+  const accessToken = await getCurrentPortalAccessToken()
+
+  if (!accessToken) {
+    throw new Error("No se ha podido recuperar la sesion del portal.")
+  }
+
+  const client = createServerInsforgeClient({ accessToken }) as any
+  const clientResult = await client.database
+    .from("clients")
+    .select("*")
+    .eq("id", portalAccount.clientId)
+    .maybeSingle()
+
+  if (clientResult.error || !clientResult.data) {
+    throw new Error("No se pudieron cargar los datos del portal.")
+  }
+
+  return {
+    client: mapPortalClient(clientResult.data as DbRow)
+  }
+})
+
+export const getPortalDashboardData = cache(async function getPortalDashboardData(rangeParam?: string): Promise<PortalDashboardData> {
+  if (await isClientPreview()) {
+    return getPreviewPortalDashboardData(rangeParam)
+  }
+
   const portalAccount = await requirePortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
 
@@ -541,12 +584,18 @@ export async function getPortalDashboardData(rangeParam?: string): Promise<Porta
     history: buildHistory(sessions, pauses, renewals, rangeDays, today),
     activePasses
   }
-}
+})
 
-export async function getClientCalendarSessions(
+export const getClientCalendarSessions = cache(async function getClientCalendarSessions(
   rangeStart: string,
   rangeEnd: string
 ): Promise<ClientCalendarSession[]> {
+  if (await isClientPreview()) {
+    return getPreviewClientCalendarSessions().filter((session) => (
+      session.startsAt >= rangeStart && session.startsAt <= rangeEnd
+    ))
+  }
+
   const portalAccount = await requirePortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
 
@@ -612,4 +661,4 @@ export async function getClientCalendarSessions(
       cancellationReason: cancellationState.cancellationReason
     } satisfies ClientCalendarSession
   })
-}
+})

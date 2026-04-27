@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState, useFormStatus } from "react-dom"
+import { useActionState, useEffect } from "react"
+import { useFormStatus } from "react-dom"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -54,7 +54,7 @@ function AdvancedActionForm({
   pendingLabel: string
   action: (prevState: PortalSettingsState) => Promise<PortalSettingsState>
 }) {
-  const [state, formAction] = useFormState(action, initialState)
+  const [state, formAction] = useActionState(action, initialState)
 
   useEffect(() => {
     if (state.error) {
@@ -90,7 +90,7 @@ function AdvancedActionForm({
 }
 
 export function PortalSettingsForm({ client }: { client: Client }) {
-  const [state, formAction] = useFormState(updatePortalPhoneAction, initialState)
+  const [state, formAction] = useActionState(updatePortalPhoneAction, initialState)
 
   useEffect(() => {
     if (state.error) {

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function PortalAuthShell({
@@ -19,6 +20,13 @@ export function PortalAuthShell({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
       <Card className="relative w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border-border/90 bg-card/98 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:rounded-[1.75rem]">
         <CardHeader className="space-y-5 px-5 pb-3 pt-6 sm:space-y-6 sm:px-6 sm:pb-4">
+          <Link
+            href="/"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-surface px-3 py-2 text-sm font-semibold text-text-secondary transition-all duration-200 hover:border-primary/20 hover:bg-primary-soft/55 hover:text-primary-hover"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver a seleccion
+          </Link>
           <Link
             href="/"
             className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-primary/15 bg-primary-soft p-2 shadow-[0_14px_34px_rgba(255,106,0,0.10)] sm:h-24 sm:w-24 sm:rounded-[1.75rem]"

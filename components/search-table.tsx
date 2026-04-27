@@ -1,5 +1,6 @@
 "use client"
 
+import { InstantLink } from "@/components/instant-navigation"
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,6 +31,10 @@ interface SearchTableProps {
   rows: SearchTableRow[]
   columns: SearchTableColumn[]
   searchPlaceholder: string
+}
+
+function isInternalHref(href: string) {
+  return href.startsWith("/") && !href.startsWith("//")
 }
 
 export function SearchTable({ rows, columns, searchPlaceholder }: SearchTableProps) {
@@ -84,10 +89,19 @@ export function SearchTable({ rows, columns, searchPlaceholder }: SearchTablePro
                         <TableCell key={column.key}>
                           {cell?.badgeVariant ? (
                             <Badge variant={cell.badgeVariant}>{cell.text}</Badge>
+                          ) : cell?.href && isInternalHref(cell.href) ? (
+                            <InstantLink
+                              href={cell.href}
+                              className="font-medium text-text-primary transition-colors hover:text-primary-hover"
+                            >
+                              {cell.text}
+                            </InstantLink>
                           ) : cell?.href ? (
                             <a
                               href={cell.href}
                               className="font-medium text-text-primary transition-colors hover:text-primary-hover"
+                              rel="noreferrer"
+                              target={cell.href.startsWith("http") ? "_blank" : undefined}
                             >
                               {cell.text}
                             </a>

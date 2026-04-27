@@ -10,10 +10,13 @@ import { formatCurrency } from "@/lib/utils"
 export default async function ProductsPage({
   searchParams
 }: {
-  searchParams?: { edit?: string | string[] }
+  searchParams?: Promise<{ edit?: string | string[] }> | { edit?: string | string[] }
 }) {
   const [products, profile] = await Promise.all([getProducts(), getCurrentProfile()])
-  const editId = Array.isArray(searchParams?.edit) ? searchParams?.edit[0] : searchParams?.edit
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const editId = Array.isArray(resolvedSearchParams?.edit)
+    ? resolvedSearchParams?.edit[0]
+    : resolvedSearchParams?.edit
   const selectedProduct = editId ? products.find((product) => product.id === editId) ?? null : null
   const canManageProducts = isAdmin(profile?.role)
 

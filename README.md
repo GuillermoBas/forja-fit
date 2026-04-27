@@ -130,6 +130,42 @@ npm run build
 
 `npm run build` fuerza Webpack porque Next.js 16 usa Turbopack por defecto y en este workspace falla al recolectar paginas App Router existentes.
 
+## Preview visual local
+
+Para revisar cambios visuales sin InsForge ni login real, activa el modo preview solo en `.env.local`:
+
+```bash
+FORJAFIT_VISUAL_PREVIEW=1
+```
+
+Despues arranca la app y abre una de estas rutas iniciales:
+
+```bash
+npm run dev
+```
+
+- Staff: `http://localhost:3000/dashboard?preview=staff`
+- Cliente: `http://localhost:3000/cliente/dashboard?preview=cliente`
+
+El parametro inicial guarda una cookie local `forjafit_visual_preview`, asi que puedes navegar internamente sin repetir la query. En produccion el modo preview se ignora aunque alguien conozca el parametro. Las acciones sensibles en preview no escriben en InsForge y devuelven respuestas simuladas para facilitar pruebas visuales.
+
+## Tests Playwright
+
+Los tests e2e usan el preview visual local para cubrir smoke de staff, smoke del portal cliente y regresiones responsive del menu inferior:
+
+```bash
+npm run test:e2e
+```
+
+Variantes utiles:
+
+```bash
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+La configuracion levanta Next.js en `http://127.0.0.1:3005` con `FORJAFIT_VISUAL_PREVIEW=1`.
+
 ## PWA instalable
 
 ForjaFit expone un manifest App Router en `/manifest.webmanifest`, registra un service worker en `/sw.js` y usa los iconos generados en `public/icons`. La instalacion PWA y las notificaciones push web se mantienen separadas: el push solo se activa desde `/cliente/ajustes` tras accion explicita del cliente.

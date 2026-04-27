@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 import {
@@ -31,7 +30,7 @@ export function CreateSaleForm({
   clients: Client[]
   products: Product[]
 }) {
-  const [state, formAction] = useFormState(createSaleAction, {})
+  const [state, formAction] = useActionState(createSaleAction, {})
 
   return (
     <Card className="rounded-3xl">
@@ -111,7 +110,7 @@ export function GenerateTicketForm({
 }: {
   sales: Sale[]
 }) {
-  const [state, formAction] = useFormState(generateTicketPdfAction, {})
+  const [state, formAction] = useActionState(generateTicketPdfAction, {})
 
   return (
     <Card className="rounded-3xl">
@@ -146,7 +145,7 @@ export function VoidSaleForm({
 }: {
   sales: Sale[]
 }) {
-  const [state, formAction] = useFormState(voidSaleAction, {})
+  const [state, formAction] = useActionState(voidSaleAction, {})
 
   return (
     <Card className="rounded-3xl">

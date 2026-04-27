@@ -11,6 +11,7 @@ import {
 import { isInsforgeConfigured } from "@/lib/config"
 import { getCurrentAccessToken } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isStaffPreview } from "@/lib/preview-mode"
 import type {
   CalendarSession,
   Client,
@@ -35,6 +36,10 @@ export type ClientHistoryItem = {
 type DbRow = Record<string, unknown>
 
 async function createAuthedClient() {
+  if (await isStaffPreview()) {
+    return null
+  }
+
   if (!isInsforgeConfigured()) {
     return null
   }

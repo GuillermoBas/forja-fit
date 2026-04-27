@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 import { addStockAction, upsertProductAction } from "@/features/products/actions"
@@ -27,7 +26,7 @@ export function ProductForm({
 }: {
   product?: Product | null
 }) {
-  const [state, formAction] = useFormState(upsertProductAction, {})
+  const [state, formAction] = useActionState(upsertProductAction, {})
 
   return (
     <Card className="rounded-3xl">
@@ -110,7 +109,7 @@ export function AddStockForm({
 }: {
   products: Product[]
 }) {
-  const [state, formAction] = useFormState(addStockAction, {})
+  const [state, formAction] = useActionState(addStockAction, {})
 
   return (
     <Card className="rounded-3xl">

@@ -42,10 +42,13 @@ function ReportList({
 export default async function ReportsPage({
   searchParams
 }: {
-  searchParams?: { from?: string | string[]; to?: string | string[] }
+  searchParams?:
+    | Promise<{ from?: string | string[]; to?: string | string[] }>
+    | { from?: string | string[]; to?: string | string[] }
 }) {
-  const from = Array.isArray(searchParams?.from) ? searchParams?.from[0] : searchParams?.from
-  const to = Array.isArray(searchParams?.to) ? searchParams?.to[0] : searchParams?.to
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const from = Array.isArray(resolvedSearchParams?.from) ? resolvedSearchParams?.from[0] : resolvedSearchParams?.from
+  const to = Array.isArray(resolvedSearchParams?.to) ? resolvedSearchParams?.to[0] : resolvedSearchParams?.to
   const [reports, profile] = await Promise.all([
     getReportsData({ from, to }),
     getCurrentProfile()

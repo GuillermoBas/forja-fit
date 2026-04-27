@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,7 +8,7 @@ import { bootstrapFirstAdminAction } from "@/features/auth/actions"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 
 export function BootstrapAdminForm() {
-  const [state, formAction] = useFormState(bootstrapFirstAdminAction, {})
+  const [state, formAction] = useActionState(bootstrapFirstAdminAction, {})
 
   useEffect(() => {
     if (state.error) {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
+import { isClientPreview } from "@/lib/preview-mode"
 
 export type PortalSettingsState = {
   error?: string
@@ -13,6 +14,11 @@ export async function updatePortalPhoneAction(
   formData: FormData
 ): Promise<PortalSettingsState> {
   await requirePortalAccount()
+  if (await isClientPreview()) {
+    revalidatePath("/cliente/ajustes")
+    return { success: "Teléfono actualizado correctamente en preview." }
+  }
+
   const accessToken = await getCurrentPortalAccessToken()
   const phone = String(formData.get("phone") ?? "").trim()
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
@@ -53,6 +59,13 @@ async function callPortalSettingsFunction(
   successMessage: string
 ): Promise<PortalSettingsState> {
   await requirePortalAccount()
+  if (await isClientPreview()) {
+    revalidatePath("/cliente/ajustes")
+    revalidatePath("/cliente/dashboard")
+    revalidatePath("/cliente/nutricion")
+    return { success: successMessage }
+  }
+
   const accessToken = await getCurrentPortalAccessToken()
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
 

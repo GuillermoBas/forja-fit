@@ -1,5 +1,7 @@
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { isClientPreview } from "@/lib/preview-mode"
+import { getPreviewPortalPushSettingsData } from "@/features/client-portal/preview-data"
 
 export type PortalPushPreferences = {
   passExpiryEnabled: boolean
@@ -19,6 +21,10 @@ const defaultPreferences: PortalPushPreferences = {
 }
 
 export async function getPortalPushSettingsData(): Promise<PortalPushSettingsData> {
+  if (await isClientPreview()) {
+    return getPreviewPortalPushSettingsData()
+  }
+
   const portalAccount = await requirePortalAccount()
   const accessToken = await getCurrentPortalAccessToken()
 

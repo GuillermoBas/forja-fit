@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 import {
@@ -28,7 +27,7 @@ export function InternalNotificationForm({
 }: {
   clients: Client[]
 }) {
-  const [state, formAction] = useFormState(createInternalNotificationAction, {})
+  const [state, formAction] = useActionState(createInternalNotificationAction, {})
 
   return (
     <Card className="rounded-3xl">
@@ -72,7 +71,7 @@ export function InternalNotificationForm({
 }
 
 export function DailyExpiryScanForm() {
-  const [state, formAction] = useFormState(runDailyExpiryScanAction, {})
+  const [state, formAction] = useActionState(runDailyExpiryScanAction, {})
 
   return (
     <Card className="rounded-3xl">

@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState, useEffect } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -33,7 +32,7 @@ export function ManualPushCard({
 }: {
   clients: ManualPushClientOption[]
 }) {
-  const [state, formAction] = useFormState(sendManualPushAction, initialState)
+  const [state, formAction] = useActionState(sendManualPushAction, initialState)
 
   return (
     <Card className="rounded-3xl xl:col-span-2">
