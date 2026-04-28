@@ -1,7 +1,6 @@
 import { Suspense } from "react"
 import { FormPanelSkeleton } from "@/components/skeletons"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
-import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { PortalAdvancedSettingsActions, PortalSettingsForm } from "@/features/client-portal/settings-form"
 import { getPortalShellData } from "@/features/client-portal/data"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
@@ -43,9 +42,6 @@ export default function ClientPortalSettingsPage() {
     <>
       <Suspense fallback={<SettingsFallback />}>
         <SettingsData />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NutritionAssistantEntrypoint />
       </Suspense>
     </>
   )

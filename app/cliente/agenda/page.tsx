@@ -3,7 +3,6 @@ import { addDays, endOfMonth } from "date-fns"
 import { CalendarSkeleton } from "@/components/skeletons"
 import { AgendaCalendar } from "@/features/client-portal/agenda-calendar"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
-import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { getClientCalendarSessions, getPortalShellData } from "@/features/client-portal/data"
 
 type AgendaView = "week" | "month"
@@ -96,9 +95,6 @@ export default async function ClientPortalAgendaPage({
       </Suspense>
       <Suspense fallback={<CalendarSkeleton />}>
         <AgendaData view={view} selectedDate={selectedDate} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NutritionAssistantEntrypoint />
       </Suspense>
     </>
   )

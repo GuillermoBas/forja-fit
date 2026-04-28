@@ -7,7 +7,6 @@ import { ActivityChart } from "@/features/client-portal/activity-chart"
 import { ActivityHistoryList } from "@/features/client-portal/activity-history-list"
 import { ActivityRangeLinks } from "@/features/client-portal/activity-range-links"
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
-import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { getPortalDashboardData } from "@/features/client-portal/data"
 
 function parseParam(value?: string | string[]) {
@@ -115,9 +114,6 @@ export default async function ClientPortalDashboardPage({
     <>
       <Suspense fallback={<DashboardDataFallback />}>
         <DashboardData rangeParam={parseParam(resolvedSearchParams?.range)} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NutritionAssistantEntrypoint />
       </Suspense>
     </>
   )

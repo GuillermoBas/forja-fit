@@ -178,7 +178,13 @@ export function PortalShellMeta({ clientName }: { clientName: string }) {
   return null
 }
 
-export function ClientPortalPersistentShell({ children }: { children: React.ReactNode }) {
+export function ClientPortalPersistentShell({
+  assistant,
+  children
+}: {
+  assistant?: React.ReactNode
+  children: React.ReactNode
+}) {
   const pathname = usePathname() ?? ""
   const { pendingHref } = useInstantNavigation()
   const [clientName, setClientName] = useState("Cliente")
@@ -220,6 +226,7 @@ export function ClientPortalPersistentShell({ children }: { children: React.Reac
         </div>
 
         <MobileClientBottomNav currentPath={currentPath} />
+        {assistant}
       </div>
     </clientNameContext.Provider>
   )

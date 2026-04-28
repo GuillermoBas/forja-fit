@@ -1,7 +1,6 @@
 import { Suspense } from "react"
 import { CardListSkeleton, FormPanelSkeleton } from "@/components/skeletons"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
-import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { NutritionChat } from "@/features/client-portal/nutrition/chat"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { WeeklyNutritionPlansList } from "@/features/client-portal/nutrition/weekly-plans-list"
@@ -48,9 +47,6 @@ export default function ClientPortalNutritionPage() {
     <>
       <Suspense fallback={<NutritionFallback />}>
         <NutritionData />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NutritionAssistantEntrypoint />
       </Suspense>
     </>
   )
