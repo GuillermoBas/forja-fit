@@ -2,12 +2,13 @@ import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InstallForjaFit } from "@/components/pwa/install-forjafit"
 import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
-import { PortalShell } from "@/features/client-portal/portal-shell"
+import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { ActivityChart } from "@/features/client-portal/activity-chart"
 import { ActivityHistoryList } from "@/features/client-portal/activity-history-list"
 import { ActivityRangeLinks } from "@/features/client-portal/activity-range-links"
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
-import { getPortalDashboardData, getPortalShellData } from "@/features/client-portal/data"
+import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
+import { getPortalDashboardData } from "@/features/client-portal/data"
 
 function parseParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value
@@ -32,6 +33,7 @@ async function DashboardData({ rangeParam }: { rangeParam?: string }) {
 
   return (
     <>
+      <PortalShellMeta clientName={data.client.fullName} />
       <InstallForjaFit />
 
       <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -108,18 +110,15 @@ export default async function ClientPortalDashboardPage({
   searchParams?: Promise<{ range?: string | string[] }> | { range?: string | string[] }
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams)
-  const shellData = await getPortalShellData()
 
   return (
-    <PortalShell
-      title="Actividad"
-      description="Resumen de entrenamientos, regularidad y bonos vigentes."
-      clientName={shellData.client.fullName}
-      currentPath="/cliente/dashboard"
-    >
+    <>
       <Suspense fallback={<DashboardDataFallback />}>
         <DashboardData rangeParam={parseParam(resolvedSearchParams?.range)} />
       </Suspense>
-    </PortalShell>
+      <Suspense fallback={null}>
+        <NutritionAssistantEntrypoint />
+      </Suspense>
+    </>
   )
 }

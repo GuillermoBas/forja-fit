@@ -1,10 +1,10 @@
 import { Suspense } from "react"
 import { CardListSkeleton, FormPanelSkeleton } from "@/components/skeletons"
-import { PortalShell } from "@/features/client-portal/portal-shell"
+import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
+import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { NutritionChat } from "@/features/client-portal/nutrition/chat"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { WeeklyNutritionPlansList } from "@/features/client-portal/nutrition/weekly-plans-list"
-import { getPortalShellData } from "@/features/client-portal/data"
 
 function NutritionFallback() {
   return (
@@ -20,6 +20,7 @@ async function NutritionData() {
 
   return (
     <section className="space-y-4">
+      <PortalShellMeta clientName={data.client.fullName} />
       <div className="max-w-3xl">
         <h3 className="font-heading text-[1.35rem] font-bold text-text-primary sm:text-[1.55rem] lg:text-2xl">
           Asistente nutricional
@@ -42,19 +43,15 @@ async function NutritionData() {
   )
 }
 
-export default async function ClientPortalNutritionPage() {
-  const shellData = await getPortalShellData()
-
+export default function ClientPortalNutritionPage() {
   return (
-    <PortalShell
-      title="Nutricion"
-      description="Habla con el asistente IA de nutricion y conserva el historial de la conversacion en tu portal."
-      clientName={shellData.client.fullName}
-      currentPath="/cliente/nutricion"
-    >
+    <>
       <Suspense fallback={<NutritionFallback />}>
         <NutritionData />
       </Suspense>
-    </PortalShell>
+      <Suspense fallback={null}>
+        <NutritionAssistantEntrypoint />
+      </Suspense>
+    </>
   )
 }

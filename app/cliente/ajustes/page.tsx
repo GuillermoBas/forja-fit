@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { FormPanelSkeleton } from "@/components/skeletons"
-import { PortalShell } from "@/features/client-portal/portal-shell"
+import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
+import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { PortalAdvancedSettingsActions, PortalSettingsForm } from "@/features/client-portal/settings-form"
 import { getPortalShellData } from "@/features/client-portal/data"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
@@ -26,6 +27,7 @@ async function SettingsData() {
 
   return (
     <div className="space-y-5">
+      <PortalShellMeta clientName={shellData.client.fullName} />
       <PortalSettingsForm client={shellData.client} />
       <PushNotificationSettings
         vapidPublicKey={pushData.vapidPublicKey}
@@ -36,19 +38,15 @@ async function SettingsData() {
   )
 }
 
-export default async function ClientPortalSettingsPage() {
-  const shellData = await getPortalShellData()
-
+export default function ClientPortalSettingsPage() {
   return (
-    <PortalShell
-      title="Ajustes"
-      description="Gestiona tus datos personales, datos del historial de nutricion y los ajustes de notificaciones push."
-      clientName={shellData.client.fullName}
-      currentPath="/cliente/ajustes"
-    >
+    <>
       <Suspense fallback={<SettingsFallback />}>
         <SettingsData />
       </Suspense>
-    </PortalShell>
+      <Suspense fallback={null}>
+        <NutritionAssistantEntrypoint />
+      </Suspense>
+    </>
   )
 }

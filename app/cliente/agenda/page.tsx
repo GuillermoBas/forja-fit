@@ -2,8 +2,9 @@ import { Suspense } from "react"
 import { addDays, endOfMonth } from "date-fns"
 import { CalendarSkeleton } from "@/components/skeletons"
 import { AgendaCalendar } from "@/features/client-portal/agenda-calendar"
+import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
+import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { getClientCalendarSessions, getPortalShellData } from "@/features/client-portal/data"
-import { PortalShell } from "@/features/client-portal/portal-shell"
 
 type AgendaView = "week" | "month"
 
@@ -71,6 +72,12 @@ async function AgendaData({
   )
 }
 
+async function PortalIdentity() {
+  const shellData = await getPortalShellData()
+
+  return <PortalShellMeta clientName={shellData.client.fullName} />
+}
+
 export default async function ClientPortalAgendaPage({
   searchParams
 }: {
@@ -79,20 +86,20 @@ export default async function ClientPortalAgendaPage({
     | { view?: string | string[]; day?: string | string[] }
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams)
-  const shellData = await getPortalShellData()
   const view = parseView(parseParam(resolvedSearchParams?.view))
   const selectedDate = parseParam(resolvedSearchParams?.day) ?? new Date().toISOString().slice(0, 10)
 
   return (
-    <PortalShell
-      title="Agenda"
-      description="Consulta tus sesiones por semana o mes y cancela solo con mas de 24 horas de antelacion."
-      clientName={shellData.client.fullName}
-      currentPath="/cliente/agenda"
-    >
+    <>
+      <Suspense fallback={null}>
+        <PortalIdentity />
+      </Suspense>
       <Suspense fallback={<CalendarSkeleton />}>
         <AgendaData view={view} selectedDate={selectedDate} />
       </Suspense>
-    </PortalShell>
+      <Suspense fallback={null}>
+        <NutritionAssistantEntrypoint />
+      </Suspense>
+    </>
   )
 }

@@ -141,7 +141,6 @@ export function StaffRouteSkeleton({ table = true, kpis = false }: { table?: boo
 export function PortalRouteSkeleton({ calendar = false, nutrition = false }: { calendar?: boolean; nutrition?: boolean }) {
   return (
     <div className="space-y-4">
-      <PageHeaderSkeleton />
       {calendar ? (
         <CalendarSkeleton />
       ) : nutrition ? (
