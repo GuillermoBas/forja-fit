@@ -127,6 +127,7 @@ export function CalendarSkeleton() {
 export function StaffRouteSkeleton({ table = true, kpis = false }: { table?: boolean; kpis?: boolean }) {
   return (
     <div className="space-y-6">
+      <PageHeaderSkeleton />
       {kpis ? <KpiGridSkeleton /> : null}
       <div className="grid gap-6 xl:grid-cols-2">
         <FormPanelSkeleton fields={4} />
@@ -140,6 +141,7 @@ export function StaffRouteSkeleton({ table = true, kpis = false }: { table?: boo
 export function PortalRouteSkeleton({ calendar = false, nutrition = false }: { calendar?: boolean; nutrition?: boolean }) {
   return (
     <div className="space-y-4">
+      <PageHeaderSkeleton />
       {calendar ? (
         <CalendarSkeleton />
       ) : nutrition ? (

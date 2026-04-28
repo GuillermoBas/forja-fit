@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { FormPanelSkeleton } from "@/components/skeletons"
+import { PortalShell } from "@/features/client-portal/portal-shell"
 import { PortalAdvancedSettingsActions, PortalSettingsForm } from "@/features/client-portal/settings-form"
 import { getPortalShellData } from "@/features/client-portal/data"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
@@ -35,10 +36,19 @@ async function SettingsData() {
   )
 }
 
-export default function ClientPortalSettingsPage() {
+export default async function ClientPortalSettingsPage() {
+  const shellData = await getPortalShellData()
+
   return (
-    <Suspense fallback={<SettingsFallback />}>
-      <SettingsData />
-    </Suspense>
+    <PortalShell
+      title="Ajustes"
+      description="Gestiona tus datos personales, datos del historial de nutricion y los ajustes de notificaciones push."
+      clientName={shellData.client.fullName}
+      currentPath="/cliente/ajustes"
+    >
+      <Suspense fallback={<SettingsFallback />}>
+        <SettingsData />
+      </Suspense>
+    </PortalShell>
   )
 }
