@@ -239,7 +239,7 @@ function AgendaModal({
       <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[1.3rem] border border-border/90 bg-surface p-5 shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="section-kicker">Agenda ForjaFit</p>
+            <p className="section-kicker">Agenda Trainium</p>
             <h3 className="mt-2 font-heading text-2xl font-bold text-text-primary">
               {state.mode === "create" ? "Agendar sesión" : "Detalle de sesión"}
             </h3>

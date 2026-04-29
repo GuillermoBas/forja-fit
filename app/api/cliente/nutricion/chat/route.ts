@@ -299,7 +299,7 @@ async function generateWeeklyPlanDraft(
       {
         role: "system",
         content: [
-          "Eres el generador estructurado de menus semanales de ForjaFit.",
+          "Eres el generador estructurado de menus semanales de Trainium.",
           "Devuelves exclusivamente JSON valido, sin markdown, sin explicaciones y sin texto adicional.",
           "No hagas preguntas de onboarding en esta tarea.",
           "Si faltan datos, asume un menu general prudente orientado al objetivo del cliente."

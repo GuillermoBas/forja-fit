@@ -1,5 +1,6 @@
 export const accessCookieName = "insforge_access_token"
 export const refreshCookieName = "insforge_refresh_token"
+export const authOauthVerifierCookieName = "insforge_oauth_verifier"
 export const accessCookieMaxAge = 60 * 15
 export const refreshCookieMaxAge = 60 * 60 * 24 * 30
 

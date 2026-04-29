@@ -37,8 +37,8 @@ export default async function(request: Request) {
     }
 
     const body = await request.json()
-    if (!body?.firstName || !body?.lastName) {
-      return json({ code: "INVALID_INPUT", message: "Nombre y apellidos son obligatorios" }, 400)
+    if (!String(body?.firstName ?? "").trim()) {
+      return json({ code: "INVALID_INPUT", message: "El nombre es obligatorio" }, 400)
     }
 
     const client = createClient({
@@ -54,8 +54,8 @@ export default async function(request: Request) {
     const rpcResult = await client.database.rpc("app_upsert_client", {
       p_actor_profile_id: actor.profile.id,
       p_client_id: body.id ?? null,
-      p_first_name: body.firstName,
-      p_last_name: body.lastName,
+      p_first_name: String(body.firstName ?? "").trim(),
+      p_last_name: String(body.lastName ?? "").trim(),
       p_email: body.email ?? "",
       p_phone: body.phone ?? "",
       p_tax_id: body.taxId ?? "",

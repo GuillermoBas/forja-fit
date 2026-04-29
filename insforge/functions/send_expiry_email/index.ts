@@ -2,7 +2,7 @@
 import { createClient } from "npm:@insforge/sdk"
 
 const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
-const BUSINESS_NAME = "ForjaFit"
+const BUSINESS_NAME = "Trainium"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

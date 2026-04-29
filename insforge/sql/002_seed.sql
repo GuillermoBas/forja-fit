@@ -1,5 +1,5 @@
 INSERT INTO settings (business_name, reminder_days_default, default_vat_rate)
-SELECT 'ForjaFit', 7, 21
+SELECT 'Trainium', 7, 21
 WHERE NOT EXISTS (SELECT 1 FROM settings);
 
 INSERT INTO pass_types (name, kind, sessions_total, price_gross, vat_rate, shared_allowed, sort_order)

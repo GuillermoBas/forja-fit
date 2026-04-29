@@ -1,9 +1,9 @@
-import Link from "next/link"
 import Image from "next/image"
+import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export function PortalAuthShell({
+export function StaffAuthShell({
   title,
   description,
   children,
@@ -42,7 +42,7 @@ export function PortalAuthShell({
           </Link>
           <div className="space-y-3 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-muted">
-              Portal de cliente
+              Portal de entrenadores
             </p>
             {title ? (
               <CardTitle className="font-heading text-[2rem] font-bold tracking-[-0.05em] sm:text-[2.35rem]">

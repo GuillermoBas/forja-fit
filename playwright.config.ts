@@ -14,7 +14,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      FORJAFIT_VISUAL_PREVIEW: "1",
+      TRAINIUM_VISUAL_PREVIEW: "1",
       NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3005"
     }
   },

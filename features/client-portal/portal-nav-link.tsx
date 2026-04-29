@@ -54,16 +54,16 @@ export function PortalDesktopNavLink({
       className={cn(
         "group flex min-w-0 items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-all duration-200",
         isActive
-          ? "border-primary/18 bg-primary-soft text-primary-hover shadow-[0_12px_24px_rgba(255,106,0,0.08)]"
-          : "border-transparent text-text-secondary hover:border-border/80 hover:bg-surface-alt hover:text-text-primary"
+          ? "border-primary bg-primary text-white shadow-[0_12px_24px_rgba(18,191,166,0.18)]"
+          : "border-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
       )}
     >
       <span
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-200",
           isActive
-            ? "border-primary/18 bg-surface text-primary-hover shadow-[0_6px_16px_rgba(255,106,0,0.08)]"
-            : "border-border/80 bg-surface text-text-muted group-hover:border-primary/15 group-hover:text-primary-hover"
+            ? "border-white/20 bg-white/15 text-white shadow-[0_6px_16px_rgba(13,27,42,0.16)]"
+            : "border-white/10 bg-white/[0.04] text-white/58 group-hover:border-white/15 group-hover:text-white"
         )}
       >
         <Icon className="h-4 w-4" />

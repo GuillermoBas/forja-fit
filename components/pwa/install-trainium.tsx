@@ -11,7 +11,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>
 }
 
-const dismissalKey = "forjafit:pwa-install-dismissed"
+const dismissalKey = "trainium:pwa-install-dismissed"
 
 function isStandaloneMode() {
   return window.matchMedia("(display-mode: standalone)").matches ||
@@ -22,7 +22,7 @@ function isIosDevice() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent)
 }
 
-export function InstallForjaFit({
+export function InstallTrainium({
   className,
   respectDismissal = true,
   compact = false,
@@ -84,7 +84,7 @@ export function InstallForjaFit({
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-heading text-base font-bold text-text-primary">
-              Instala ForjaFit
+              Instala Trainium
             </p>
             <p className="mt-1 text-sm leading-6 text-text-secondary">
               Abre la plataforma desde un icono propio y usa la experiencia en pantalla completa.
@@ -107,16 +107,16 @@ export function InstallForjaFit({
         {installPrompt ? (
           <Button type="button" className="w-full gap-2 rounded-xl sm:w-auto" onClick={install}>
             <Download className="h-4 w-4" />
-            Instalar ForjaFit
+            Instalar Trainium
           </Button>
         ) : null}
 
         {isIos ? (
           <ol className="grid gap-2 text-sm leading-6 text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
-            <li>Abre ForjaFit en Safari.</li>
+            <li>Abre Trainium en Safari.</li>
             <li>Toca Compartir.</li>
             <li>Toca &quot;Anadir a pantalla de inicio&quot;.</li>
-            <li>Abre ForjaFit desde el nuevo icono.</li>
+            <li>Abre Trainium desde el nuevo icono.</li>
           </ol>
         ) : null}
 

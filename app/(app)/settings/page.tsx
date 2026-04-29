@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BlockedState } from "@/components/blocked-state"
 import { PageHeader } from "@/components/page-header"
-import { InstallForjaFit } from "@/components/pwa/install-forjafit"
+import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
@@ -105,7 +105,7 @@ export default async function SettingsPage() {
             <CardTitle>Instalación PWA</CardTitle>
           </CardHeader>
           <CardContent>
-            <InstallForjaFit respectDismissal={false} compact surface="plain" />
+            <InstallTrainium respectDismissal={false} compact surface="plain" />
           </CardContent>
         </Card>
 

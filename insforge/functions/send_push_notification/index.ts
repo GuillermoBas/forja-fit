@@ -77,7 +77,7 @@ function buildVapidJwk(publicKey: string, privateKey: string) {
 async function getApplicationServer() {
   const publicKey = Deno.env.get("VAPID_PUBLIC_KEY")
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY")
-  const subject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:soporte@forjafit.com"
+  const subject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:soporte@trainium.app"
 
   if (!publicKey || !privateKey) {
     throw new Error("Faltan VAPID_PUBLIC_KEY o VAPID_PRIVATE_KEY")

@@ -84,7 +84,7 @@ export function PortalLoginForm({
             />
           </div>
           <div className="field-shell">
-            <label className="field-label">Clave</label>
+            <label className="field-label">Contraseña</label>
             <Input
               type="password"
               name="password"

@@ -18,27 +18,27 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: "ForjaFit",
+  title: "Trainium",
   description: "La plataforma inteligente para entrenadores personales",
   manifest: "/manifest.webmanifest",
-  applicationName: "ForjaFit",
+  applicationName: "Trainium",
   appleWebApp: {
     capable: true,
-    title: "ForjaFit",
+    title: "Trainium",
     statusBarStyle: "default"
   },
   icons: {
     icon: [
-      { url: "/forjafit-icon.png", type: "image/png" },
+      { url: "/trainium-icon.png", type: "image/png" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
     ],
-    shortcut: "/forjafit-icon.png",
+    shortcut: "/trainium-icon.png",
     apple: "/icons/apple-touch-icon.png"
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "ForjaFit"
+    "apple-mobile-web-app-title": "Trainium"
   }
 }
 
@@ -46,7 +46,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#FF6A00",
+  themeColor: "#0D1B2A",
   colorScheme: "light"
 }
 

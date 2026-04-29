@@ -3,45 +3,82 @@
 @tailwind utilities;
 
 :root {
-  --background: 210 40% 98%;
+  --color-brand-primary: #12BFA6;
+  --color-brand-primary-hover: #0E9B88;
+  --color-brand-primary-active: #0C7C6E;
+  --color-brand-accent: #24E3C2;
+  --color-brand-dark: #0D1B2A;
+  --color-brand-dark-soft: #1F2937;
+  --color-brand-dark-muted: #334155;
+  --color-background: #F4F6F8;
+  --color-background-soft: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F9FAFB;
+  --color-surface-dark: #0D1B2A;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #6B7280;
+  --color-text-inverse: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-border-soft: #EEF2F6;
+  --color-border-strong: #CBD5E1;
+  --color-success: #12BFA6;
+  --color-success-soft: #E6FFFB;
+  --color-info: #38BDF8;
+  --color-info-soft: #E0F2FE;
+  --color-warning: #F59E0B;
+  --color-warning-soft: #FEF3C7;
+  --color-danger: #EF4444;
+  --color-danger-soft: #FEE2E2;
+  --color-focus-ring: rgba(18, 191, 166, 0.35);
+  --shadow-card: 0 8px 24px rgba(13, 27, 42, 0.08);
+  --shadow-card-hover: 0 12px 32px rgba(13, 27, 42, 0.12);
+  --shadow-popover: 0 16px 40px rgba(13, 27, 42, 0.16);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --background: 210 22% 96%;
   --foreground: 222 47% 11%;
   --surface: 0 0% 100%;
-  --surface-alt: 210 40% 96%;
+  --surface-alt: 210 40% 98%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  --primary: 25 100% 50%;
-  --primary-hover: 24 100% 45%;
-  --primary-soft: 24 100% 95%;
-  --primary-muted: 25 100% 40%;
+  --primary: 171 83% 41%;
+  --primary-hover: 171 83% 33%;
+  --primary-active: 172 82% 27%;
+  --primary-soft: 170 100% 95%;
+  --primary-muted: 172 82% 27%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96%;
+  --secondary: 210 40% 98%;
   --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
   --text-primary: 222 47% 11%;
-  --text-secondary: 215 25% 27%;
-  --text-muted: 215 16% 47%;
+  --text-secondary: 220 9% 33%;
+  --text-muted: 220 9% 46%;
   --metal-light: 220 13% 91%;
-  --metal-mid: 215 20% 65%;
-  --metal-dark: 215 28% 27%;
-  --accent: 210 40% 96%;
+  --metal-mid: 220 13% 69%;
+  --metal-dark: 217 19% 27%;
+  --accent: 170 77% 52%;
   --accent-foreground: 222 47% 11%;
-  --success: 134 76% 37%;
-  --warning: 32 88% 44%;
+  --success: 171 83% 41%;
+  --warning: 38 92% 50%;
   --error: 0 72% 50%;
-  --info: 217 91% 60%;
+  --info: 199 89% 48%;
   --destructive: 0 72% 50%;
   --destructive-foreground: 0 0% 100%;
   --border: 214 32% 91%;
   --border-strong: 215 25% 84%;
   --input: 214 32% 91%;
-  --ring: 25 100% 50%;
+  --ring: 171 83% 41%;
   --radius: 1rem;
-  --shadow-soft: 0 10px 26px rgba(15, 23, 42, 0.055);
-  --shadow-panel: 0 18px 42px rgba(15, 23, 42, 0.08);
-  --shadow-glow: 0 0 0 1px rgba(255, 106, 0, 0.10), 0 12px 28px rgba(255, 106, 0, 0.14);
+  --shadow-soft: var(--shadow-card);
+  --shadow-panel: var(--shadow-card-hover);
+  --shadow-glow: 0 0 0 1px rgba(18, 191, 166, 0.14), 0 12px 28px rgba(18, 191, 166, 0.18);
   --font-sans: "Inter";
   --font-heading: "Space Grotesk";
   --safe-top: env(safe-area-inset-top, 0px);
@@ -64,12 +101,13 @@ html {
 body {
   @apply bg-background text-foreground antialiased;
   background-image:
-    radial-gradient(circle at top left, rgba(255, 106, 0, 0.06), transparent 17%),
+    radial-gradient(circle at top left, rgba(18, 191, 166, 0.08), transparent 17%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.06), transparent 20%),
     radial-gradient(circle at top right, rgba(148, 163, 184, 0.07), transparent 23%),
     linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(244, 247, 250, 1));
-  background-size: auto, auto, 64px 64px, 64px 64px, auto;
+    linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(244, 246, 248, 1));
+  background-size: auto, auto, auto, 64px 64px, 64px 64px, auto;
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -79,7 +117,7 @@ a {
 }
 
 ::selection {
-  background: rgba(255, 106, 0, 0.18);
+  background: rgba(18, 191, 166, 0.2);
   color: #0f172a;
 }
 
@@ -99,7 +137,7 @@ a {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 106, 0, 0.55);
+  background: rgba(18, 191, 166, 0.55);
 }
 
 @layer base {
@@ -165,7 +203,7 @@ a {
   .section-title-accent::after {
     content: "";
     @apply absolute bottom-0 left-0 h-0.5 w-12 rounded-full bg-primary;
-    box-shadow: 0 0 0 1px rgba(255, 106, 0, 0.08);
+    box-shadow: 0 0 0 1px rgba(18, 191, 166, 0.12);
   }
 
   .panel-hover {
@@ -313,7 +351,7 @@ a {
 
 @media (max-width: 767px) {
   body {
-    background-size: auto, auto, 48px 48px, 48px 48px, auto;
+    background-size: auto, auto, auto, 48px 48px, 48px 48px, auto;
   }
 
   .page-section {

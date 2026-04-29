@@ -1,6 +1,6 @@
-# ForjaFit
+# Trainium
 
-Aplicacion pequena de gestion para un gimnasio de entrenamiento personal. Esta construida como una unica app Next.js con InsForge como backend para autenticacion, base de datos, funciones, almacenamiento y despliegue.
+Aplicacion pequena de gestion para gimnasios, estudios de entrenamiento personal y entrenadores. Esta construida como una unica app Next.js con InsForge como backend para autenticacion, base de datos, funciones, almacenamiento y despliegue.
 
 ## Phase 2
 
@@ -135,7 +135,7 @@ npm run build
 Para revisar cambios visuales sin InsForge ni login real, activa el modo preview solo en `.env.local`:
 
 ```bash
-FORJAFIT_VISUAL_PREVIEW=1
+TRAINIUM_VISUAL_PREVIEW=1
 ```
 
 Despues arranca la app y abre una de estas rutas iniciales:
@@ -147,7 +147,7 @@ npm run dev
 - Staff: `http://localhost:3000/dashboard?preview=staff`
 - Cliente: `http://localhost:3000/cliente/dashboard?preview=cliente`
 
-El parametro inicial guarda una cookie local `forjafit_visual_preview`, asi que puedes navegar internamente sin repetir la query. En produccion el modo preview se ignora aunque alguien conozca el parametro. Las acciones sensibles en preview no escriben en InsForge y devuelven respuestas simuladas para facilitar pruebas visuales.
+El parametro inicial guarda una cookie local `trainium_visual_preview`, asi que puedes navegar internamente sin repetir la query. En produccion el modo preview se ignora aunque alguien conozca el parametro. Las acciones sensibles en preview no escriben en InsForge y devuelven respuestas simuladas para facilitar pruebas visuales.
 
 ## Tests Playwright
 
@@ -164,15 +164,15 @@ npm run test:e2e:headed
 npm run test:e2e:ui
 ```
 
-La configuracion levanta Next.js en `http://127.0.0.1:3005` con `FORJAFIT_VISUAL_PREVIEW=1`.
+La configuracion levanta Next.js en `http://127.0.0.1:3005` con `TRAINIUM_VISUAL_PREVIEW=1`.
 
 ## PWA instalable
 
-ForjaFit expone un manifest App Router en `/manifest.webmanifest`, registra un service worker en `/sw.js` y usa los iconos generados en `public/icons`. La instalacion PWA y las notificaciones push web se mantienen separadas: el push solo se activa desde `/cliente/ajustes` tras accion explicita del cliente.
+Trainium expone un manifest App Router en `/manifest.webmanifest`, registra un service worker en `/sw.js` y usa los iconos generados en `public/icons`. La instalacion PWA y las notificaciones push web se mantienen separadas: el push solo se activa desde `/cliente/ajustes` tras accion explicita del cliente.
 
 ### Regenerar iconos PWA
 
-Los iconos se generan desde `public/forjafit-logo.png` o, si no existe, desde `public/forjafit-icon.png`:
+Los iconos se generan desde `public/trainium-icon.png`:
 
 ```bash
 npm run generate:pwa-icons
@@ -182,17 +182,17 @@ npm run generate:pwa-icons
 
 1. Abrir `https://4nc39nmu.insforge.site` en Chrome.
 2. Iniciar sesion si corresponde.
-3. Tocar el aviso `Instalar ForjaFit` si aparece, o abrir el menu de Chrome.
+3. Tocar el aviso `Instalar Trainium` si aparece, o abrir el menu de Chrome.
 4. Elegir `Instalar app` o `Anadir a pantalla de inicio`.
-5. Abrir ForjaFit desde el nuevo icono.
+5. Abrir Trainium desde el nuevo icono.
 
 ### Instalar en iPhone o iPad
 
-1. Abrir ForjaFit en Safari.
+1. Abrir Trainium en Safari.
 2. Tocar Compartir.
 3. Tocar `Anadir a pantalla de inicio`.
-4. Confirmar el nombre `ForjaFit`.
-5. Abrir ForjaFit desde el nuevo icono.
+4. Confirmar el nombre `Trainium`.
+5. Abrir Trainium desde el nuevo icono.
 
 Limitacion conocida de iOS: los permisos de notificaciones push solo pueden solicitarse cuando la PWA ya esta instalada en la pantalla de inicio.
 
@@ -223,7 +223,7 @@ Anadir en `.env.local` y en las variables del deployment de InsForge:
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT`
 
-`NEXT_PUBLIC_VAPID_PUBLIC_KEY` y `VAPID_PUBLIC_KEY` deben tener el mismo valor publico. `VAPID_SUBJECT` puede ser `mailto:soporte@forjafit.com` o el email de soporte del negocio.
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` y `VAPID_PUBLIC_KEY` deben tener el mismo valor publico. `VAPID_SUBJECT` puede ser `mailto:soporte@trainium.app` o el email de soporte del negocio.
 
 ### Generar claves VAPID
 
@@ -309,17 +309,17 @@ Los envios usan dedupe:
 
 ### Probar en Android
 
-1. Instalar ForjaFit desde Chrome.
-2. Abrir ForjaFit desde el icono instalado.
+1. Instalar Trainium desde Chrome.
+2. Abrir Trainium desde el icono instalado.
 3. Entrar en `/cliente/ajustes`.
 4. Activar notificaciones y confirmar permisos.
 5. Crear una cita para el cliente y ejecutar `send_calendar_session_24h_reminders` con una cita dentro de la ventana de 23-25 horas.
 
 ### Probar en iPhone/iPad
 
-1. Abrir ForjaFit en Safari.
+1. Abrir Trainium en Safari.
 2. Instalar con Compartir > `Anadir a pantalla de inicio`.
-3. Abrir ForjaFit desde el icono.
+3. Abrir Trainium desde el icono.
 4. Iniciar sesion como cliente.
 5. Ir a `/cliente/ajustes` y activar notificaciones.
 
@@ -346,17 +346,20 @@ Limitacion iOS: Safari solo permite pedir permiso push a PWAs instaladas en pant
 
 ### Esquema y seeds
 
-- Esquema base: [insforge/sql/001_schema.sql](/C:/Users/guill/OneDrive/CodeDev/ForjaFit/insforge/sql/001_schema.sql)
-- Seed inicial: [insforge/sql/002_seed.sql](/C:/Users/guill/OneDrive/CodeDev/ForjaFit/insforge/sql/002_seed.sql)
-- Migracion de bonos flexibles y hasta 5 titulares: [insforge/sql/010_passes_flexible_model.sql](/C:/Users/guill/OneDrive/CodeDev/ForjaFit/insforge/sql/010_passes_flexible_model.sql)
+- Esquema base: `insforge/sql/001_schema.sql`
+- Seed inicial: `insforge/sql/002_seed.sql`
+- Migracion de bonos flexibles y hasta 5 titulares: `insforge/sql/010_passes_flexible_model.sql`
 
 ### Orden recomendado para aplicar en un proyecto ya existente
 
 ```bash
+npx @insforge/cli db import insforge/sql/005_grant_invoice_sequence.sql
 npx @insforge/cli db import insforge/sql/010_passes_flexible_model.sql
 npx @insforge/cli db import insforge/sql/003_phase3_clients_passes.sql
 npx @insforge/cli db import insforge/sql/009_delete_client.sql
 npx @insforge/cli db import insforge/sql/017_agenda_multi_passes.sql
+npx @insforge/cli db import insforge/sql/020_clients_last_name_optional.sql
+npx @insforge/cli db import insforge/sql/022_grant_invoice_sequence_all_roles.sql
 ```
 
 ### Bucket de tickets

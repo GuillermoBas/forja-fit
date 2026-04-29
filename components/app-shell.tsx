@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import Image from "next/image"
 import { Bell } from "lucide-react"
 import { appConfig } from "@/lib/config"
 import { getNotifications } from "@/lib/data"
@@ -54,12 +55,17 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-transparent">
       <div className="mobile-page-shell mx-auto grid min-h-screen max-w-[1600px] gap-5 lg:grid-cols-[248px_1fr] lg:px-6 lg:py-6">
-        <aside className="page-section flex flex-col bg-surface/98 p-3.5 sm:p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:p-4">
-          <div className="mb-3 rounded-[1.2rem] border border-border/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,245,249,0.92))] p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:mb-4 sm:p-4">
-            <p className="section-kicker">Gestion del gimnasio</p>
-            <h1 className="mt-2 font-heading text-[1.55rem] font-bold tracking-tight text-text-primary sm:text-[1.8rem]">
-              {appConfig.businessName}
-            </h1>
+        <aside className="page-section flex flex-col border-trainium-dark/80 bg-trainium-dark p-3.5 text-white sm:p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:p-4">
+          <div className="mb-3 rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_10px_24px_rgba(7,17,29,0.24)] sm:mb-4 sm:p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Gestion del gimnasio</p>
+            <Image
+              src="/trainium-logo-full.png"
+              alt={`Logo de ${appConfig.businessName}`}
+              width={320}
+              height={320}
+              priority
+              className="mt-3 h-auto w-32 rounded-xl bg-white object-contain p-1.5 sm:w-36"
+            />
             <Badge variant="default" className="mt-3 w-fit">
               {profile.role === "admin" ? "Administrador" : "Entrenador"}
             </Badge>

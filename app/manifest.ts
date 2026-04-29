@@ -2,14 +2,14 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ForjaFit",
-    short_name: "ForjaFit",
+    name: "Trainium",
+    short_name: "Trainium",
     description: "La plataforma inteligente para entrenadores personales",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#F8FAFC",
-    theme_color: "#FF6A00",
+    background_color: "#F4F6F8",
+    theme_color: "#0D1B2A",
     orientation: "portrait",
     icons: [
       {

@@ -3,7 +3,7 @@ import { Suspense } from "react"
 import { AlertTriangle, ArrowUpRight, BellRing, Box, CalendarClock, Wallet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
-import { InstallForjaFit } from "@/components/pwa/install-forjafit"
+import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
 import { getDashboardData } from "@/lib/data"
 import { cn } from "@/lib/utils"
@@ -160,7 +160,7 @@ export default function DashboardPage() {
         description="Resumen diario del negocio, los bonos y las alertas pendientes."
       />
 
-      <InstallForjaFit />
+      <InstallTrainium />
 
       <Suspense fallback={<DashboardDataFallback />}>
         <DashboardData />

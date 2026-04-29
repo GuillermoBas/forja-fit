@@ -1,88 +1,103 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useEffect } from "react"
-import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
+import { StaffAuthShell } from "@/features/auth/staff-auth-shell"
 
 export function LoginForm({
   verifyStatus,
-  errorMessage
+  errorMessage,
+  resetStatus,
+  canBootstrap
 }: {
   verifyStatus?: string
   errorMessage?: string
+  resetStatus?: string
+  canBootstrap: boolean
 }) {
+  const normalizedErrorMessage =
+    errorMessage === "Invalid credentials" ? "Email o Contraseña incorrectos." : errorMessage
+
   useEffect(() => {
-    if (errorMessage) {
-      toast.error(errorMessage)
+    if (normalizedErrorMessage) {
+      toast.error(normalizedErrorMessage)
     }
-  }, [errorMessage])
+  }, [normalizedErrorMessage])
+
+  useEffect(() => {
+    if (resetStatus === "success") {
+      toast.success("Clave actualizada. Ya puedes acceder al panel staff.")
+    }
+  }, [resetStatus])
 
   return (
-    <div className="mobile-page-shell relative flex min-h-screen items-center justify-center overflow-hidden py-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,106,0,0.08),_transparent_22%),radial-gradient(circle_at_center_right,_rgba(148,163,184,0.10),_transparent_30%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
-      <Card className="relative w-full max-w-[30rem] overflow-hidden rounded-[1.5rem] border-border/90 bg-card/98 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:rounded-[1.75rem]">
-        <CardHeader className="space-y-5 px-5 pb-3 pt-6 sm:space-y-6 sm:px-6 sm:pb-4">
+    <StaffAuthShell
+      description="Accede al portal de administracion y entrenadores con Google o Email."
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          {canBootstrap ? (
+            <Link href="/setup/bootstrap-admin" className="text-primary hover:underline">
+              Crear admin inicial
+            </Link>
+          ) : null}
           <Link
-            href="/"
-            className="inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-surface px-3 py-2 text-sm font-semibold text-text-secondary transition-all duration-200 hover:border-primary/20 hover:bg-primary-soft/55 hover:text-primary-hover"
+            href="/recuperar-clave"
+            className="text-text-secondary hover:text-text-primary hover:underline"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Volver a seleccion
+            Recuperar contraseña
           </Link>
-          <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-primary/15 bg-primary-soft p-2 shadow-[0_14px_34px_rgba(255,106,0,0.10)] sm:h-24 sm:w-24 sm:rounded-[1.75rem]">
-            <Image
-              src="/forjafit-logo.png"
-              alt="Logo de ForjaFit"
-              width={280}
-              height={280}
-              priority
-              className="h-full w-full rounded-[1.35rem] object-cover"
+        </div>
+      }
+    >
+      {verifyStatus === "success" ? (
+        <div className="rounded-2xl border border-success/20 bg-success/10 p-3 text-sm text-success">
+          Email verificado correctamente. Ya puedes iniciar sesión.
+        </div>
+      ) : null}
+
+      {normalizedErrorMessage ? (
+        <div className="rounded-2xl border border-error/20 bg-error/10 p-3 text-sm text-error">
+          {normalizedErrorMessage}
+        </div>
+      ) : null}
+
+      <Button asChild variant="outline" className="w-full">
+        <Link href="/api/auth/oauth/google">Acceder con Google</Link>
+      </Button>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-text-muted">
+          <span className="h-px flex-1 bg-border/70" />
+          <span>o continuar con</span>
+          <span className="h-px flex-1 bg-border/70" />
+        </div>
+
+        <form className="space-y-5" action="/api/auth/login" method="post">
+          <div className="field-shell">
+            <label className="field-label">Email</label>
+            <Input
+              type="email"
+              name="email"
+              placeholder="email@dominio.com"
+              autoComplete="email"
             />
           </div>
-          <div className="space-y-3 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-muted">
-              La plataforma inteligente para entrenadores personales
-            </p>
-            <CardDescription className="mx-auto max-w-md text-sm leading-7 text-text-secondary sm:text-base">
-              Accede al portal de administración y entrenadores.
-            </CardDescription>
+          <div className="field-shell">
+            <label className="field-label">Contraseña</label>
+            <Input
+              type="password"
+              name="password"
+              placeholder="********"
+              autoComplete="current-password"
+            />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-5 px-5 pb-6 sm:space-y-6 sm:px-6">
-          {verifyStatus === "success" ? (
-            <div className="rounded-2xl border border-success/20 bg-success/10 p-3 text-sm text-success">
-              Email verificado correctamente. Ya puedes iniciar sesión.
-            </div>
-          ) : null}
-          <form className="space-y-5" action="/api/auth/login" method="post">
-            <div className="field-shell">
-              <label className="field-label">Email</label>
-              <Input
-                type="email"
-                name="email"
-                placeholder="email@dominio.com"
-                autoComplete="email"
-              />
-            </div>
-            <div className="field-shell">
-              <label className="field-label">Contrasena</label>
-              <Input
-                type="password"
-                name="password"
-                placeholder="********"
-                autoComplete="current-password"
-              />
-            </div>
-            <AuthFormSubmit idleLabel="Entrar" pendingLabel="Entrando..." />
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          <AuthFormSubmit idleLabel="Entrar al portal" pendingLabel="Entrando..." />
+        </form>
+      </div>
+    </StaffAuthShell>
   )
 }

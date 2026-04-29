@@ -1,7 +1,9 @@
+import Image from "next/image"
 import { LogOut } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { appConfig } from "@/lib/config"
 import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { portalSignOutAction } from "@/features/client-portal/auth/actions"
 import {
@@ -25,13 +27,18 @@ function DesktopClientSidebar({
   currentPath: string
 }) {
   return (
-    <aside className="page-section hidden flex-col bg-surface/98 p-5 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)]">
-      <div className="mb-6 rounded-[1.3rem] border border-border/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,245,249,0.92))] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <p className="section-kicker">Portal de cliente</p>
-        <h1 className="mt-3 font-heading text-[2rem] font-bold tracking-tight text-text-primary">
-          ForjaFit
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-text-secondary">
+    <aside className="page-section hidden flex-col border-trainium-dark/80 bg-trainium-dark p-5 text-white lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)]">
+      <div className="mb-6 rounded-[1.3rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_12px_28px_rgba(7,17,29,0.24)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Portal de cliente</p>
+        <Image
+          src="/trainium-logo-full.png"
+          alt={`Logo de ${appConfig.businessName}`}
+          width={320}
+          height={320}
+          priority
+          className="mt-3 h-auto w-36 rounded-xl bg-white object-contain p-1.5"
+        />
+        <p className="mt-3 text-sm leading-6 text-white/70">
           Tu actividad, agenda, bonos, nutrición y ajustes de contacto.
         </p>
         <Badge variant="default" className="mt-4 w-fit max-w-full truncate">
@@ -72,7 +79,7 @@ function MobileClientTopbar({ clientName }: { clientName: string }) {
         <div className="min-w-0">
           <p className="section-kicker">Portal de cliente</p>
           <p className="mt-0.5 truncate font-heading text-base font-bold text-text-primary sm:text-lg md:text-center">
-            ForjaFit
+            {appConfig.businessName}
           </p>
         </div>
         <Badge variant="default" className="max-w-[40vw] shrink truncate px-2.5 py-1 text-[10px] sm:max-w-[42vw] md:max-w-full md:px-3 md:text-center">

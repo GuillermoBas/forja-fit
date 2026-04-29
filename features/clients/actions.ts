@@ -16,7 +16,7 @@ export type ClientActionState = {
 
 const clientFormSchema = z.object({
   firstName: z.string().trim().min(1, "El nombre es obligatorio."),
-  lastName: z.string().trim().min(1, "Los apellidos son obligatorios."),
+  lastName: z.string().trim().optional(),
   email: z
     .string()
     .trim()
@@ -46,7 +46,7 @@ export async function upsertClientAction(
     const fieldErrors = parsed.error.flatten().fieldErrors
 
     return {
-      error: "Revisa los campos obligatorios antes de continuar.",
+      error: "Revisa el formulario antes de continuar.",
       fieldErrors: {
         firstName: fieldErrors.firstName?.[0],
         lastName: fieldErrors.lastName?.[0],

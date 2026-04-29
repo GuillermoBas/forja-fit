@@ -5,12 +5,10 @@ const sharp = require("sharp")
 const rootDir = path.resolve(__dirname, "..")
 const publicDir = path.join(rootDir, "public")
 const iconsDir = path.join(publicDir, "icons")
-const sourceLogo = fs.existsSync(path.join(publicDir, "forjafit-logo.png"))
-  ? path.join(publicDir, "forjafit-logo.png")
-  : path.join(publicDir, "forjafit-icon.png")
+const sourceLogo = path.join(publicDir, "trainium-icon.png")
 
 if (!fs.existsSync(sourceLogo)) {
-  throw new Error("No source logo found in public/forjafit-logo.png or public/forjafit-icon.png")
+  throw new Error("No source icon found in public/trainium-icon.png")
 }
 
 fs.mkdirSync(iconsDir, { recursive: true })
@@ -30,7 +28,7 @@ async function generateIcon(fileName, size, padding = 0) {
       width: size,
       height: size,
       channels: 4,
-      background: { r: 248, g: 250, b: 252, alpha: 1 }
+      background: { r: 244, g: 246, b: 248, alpha: 1 }
     }
   })
     .composite([{ input: image, gravity: "center" }])

@@ -105,7 +105,7 @@ export function PushNotificationSettings({ vapidPublicKey, initialPreferences }:
     }
 
     if (!canUsePush) {
-      toast.error("Instala ForjaFit en la pantalla de inicio antes de activar notificaciones.")
+      toast.error("Instala Trainium en la pantalla de inicio antes de activar notificaciones.")
       return
     }
 
@@ -224,8 +224,8 @@ export function PushNotificationSettings({ vapidPublicKey, initialPreferences }:
             <div className="flex gap-3">
               <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <p>
-                En iPhone o iPad instala ForjaFit primero: abre esta pagina en Safari, toca Compartir,
-                elige Anadir a pantalla de inicio y abre ForjaFit desde el nuevo icono.
+                En iPhone o iPad instala Trainium primero: abre esta pagina en Safari, toca Compartir,
+                elige Anadir a pantalla de inicio y abre Trainium desde el nuevo icono.
               </p>
             </div>
           </div>

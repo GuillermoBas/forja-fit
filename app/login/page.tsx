@@ -1,18 +1,31 @@
 import { redirect } from "next/navigation"
 import { LoginForm } from "@/features/auth/login-form"
+import { canBootstrapFirstAdmin } from "@/features/auth/server"
 import { getCurrentAuthUser } from "@/lib/auth/session"
 
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams?: Promise<{ insforge_status?: string; error?: string }> | { insforge_status?: string; error?: string }
+  searchParams?:
+    | Promise<{ insforge_status?: string; error?: string; reset?: string }>
+    | { insforge_status?: string; error?: string; reset?: string }
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams)
-  const currentUser = await getCurrentAuthUser()
+  const [currentUser, canBootstrap] = await Promise.all([
+    getCurrentAuthUser(),
+    canBootstrapFirstAdmin()
+  ])
 
   if (currentUser) {
     redirect("/dashboard")
   }
 
-  return <LoginForm verifyStatus={resolvedSearchParams?.insforge_status} errorMessage={resolvedSearchParams?.error} />
+  return (
+    <LoginForm
+      verifyStatus={resolvedSearchParams?.insforge_status}
+      errorMessage={resolvedSearchParams?.error}
+      resetStatus={resolvedSearchParams?.reset}
+      canBootstrap={canBootstrap}
+    />
+  )
 }

@@ -497,7 +497,7 @@ Expected variables:
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT`
-- `FORJAFIT_VISUAL_PREVIEW=0`
+- `TRAINIUM_VISUAL_PREVIEW=0`
 
 MCP assumptions:
 - InsForge project link may exist in `.insforge/project.json`
@@ -507,7 +507,7 @@ MCP assumptions:
 Only add more when needed. Document every new variable in both `AGENTS.md` and `.env.example`.
 
 Local visual preview:
-- set `FORJAFIT_VISUAL_PREVIEW=1` only in local/test environments
+- set `TRAINIUM_VISUAL_PREVIEW=1` only in local/test environments
 - start staff preview with `/dashboard?preview=staff`
 - start client preview with `/cliente/dashboard?preview=cliente`
 - never rely on preview mode for permission, mutation, accounting or production validation

@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { InstallForjaFit } from "@/components/pwa/install-forjafit"
+import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { ActivityChart } from "@/features/client-portal/activity-chart"
@@ -33,7 +33,7 @@ async function DashboardData({ rangeParam }: { rangeParam?: string }) {
   return (
     <>
       <PortalShellMeta clientName={data.client.fullName} />
-      <InstallForjaFit />
+      <InstallTrainium />
 
       <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">

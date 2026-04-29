@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   first_name TEXT NOT NULL,
-  last_name TEXT NOT NULL,
+  last_name TEXT,
   email TEXT,
   phone TEXT,
   tax_id TEXT,

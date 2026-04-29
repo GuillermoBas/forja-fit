@@ -11,6 +11,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        trainium: {
+          primary: "#12BFA6",
+          primaryHover: "#0E9B88",
+          primaryActive: "#0C7C6E",
+          accent: "#24E3C2",
+          dark: "#0D1B2A",
+          darkSoft: "#1F2937",
+          background: "#F4F6F8",
+          backgroundSoft: "#F8FAFC",
+          surface: "#FFFFFF",
+          border: "#E5E7EB",
+          text: "#111827",
+          muted: "#6B7280"
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         surface: "hsl(var(--surface))",
@@ -21,6 +35,7 @@ const config: Config = {
         "popover-foreground": "hsl(var(--popover-foreground))",
         primary: "hsl(var(--primary))",
         "primary-hover": "hsl(var(--primary-hover))",
+        "primary-active": "hsl(var(--primary-active))",
         "primary-soft": "hsl(var(--primary-soft))",
         "primary-muted": "hsl(var(--primary-muted))",
         "primary-foreground": "hsl(var(--primary-foreground))",
@@ -58,7 +73,11 @@ const config: Config = {
       },
       backgroundImage: {
         "hero-grid":
-          "radial-gradient(circle at top left, rgba(255, 106, 0, 0.08), transparent 24%), radial-gradient(circle at bottom right, rgba(148, 163, 184, 0.09), transparent 30%)"
+          "radial-gradient(circle at top left, rgba(18, 191, 166, 0.10), transparent 24%), radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.08), transparent 30%)",
+        "trainium-hero":
+          "radial-gradient(circle at top right, rgba(36, 227, 194, 0.22), transparent 32%), linear-gradient(135deg, #0D1B2A 0%, #111827 55%, #0E9B88 140%)",
+        "trainium-ai":
+          "linear-gradient(135deg, rgba(18, 191, 166, 0.12), rgba(56, 189, 248, 0.12))"
       }
     }
   },

@@ -146,7 +146,7 @@ export function getPathnameFromHref(href: string | null) {
   }
 
   try {
-    return new URL(href, "http://forjafit.local").pathname
+    return new URL(href, "http://trainium.local").pathname
   } catch {
     return href.split("?")[0]?.split("#")[0] ?? href
   }
@@ -184,7 +184,7 @@ function InstantNavigationProgress({ active }: { active: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-x-0 top-0 z-[100] h-1 origin-left bg-primary shadow-[0_0_24px_rgba(255,106,0,0.35)] transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-[100] h-1 origin-left bg-primary shadow-[0_0_24px_rgba(18,191,166,0.35)] transition-all duration-300 ${
         active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
       }`}
     />

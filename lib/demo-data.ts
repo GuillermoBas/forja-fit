@@ -12,8 +12,8 @@ import type {
 
 export const demoProfile: Profile = {
   id: "demo-admin",
-  email: "admin@forjafit.local",
-  fullName: "Admin ForjaFit",
+  email: "admin@trainium.local",
+  fullName: "Admin Trainium",
   role: "admin",
   calendarColor: "#BFDBFE"
 }
@@ -269,7 +269,7 @@ export const demoNotifications: NotificationLogItem[] = [
     status: "queued",
     clientName: "Lucia Moreno",
     recipient: "lucia@example.com",
-    subject: "ForjaFit: tu bono caduca en 7 días",
+    subject: "Trainium: tu bono caduca en 7 días",
     createdAt: "2026-04-17T06:00:00.000Z",
     message: "Recordatorio de bono proximo a caducar en 7 dias."
   }
@@ -279,7 +279,7 @@ export const demoCalendarSessions: CalendarSession[] = [
   {
     id: "cs1",
     trainerProfileId: "demo-admin",
-    trainerName: "Admin ForjaFit",
+    trainerName: "Admin Trainium",
     trainerColor: "#BFDBFE",
     client1Id: "c1",
     client2Id: null,
@@ -295,7 +295,7 @@ export const demoCalendarSessions: CalendarSession[] = [
   {
     id: "cs2",
     trainerProfileId: "demo-admin",
-    trainerName: "Admin ForjaFit",
+    trainerName: "Admin Trainium",
     trainerColor: "#BFDBFE",
     client1Id: "c2",
     client2Id: "c3",

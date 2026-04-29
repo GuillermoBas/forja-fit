@@ -79,7 +79,7 @@ export function ClientForm({
       <Card className="rounded-3xl">
         <CardHeader>
           <CardTitle>{client ? "Editar cliente" : "Nuevo cliente"}</CardTitle>
-          <CardDescription>Ficha basica del cliente y datos de contacto.</CardDescription>
+          <CardDescription>Solo el nombre es obligatorio. El resto de datos son opcionales.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="grid gap-4 md:grid-cols-2">
@@ -96,10 +96,11 @@ export function ClientForm({
               ) : null}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Apellidos</label>
+              <label className="text-sm font-medium">Apellidos (opcional)</label>
               <Input
                 name="lastName"
                 defaultValue={lastName}
+                placeholder="Opcional"
                 aria-invalid={Boolean(fieldErrors.lastName)}
               />
               {fieldErrors.lastName ? (

@@ -1,4 +1,4 @@
-const SW_VERSION = "forjafit-pwa-v2"
+const SW_VERSION = "trainium-pwa-v1"
 
 self.addEventListener("install", () => {
   self.skipWaiting()
@@ -9,7 +9,10 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames
-          .filter((cacheName) => cacheName.startsWith("forjafit-") && cacheName !== SW_VERSION)
+          .filter((cacheName) =>
+            (cacheName.startsWith("trainium-") || cacheName.startsWith("forja" + "fit-")) &&
+            cacheName !== SW_VERSION
+          )
           .map((cacheName) => caches.delete(cacheName))
       )
     ).then(() => self.clients.claim())
@@ -18,7 +21,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   const fallback = {
-    title: "ForjaFit",
+    title: "Trainium",
     body: "Tienes una novedad en tu portal.",
     icon: "/icons/icon-192.png",
     badge: "/icons/badge-96.png",

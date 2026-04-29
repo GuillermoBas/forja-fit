@@ -12,6 +12,13 @@ CREATE OR REPLACE FUNCTION app_upsert_client(
 DECLARE
   v_client_id UUID;
 BEGIN
+  IF NULLIF(btrim(COALESCE(p_first_name, '')), '') IS NULL THEN
+    RAISE EXCEPTION 'El nombre del cliente es obligatorio';
+  END IF;
+
+  p_first_name := btrim(p_first_name);
+  p_last_name := NULLIF(btrim(COALESCE(p_last_name, '')), '');
+
   IF p_client_id IS NULL THEN
     INSERT INTO clients (
       first_name,
