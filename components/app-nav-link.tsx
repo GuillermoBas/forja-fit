@@ -49,7 +49,7 @@ export function AppNavLink({
       href={href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group relative flex min-w-0 shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-2.5 text-center text-[11px] font-medium leading-4 tracking-tight transition-all duration-200 sm:w-[4.8rem] sm:min-w-[4.8rem] lg:w-full lg:flex-row lg:justify-start lg:gap-2.5 lg:px-3 lg:py-2.5 lg:text-sm lg:leading-5 lg:text-left",
+        "group relative flex min-w-0 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-1.5 py-2 text-center text-[10px] font-medium leading-4 tracking-tight transition-all duration-200 sm:w-[4.35rem] sm:min-w-[4.35rem] md:h-full md:w-full md:min-w-0 md:px-2 lg:h-auto lg:w-full lg:flex-row lg:justify-start lg:gap-2.5 lg:px-3 lg:py-2.5 lg:text-sm lg:leading-5 lg:text-left",
         isActive
           ? "border-primary bg-primary text-white shadow-[0_10px_22px_rgba(18,191,166,0.18)]"
           : "border-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
@@ -65,7 +65,7 @@ export function AppNavLink({
       >
         <Icon className="h-4 w-4" />
       </span>
-      <span className="max-w-full truncate lg:flex-1">{label}</span>
+      <span className="max-w-full truncate md:max-w-[6.5rem] lg:max-w-full lg:flex-1">{label}</span>
       {isActive ? (
         <span className="h-1.5 w-1.5 rounded-full bg-primary lg:ml-auto" />
       ) : null}

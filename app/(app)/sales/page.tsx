@@ -17,28 +17,28 @@ export default async function SalesPage() {
 
   const postedSales = sales.filter((sale) => !sale.isVoided)
   const activeProducts = products.filter((product) => product.isActive)
+  const isAdmin = canVoidSales(profile?.role)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Ventas"
-        description="Ventas de productos, renovaciones de bono y tickets PDF en un único registro."
+        description="Ventas de productos, renovaciones de bono y tickets PDF en un unico registro."
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className={`grid gap-6 ${isAdmin ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
         <CreateSaleForm clients={clients} products={activeProducts} />
         <GenerateTicketForm sales={sales} />
+        {isAdmin ? (
+          <VoidSaleForm sales={postedSales} />
+        ) : (
+          <Card className="rounded-3xl">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              La anulacion de ventas esta reservada al perfil admin.
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {canVoidSales(profile?.role) ? (
-        <VoidSaleForm sales={postedSales} />
-      ) : (
-        <Card className="rounded-3xl">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            La anulación de ventas está reservada al perfil admin.
-          </CardContent>
-        </Card>
-      )}
 
       <SearchTable
         rows={sales.map((row) => ({
@@ -70,7 +70,7 @@ export default async function SalesPage() {
           { key: "status", label: "Estado" },
           { key: "ticket", label: "Ticket" }
         ]}
-        searchPlaceholder="Buscar por cliente, factura o método de pago"
+        searchPlaceholder="Buscar por cliente, factura o metodo de pago"
       />
     </div>
   )

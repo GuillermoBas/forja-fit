@@ -265,6 +265,7 @@ Create and maintain these InsForge Functions:
 - `upsert_client`
 - `delete_client`
 - `upsert_pass_type`
+- `delete_pass_type`
 - `create_pass`
 - `update_pass`
 - `delete_pass`
@@ -273,6 +274,8 @@ Create and maintain these InsForge Functions:
 - `renew_pass`
 - `upsert_product`
 - `add_stock`
+- `reduce_stock`
+- `delete_product`
 - `create_sale`
 - `void_sale`
 - `create_expense`
@@ -281,6 +284,7 @@ Create and maintain these InsForge Functions:
 - `cancel_client_calendar_session`
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
+- `create_staff_user`
 - `run_daily_expiry_scan`
 - `send_expiry_email`
 - `create_internal_notification`
@@ -525,20 +529,25 @@ If automated tests are missing, run these manual checks:
 4.1. edit pass
 4.2. delete a clean pass
 4.3. create or edit a pass type with 1-30 sessions or monthly mode
+4.4. delete a clean pass type with no usage
 5. consume one session
 6. pause pass within rules
 7. renew pass and verify internal notification
 8. create product
 9. add stock as admin
-10. create product sale and verify stock decrement
-11. create expense
-12. create agenda session
-13. verify shared-pass holders are all associated automatically
-14. run daily expiry scan once and verify idempotency
-15. generate ticket PDF
-16. verify report screens load
-17. verify `audit_logs` entries exist for create, update, delete, renew, consume, void sale and notification attempts
-18. verify trainer cannot access admin-only actions such as stock increases, sale voiding, settings changes or protected admin functions
+10. reduce stock as admin with a reason
+11. delete a clean product with no sale history
+12. create product sale and verify stock decrement
+13. void a sale as admin and verify stock rollback
+14. create or update a staff user from settings
+15. create expense
+16. create agenda session
+17. verify shared-pass holders are all associated automatically
+18. run daily expiry scan once and verify idempotency
+19. generate ticket PDF
+20. verify report screens load
+21. verify `audit_logs` entries exist for create, update, delete, renew, consume, void sale and notification attempts
+22. verify trainer cannot access admin-only actions such as stock increases, sale voiding, settings changes or protected admin functions
 
 ---
 

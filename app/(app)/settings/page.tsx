@@ -2,10 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BlockedState } from "@/components/blocked-state"
 import { PageHeader } from "@/components/page-header"
 import { InstallTrainium } from "@/components/pwa/install-trainium"
+import { DailyExpiryScanForm } from "@/features/notifications/notification-forms"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
+import { StaffManagementCard } from "@/features/settings/staff-management-card"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
 import { appConfig } from "@/lib/config"
+import { getStaffProfiles } from "@/lib/data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
 
@@ -91,18 +94,21 @@ export default async function SettingsPage() {
   }
 
   const isAdmin = profile.role === "admin"
-  const manualPushClients = await getManualPushClients()
+  const [manualPushClients, staffProfiles] = await Promise.all([
+    getManualPushClients(),
+    isAdmin ? getStaffProfiles() : Promise.resolve([])
+  ])
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Ajustes"
-        description="Preferencias del perfil, configuración básica del negocio y gestión interna."
+        description="Preferencias del perfil, configuracion basica del negocio y gestion interna."
       />
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="rounded-3xl">
           <CardHeader>
-            <CardTitle>Instalación PWA</CardTitle>
+            <CardTitle>Instalacion PWA</CardTitle>
           </CardHeader>
           <CardContent>
             <InstallTrainium respectDismissal={false} compact surface="plain" />
@@ -129,24 +135,14 @@ export default async function SettingsPage() {
               <CardContent className="space-y-3 text-sm">
                 <p><span className="font-medium">Nombre:</span> {appConfig.businessName}</p>
                 <p><span className="font-medium">Zona horaria:</span> {appConfig.timezone}</p>
-                <p><span className="font-medium">Aviso por defecto:</span> 7 días</p>
+                <p><span className="font-medium">Aviso por defecto:</span> 7 dias</p>
                 <p><span className="font-medium">IVA por defecto:</span> configurable en UI futura</p>
               </CardContent>
             </Card>
 
-            <Card className="rounded-3xl">
-              <CardHeader>
-                <CardTitle>Operaciones protegidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Crear o promocionar admins, añadir stock, anular ventas y editar precios debe pasar siempre por funciones protegidas.
-                </p>
-                <p>
-                  Si InsForge Schedules no está disponible, desde aquí puede exponerse la ejecución manual segura de `run_daily_expiry_scan`.
-                </p>
-              </CardContent>
-            </Card>
+            <DailyExpiryScanForm />
+
+            <StaffManagementCard staffProfiles={staffProfiles} />
           </>
         ) : null}
       </div>

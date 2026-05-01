@@ -7,8 +7,8 @@ export default async function LoginPage({
   searchParams
 }: {
   searchParams?:
-    | Promise<{ insforge_status?: string; error?: string; reset?: string }>
-    | { insforge_status?: string; error?: string; reset?: string }
+    | Promise<{ insforge_status?: string; error?: string; reset?: string; activation?: string; email?: string }>
+    | { insforge_status?: string; error?: string; reset?: string; activation?: string; email?: string }
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams)
   const [currentUser, canBootstrap] = await Promise.all([
@@ -25,6 +25,8 @@ export default async function LoginPage({
       verifyStatus={resolvedSearchParams?.insforge_status}
       errorMessage={resolvedSearchParams?.error}
       resetStatus={resolvedSearchParams?.reset}
+      activationRequired={resolvedSearchParams?.activation === "required"}
+      activationEmail={resolvedSearchParams?.email}
       canBootstrap={canBootstrap}
     />
   )

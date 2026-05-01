@@ -37,7 +37,7 @@ export function CreateSaleForm({
       <ErrorToast message={state.error} />
       <CardHeader>
         <CardTitle>Nueva venta de productos</CardTitle>
-        <CardDescription>Hasta 3 líneas por ticket. El precio se lee siempre desde base de datos.</CardDescription>
+        <CardDescription>Hasta 3 lineas por ticket. El precio se lee siempre desde base de datos.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
@@ -53,7 +53,7 @@ export function CreateSaleForm({
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Método de pago</label>
+            <label className="text-sm font-medium">Metodo de pago</label>
             <select name="paymentMethod" className={nativeSelectClassName}>
               <option value="cash">{formatPaymentMethod("cash")}</option>
               <option value="card">{formatPaymentMethod("card")}</option>
@@ -117,7 +117,7 @@ export function GenerateTicketForm({
       <ErrorToast message={state.error} />
       <CardHeader>
         <CardTitle>Generar o regenerar ticket</CardTitle>
-        <CardDescription>Útil para ventas antiguas o renovaciones de bono que aún no tengan PDF.</CardDescription>
+        <CardDescription>Util para ventas antiguas o renovaciones de bono que aun no tengan PDF.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
@@ -152,28 +152,34 @@ export function VoidSaleForm({
       <ErrorToast message={state.error} />
       <CardHeader>
         <CardTitle>Anular venta</CardTitle>
-        <CardDescription>Solo admin. Si la venta incluye productos, el stock se repone de forma automática.</CardDescription>
+        <CardDescription>Solo admin. Si la venta incluye productos, el stock se repone de forma automatica.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Venta publicada</label>
-            <select name="saleId" className={nativeSelectClassName}>
-              {sales.map((sale) => (
-                <option key={sale.id} value={sale.id}>
-                  {sale.invoiceCode} - {sale.totalAmount.toFixed(2)} €
-                </option>
-              ))}
-            </select>
+        {sales.length ? (
+          <form action={formAction} className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Venta publicada</label>
+              <select name="saleId" className={nativeSelectClassName}>
+                {sales.map((sale) => (
+                  <option key={sale.id} value={sale.id}>
+                    {sale.invoiceCode} - {sale.totalAmount.toFixed(2)} EUR
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Motivo</label>
+              <Input name="reason" required />
+            </div>
+            <div className="md:col-span-2">
+              <AuthFormSubmit idleLabel="Anular venta" pendingLabel="Anulando..." />
+            </div>
+          </form>
+        ) : (
+          <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+            No hay ventas publicadas pendientes de anulacion.
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Motivo</label>
-            <Input name="reason" required />
-          </div>
-          <div className="md:col-span-2">
-            <AuthFormSubmit idleLabel="Anular venta" pendingLabel="Anulando..." />
-          </div>
-        </form>
+        )}
       </CardContent>
     </Card>
   )

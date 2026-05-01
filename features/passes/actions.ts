@@ -72,6 +72,34 @@ export async function upsertPassTypeAction(
   return { success: true }
 }
 
+export async function deletePassTypeAction(
+  _prevState: PassActionState,
+  formData: FormData
+): Promise<PassActionState> {
+  const passTypeId = String(formData.get("passTypeId") ?? "").trim()
+  const confirmationText = String(formData.get("confirmationText") ?? "").trim()
+
+  if (!passTypeId) {
+    return { error: "No se ha encontrado el tipo de bono a borrar." }
+  }
+
+  if (confirmationText !== "CONFIRMO") {
+    return { error: 'Escribe "CONFIRMO" para confirmar el borrado.' }
+  }
+
+  try {
+    await invokeProtectedFunction("delete_pass_type", { passTypeId })
+  } catch (error) {
+    return toActionError(error, "No se pudo borrar el tipo de bono")
+  }
+
+  revalidatePath("/passes")
+  return {
+    success: true,
+    redirectTo: "/passes"
+  }
+}
+
 export async function updatePassAction(
   _prevState: PassActionState,
   formData: FormData

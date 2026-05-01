@@ -1,14 +1,52 @@
 "use client"
 
 import { useActionState, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Client, Pass, PassType } from "@/types/domain"
-import { deletePassAction, type PassActionState, updatePassAction, upsertPassTypeAction } from "@/features/passes/actions"
+import {
+  deletePassAction,
+  deletePassTypeAction,
+  type PassActionState,
+  updatePassAction,
+  upsertPassTypeAction
+} from "@/features/passes/actions"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { nativeSelectClassName } from "@/lib/utils"
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100
+}
+
+function formatMoneyInput(value: number) {
+  return roundMoney(value).toFixed(2)
+}
+
+function parseDecimalInput(value: string) {
+  const normalized = value.replace(",", ".").trim()
+  if (!normalized) {
+    return null
+  }
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function calculatePriceWithVat(basePrice: number, vatRate: number) {
+  return roundMoney(basePrice * (1 + (vatRate / 100)))
+}
+
+function calculateBasePrice(priceWithVat: number, vatRate: number) {
+  if (vatRate <= -100) {
+    return priceWithVat
+  }
+
+  return roundMoney(priceWithVat / (1 + (vatRate / 100)))
+}
 
 function usePassFeedback(state: PassActionState, successMessage: string) {
   const router = useRouter()
@@ -86,85 +124,248 @@ export function PassTypeForm({
     [passTypes, selectedPassTypeId]
   )
   const [kind, setKind] = useState<PassType["kind"]>(selectedPassType?.kind ?? "session")
+  const [vatRate, setVatRate] = useState(() => String(selectedPassType?.vatRate ?? 21))
+  const [basePrice, setBasePrice] = useState(() =>
+    formatMoneyInput(calculateBasePrice(selectedPassType?.price ?? 0, selectedPassType?.vatRate ?? 21))
+  )
+  const [priceWithVat, setPriceWithVat] = useState(() => formatMoneyInput(selectedPassType?.price ?? 0))
+  const [lastEditedPriceField, setLastEditedPriceField] = useState<"base" | "gross">("base")
   const [state, formAction] = useActionState(upsertPassTypeAction, {})
+  const [deleteState, deleteFormAction] = useActionState(deletePassTypeAction, {})
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   useEffect(() => {
     setKind(selectedPassType?.kind ?? "session")
-  }, [selectedPassType?.kind])
+    setVatRate(String(selectedPassType?.vatRate ?? 21))
+    setBasePrice(formatMoneyInput(calculateBasePrice(selectedPassType?.price ?? 0, selectedPassType?.vatRate ?? 21)))
+    setPriceWithVat(formatMoneyInput(selectedPassType?.price ?? 0))
+    setLastEditedPriceField("base")
+    setIsDeleteOpen(false)
+  }, [selectedPassType])
 
   usePassFeedback(
     state,
     selectedPassType ? "Tipo de bono actualizado correctamente." : "Tipo de bono creado correctamente."
   )
+  usePassFeedback(deleteState, "Tipo de bono borrado correctamente.")
+
+  useEffect(() => {
+    if (deleteState.success) {
+      setIsDeleteOpen(false)
+    }
+  }, [deleteState.success])
+
+  const canDeleteSelectedPassType = Boolean(selectedPassType?.canDelete)
+  const selectedPassTypeUsageCount = selectedPassType?.passCount ?? 0
+
+  function syncFromBasePrice(nextBasePrice: string, nextVatRate = vatRate) {
+    setBasePrice(nextBasePrice)
+    setLastEditedPriceField("base")
+
+    const parsedBasePrice = parseDecimalInput(nextBasePrice)
+    const parsedVatRate = parseDecimalInput(nextVatRate)
+
+    if (parsedBasePrice === null || parsedVatRate === null) {
+      setPriceWithVat("")
+      return
+    }
+
+    setPriceWithVat(formatMoneyInput(calculatePriceWithVat(parsedBasePrice, parsedVatRate)))
+  }
+
+  function syncFromPriceWithVat(nextPriceWithVat: string, nextVatRate = vatRate) {
+    setPriceWithVat(nextPriceWithVat)
+    setLastEditedPriceField("gross")
+
+    const parsedPriceWithVat = parseDecimalInput(nextPriceWithVat)
+    const parsedVatRate = parseDecimalInput(nextVatRate)
+
+    if (parsedPriceWithVat === null || parsedVatRate === null) {
+      setBasePrice("")
+      return
+    }
+
+    setBasePrice(formatMoneyInput(calculateBasePrice(parsedPriceWithVat, parsedVatRate)))
+  }
+
+  function handleVatRateChange(nextVatRate: string) {
+    setVatRate(nextVatRate)
+
+    if (lastEditedPriceField === "gross") {
+      syncFromPriceWithVat(priceWithVat, nextVatRate)
+      return
+    }
+
+    syncFromBasePrice(basePrice, nextVatRate)
+  }
 
   return (
-    <Card className="rounded-3xl">
-      <CardHeader>
-        <CardTitle>{selectedPassType ? "Editar tipo de bono" : "Nuevo tipo de bono"}</CardTitle>
-        <CardDescription>
-          Configura bonos por sesiones de 1 a 30 o un bono mensual por mes natural.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form action={formAction} className="grid gap-4 md:grid-cols-2">
-          <input type="hidden" name="id" value={selectedPassType?.id ?? ""} />
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Nombre</label>
-            <Input name="name" defaultValue={selectedPassType?.name ?? ""} placeholder="Bono 6 sesiones" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo</label>
-            <select
-              name="kind"
-              value={kind}
-              onChange={(event) => setKind(event.target.value as PassType["kind"])}
-              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-            >
-              <option value="session">Por sesiones</option>
-              <option value="monthly">Mensual</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Sesiones</label>
-            <Input
-              name="sessionsTotal"
-              type="number"
-              min={1}
-              max={30}
-              disabled={kind === "monthly"}
-              defaultValue={selectedPassType?.sessionCount ?? ""}
-              placeholder={kind === "monthly" ? "No aplica" : "Entre 1 y 30"}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Precio bruto</label>
-            <Input name="priceGross" type="number" step="0.01" min={0} defaultValue={selectedPassType?.price ?? 0} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">IVA</label>
-            <Input name="vatRate" type="number" step="0.01" min={0} defaultValue={selectedPassType?.vatRate ?? 21} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Orden</label>
-            <Input name="sortOrder" type="number" min={0} defaultValue={selectedPassType?.sortOrder ?? 0} />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="sharedAllowed" defaultChecked={selectedPassType?.sharedAllowed ?? true} />
-            Permitir bono compartido (hasta 5 titulares)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="isActive" defaultChecked={selectedPassType?.isActive ?? true} />
-            Tipo activo
-          </label>
-          <div className="md:col-span-2">
-            <AuthFormSubmit
-              idleLabel={selectedPassType ? "Guardar tipo de bono" : "Crear tipo de bono"}
-              pendingLabel="Guardando..."
-            />
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle>{selectedPassType ? "Editar tipo de bono" : "Nuevo tipo de bono"}</CardTitle>
+          <CardDescription>
+            Configura bonos por sesiones de 1 a 30 o un bono mensual por mes natural.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form key={selectedPassType?.id ?? "new-pass-type"} action={formAction} className="grid gap-4 md:grid-cols-2">
+            <input type="hidden" name="id" value={selectedPassType?.id ?? ""} />
+            <input type="hidden" name="priceGross" value={priceWithVat} />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nombre</label>
+              <Input
+                name="name"
+                defaultValue={selectedPassType?.name ?? ""}
+                placeholder="Bono 6 sesiones"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo</label>
+              <select
+                name="kind"
+                value={kind}
+                onChange={(event) => setKind(event.target.value as PassType["kind"])}
+                className={nativeSelectClassName}
+              >
+                <option value="session">Por sesiones</option>
+                <option value="monthly">Mensual</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sesiones</label>
+              <Input
+                name="sessionsTotal"
+                type="number"
+                min={1}
+                max={30}
+                disabled={kind === "monthly"}
+                defaultValue={selectedPassType?.sessionCount ?? ""}
+                placeholder={kind === "monthly" ? "No aplica" : "Entre 1 y 30"}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Precio bruto</label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                value={basePrice}
+                onChange={(event) => syncFromBasePrice(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">IVA</label>
+              <Input
+                name="vatRate"
+                type="number"
+                step="0.01"
+                min={0}
+                value={vatRate}
+                onChange={(event) => handleVatRateChange(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Precio con IVA incluido</label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                value={priceWithVat}
+                onChange={(event) => syncFromPriceWithVat(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Orden</label>
+              <Input name="sortOrder" type="number" min={0} defaultValue={selectedPassType?.sortOrder ?? 0} />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="sharedAllowed" defaultChecked={selectedPassType?.sharedAllowed ?? true} />
+              Permitir bono compartido (hasta 5 titulares)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="isActive" defaultChecked={selectedPassType?.isActive ?? true} />
+              Tipo activo
+            </label>
+            <div className="flex flex-col gap-3 md:col-span-2 md:flex-row">
+              <AuthFormSubmit
+                idleLabel={selectedPassType ? "Guardar tipo de bono" : "Crear tipo de bono"}
+                pendingLabel="Guardando..."
+              />
+              {selectedPassType ? (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/passes">Limpiar edición</Link>
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {selectedPassType ? (
+        canDeleteSelectedPassType ? (
+          <>
+            <Card className="rounded-3xl border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-destructive">Zona peligrosa</CardTitle>
+                <CardDescription>
+                  Este tipo no tiene bonos asociados ni histórico de uso. Se puede borrar de forma segura.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="destructive" type="button" onClick={() => setIsDeleteOpen(true)}>
+                  Borrar tipo de bono
+                </Button>
+              </CardContent>
+            </Card>
+
+            {isDeleteOpen ? (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                <div className="w-full max-w-md rounded-3xl border bg-card p-6 shadow-xl">
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-semibold text-destructive">Confirmar borrado del tipo de bono</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Esta accion eliminara el tipo de bono de forma permanente. Para continuar, escribe
+                      <span className="font-semibold text-foreground"> CONFIRMO</span>.
+                    </p>
+                    <form action={deleteFormAction} className="space-y-4">
+                      <input type="hidden" name="passTypeId" value={selectedPassType.id} />
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Texto de confirmacion</label>
+                        <Input name="confirmationText" autoFocus placeholder="CONFIRMO" />
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setIsDeleteOpen(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button variant="destructive" className="flex-1">
+                          Confirmar borrado
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <Card className="rounded-3xl border-border/70">
+            <CardHeader>
+              <CardTitle>No se puede borrar este tipo de bono</CardTitle>
+              <CardDescription>
+                Hay {selectedPassTypeUsageCount} bono{selectedPassTypeUsageCount === 1 ? "" : "s"} asociado
+                {selectedPassTypeUsageCount === 1 ? "" : "s"} a este tipo, así que el borrado queda bloqueado.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )
+      ) : null}
+    </>
   )
 }
 

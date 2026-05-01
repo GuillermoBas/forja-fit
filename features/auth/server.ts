@@ -7,6 +7,7 @@ export type StaffAuthActionState = {
   error?: string
   success?: string
   email?: string
+  verificationRequired?: boolean
   resetCodeSent?: boolean
   resetToken?: string
 }

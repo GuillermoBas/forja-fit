@@ -3,7 +3,6 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, ShieldCheck, UserRound } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { appConfig } from "@/lib/config"
 import { getCurrentProfile } from "@/lib/auth/session"
 import { getCurrentPortalAccount } from "@/lib/auth/portal-session"
 
@@ -55,7 +54,7 @@ export default async function HomePage() {
             </div>
 
             <h1 className="mt-5 text-center font-heading text-[2.35rem] font-bold tracking-[-0.06em] text-text-primary sm:text-[3rem]">
-              {appConfig.businessName}
+              Trainium
             </h1>
 
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-muted sm:text-xs">

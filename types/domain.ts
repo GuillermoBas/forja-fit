@@ -63,6 +63,8 @@ export interface PassType {
   sharedAllowed: boolean
   isActive: boolean
   sortOrder: number
+  passCount?: number
+  canDelete?: boolean
 }
 
 export interface Pass {
@@ -96,6 +98,8 @@ export interface Product {
   lowStockThreshold: number
   minStock: number
   isActive: boolean
+  saleItemCount?: number
+  canDelete?: boolean
 }
 
 export interface Sale {

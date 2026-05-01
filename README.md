@@ -130,6 +130,25 @@ npm run build
 
 `npm run build` fuerza Webpack porque Next.js 16 usa Turbopack por defecto y en este workspace falla al recolectar paginas App Router existentes.
 
+## Activacion de staff
+
+Los usuarios staff nuevos pueden necesitar verificar su email con un codigo de 6 digitos antes de entrar por primera vez. Si intentan acceder desde `/login` sin haber activado la cuenta, Trainium redirige el flujo al modo de activacion y les pide el codigo recibido por email para completar el acceso.
+
+## Operativa admin en ajustes y catalogo
+
+La pantalla `/settings` ya incluye dos operaciones protegidas para admins:
+
+- alta y mantenimiento de usuarios staff (`trainer` y `admin`) mediante la Function `create_staff_user`
+- ejecucion manual de `run_daily_expiry_scan` como fallback si el Schedule falla o no esta disponible
+
+La pantalla `/products` ya permite a admins:
+
+- anadir stock
+- reducir stock con motivo obligatorio
+- borrar productos solo si no tienen historial en `sale_items`
+
+La pantalla `/sales` muestra la anulacion de ventas como una tarjeta propia para admins, usando la Function protegida `void_sale`.
+
 ## Preview visual local
 
 Para revisar cambios visuales sin InsForge ni login real, activa el modo preview solo en `.env.local`:
@@ -488,18 +507,23 @@ npm run deploy
 5. Editar un pase existente.
 6. Borrar un pase limpio y comprobar que un cliente sin relaciones ya se puede borrar.
 7. Crear o editar un tipo de bono con sesiones flexibles o mensual.
-8. Consumir una sesion.
-9. Pausar pase dentro de reglas.
-10. Renovar pase y verificar notificacion interna.
-11. Crear producto.
-12. Anadir stock como admin.
-13. Crear venta y verificar decremento de stock.
-14. Crear gasto.
-15. Crear sesion de agenda.
-16. Verificar que un bono compartido asocia todos sus titulares a la cita.
-17. Ejecutar `run_daily_expiry_scan` una vez y verificar idempotencia.
-18. Generar ticket PDF.
-19. Verificar que cargan los informes.
+8. Borrar un tipo de bono limpio sin bonos asociados.
+9. Consumir una sesion.
+10. Pausar pase dentro de reglas.
+11. Renovar pase y verificar notificacion interna.
+12. Crear producto.
+13. Anadir stock como admin.
+14. Reducir stock como admin con motivo.
+15. Borrar un producto limpio sin historial de ventas.
+16. Crear venta y verificar decremento de stock.
+17. Anular una venta como admin y verificar reposicion de stock si aplica.
+18. Crear o actualizar un usuario staff desde Ajustes.
+19. Crear gasto.
+20. Crear sesion de agenda.
+21. Verificar que un bono compartido asocia todos sus titulares a la cita.
+22. Ejecutar `run_daily_expiry_scan` una vez y verificar idempotencia.
+23. Generar ticket PDF.
+24. Verificar que cargan los informes.
 
 ## Smoke checklist de Fase 2
 

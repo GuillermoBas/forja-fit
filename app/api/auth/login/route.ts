@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
-import { accessCookieMaxAge, clearAuthCookies, getAuthCookieOptions, refreshCookieMaxAge } from "@/lib/auth/cookies"
+import {
+  accessCookieMaxAge,
+  clearAuthCookies,
+  getAuthCookieOptions,
+  refreshCookieMaxAge
+} from "@/lib/auth/cookies"
+
+function looksLikePendingEmailVerification(message?: string) {
+  const normalized = String(message ?? "").toLowerCase()
+
+  return (
+    normalized.includes("verify") ||
+    normalized.includes("verified") ||
+    normalized.includes("verification") ||
+    normalized.includes("not verified") ||
+    normalized.includes("email not") ||
+    normalized.includes("confirm")
+  )
+}
 
 export async function POST(request: Request) {
   const formData = await request.formData()
   const email = String(formData.get("email") ?? "").trim()
   const password = String(formData.get("password") ?? "")
-  const invalidCredentialsMessage = encodeURIComponent("Email o Contraseña incorrectos.")
+  const invalidCredentialsMessage = encodeURIComponent("Email o Contrasena incorrectos.")
 
   if (!email || !password) {
-    return NextResponse.redirect(new URL("/login?error=Introduce%20email%20y%20Contrase%C3%B1a.", request.url))
+    return NextResponse.redirect(new URL("/login?error=Introduce%20email%20y%20contrasena.", request.url))
   }
 
   try {
@@ -17,10 +35,16 @@ export async function POST(request: Request) {
     const result = await client.auth.signInWithPassword({ email, password })
 
     if (result.error || !result.data?.accessToken) {
+      if (looksLikePendingEmailVerification(result.error?.message)) {
+        return NextResponse.redirect(
+          new URL(`/login?activation=required&email=${encodeURIComponent(email)}`, request.url)
+        )
+      }
+
       const message =
         result.error?.message === "Invalid credentials"
           ? invalidCredentialsMessage
-          : encodeURIComponent(result.error?.message ?? "No se pudo iniciar sesión.")
+          : encodeURIComponent(result.error?.message ?? "No se pudo iniciar sesion.")
       return NextResponse.redirect(new URL(`/login?error=${message}`, request.url))
     }
 
@@ -42,7 +66,7 @@ export async function POST(request: Request) {
 
     if (!profileResult.data.is_active) {
       await clearAuthCookies()
-      const message = encodeURIComponent("Tu perfil staff está desactivado. Contacta con un administrador.")
+      const message = encodeURIComponent("Tu perfil staff esta desactivado. Contacta con un administrador.")
       return NextResponse.redirect(new URL(`/login?error=${message}`, request.url))
     }
 
@@ -71,10 +95,17 @@ export async function POST(request: Request) {
   } catch (error) {
     const fallbackMessage =
       error instanceof Error && error.message === "Invalid credentials"
-        ? "Email o Contraseña incorrectos."
+        ? "Email o Contrasena incorrectos."
         : error instanceof Error
           ? error.message
-          : "No se pudo iniciar sesión."
+          : "No se pudo iniciar sesion."
+
+    if (looksLikePendingEmailVerification(fallbackMessage)) {
+      return NextResponse.redirect(
+        new URL(`/login?activation=required&email=${encodeURIComponent(email)}`, request.url)
+      )
+    }
+
     const message = encodeURIComponent(fallbackMessage)
     return NextResponse.redirect(new URL(`/login?error=${message}`, request.url))
   }

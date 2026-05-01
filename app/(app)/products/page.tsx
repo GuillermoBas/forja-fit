@@ -1,10 +1,10 @@
-import { AddStockForm, ProductForm } from "@/features/products/product-forms"
+import { AddStockForm, ProductForm, ReduceStockForm } from "@/features/products/product-forms"
 import { PageHeader } from "@/components/page-header"
 import { SearchTable } from "@/components/search-table"
 import { Card, CardContent } from "@/components/ui/card"
 import { getCurrentProfile } from "@/lib/auth/session"
-import { isAdmin } from "@/lib/permissions/roles"
 import { getProducts } from "@/lib/data"
+import { isAdmin } from "@/lib/permissions/roles"
 import { formatCurrency } from "@/lib/utils"
 
 export default async function ProductsPage({
@@ -19,23 +19,26 @@ export default async function ProductsPage({
     : resolvedSearchParams?.edit
   const selectedProduct = editId ? products.find((product) => product.id === editId) ?? null : null
   const canManageProducts = isAdmin(profile?.role)
+  const activeProducts = products.filter((product) => product.isActive)
+  const stockedProducts = activeProducts.filter((product) => product.stockOnHand > 0)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Productos"
-        description="Suplementos, stock y mantenimiento de catálogo para el día a día."
+        description="Suplementos, stock y mantenimiento de catalogo para el dia a dia."
       />
 
       {canManageProducts ? (
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-3">
           <ProductForm product={selectedProduct} />
-          <AddStockForm products={products.filter((product) => product.isActive)} />
+          <AddStockForm products={activeProducts} />
+          <ReduceStockForm products={stockedProducts.length ? stockedProducts : activeProducts} />
         </div>
       ) : (
         <Card className="rounded-3xl">
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Los entrenadores pueden consultar el catálogo, pero solo admin puede editar precios y stock.
+            Los entrenadores pueden consultar el catalogo, pero solo admin puede editar precios y stock.
           </CardContent>
         </Card>
       )}
@@ -50,7 +53,7 @@ export default async function ProductsPage({
               subtext: row.sku ?? "Sin SKU",
               href: canManageProducts ? `/products?edit=${row.id}` : undefined
             },
-            category: { text: row.category ?? "Sin categoría" },
+            category: { text: row.category ?? "Sin categoria" },
             price: { text: formatCurrency(row.priceGross) },
             stock: { text: String(row.stockOnHand) },
             minimum: { text: String(row.minStock) },
@@ -66,14 +69,14 @@ export default async function ProductsPage({
         }))}
         columns={[
           { key: "name", label: "Producto" },
-          { key: "category", label: "Categoría" },
+          { key: "category", label: "Categoria" },
           { key: "price", label: "Precio" },
           { key: "stock", label: "Stock" },
-          { key: "minimum", label: "Mínimo" },
+          { key: "minimum", label: "Minimo" },
           { key: "alert", label: "Alerta" },
           { key: "status", label: "Estado" }
         ]}
-        searchPlaceholder="Buscar producto por nombre, SKU o categoría"
+        searchPlaceholder="Buscar producto por nombre, SKU o categoria"
       />
     </div>
   )

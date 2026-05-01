@@ -452,9 +452,28 @@ export async function getClientPortalSupportState(
 }
 
 export async function getPassTypes(options?: { includeInactive?: boolean }): Promise<PassType[]> {
+  const mapFallbackPassTypes = (items: PassType[]) => {
+    const passCountByTypeId = new Map<string, number>()
+
+    for (const pass of demoPasses) {
+      passCountByTypeId.set(pass.passTypeId, (passCountByTypeId.get(pass.passTypeId) ?? 0) + 1)
+    }
+
+    return items.map((item) => {
+      const passCount = passCountByTypeId.get(item.id) ?? 0
+
+      return {
+        ...item,
+        passCount,
+        canDelete: passCount === 0
+      }
+    })
+  }
+
   const client = await createAuthedClient()
   if (!client) {
-    return options?.includeInactive ? demoPassTypes : demoPassTypes.filter((item) => item.isActive)
+    const fallback = options?.includeInactive ? demoPassTypes : demoPassTypes.filter((item) => item.isActive)
+    return mapFallbackPassTypes(fallback)
   }
 
   let query = client.database.from("pass_types").select("*").order("sort_order", { ascending: true })
@@ -462,13 +481,39 @@ export async function getPassTypes(options?: { includeInactive?: boolean }): Pro
     query = query.eq("is_active", true)
   }
 
-  const result = await query
+  const [result, passesResult] = await Promise.all([
+    query,
+    client.database.from("passes").select("id,pass_type_id")
+  ])
 
   if (result.error || !result.data) {
-    return options?.includeInactive ? demoPassTypes : demoPassTypes.filter((item) => item.isActive)
+    const fallback = options?.includeInactive ? demoPassTypes : demoPassTypes.filter((item) => item.isActive)
+    return mapFallbackPassTypes(fallback)
   }
 
-  return (result.data as DbRow[]).map(mapPassTypeRow)
+  const passCountByTypeId = new Map<string, number>()
+
+  if (!passesResult.error && passesResult.data) {
+    for (const row of passesResult.data as DbRow[]) {
+      const passTypeId = String(row.pass_type_id ?? "")
+      if (!passTypeId) {
+        continue
+      }
+
+      passCountByTypeId.set(passTypeId, (passCountByTypeId.get(passTypeId) ?? 0) + 1)
+    }
+  }
+
+  return (result.data as DbRow[]).map((row) => {
+    const base = mapPassTypeRow(row)
+    const passCount = passCountByTypeId.get(base.id) ?? 0
+
+    return {
+      ...base,
+      passCount,
+      canDelete: passCount === 0
+    }
+  })
 }
 
 export async function getPasses(): Promise<Pass[]> {
@@ -486,17 +531,82 @@ export async function getPassById(id: string): Promise<Pass | null> {
 }
 
 export async function getProducts(): Promise<Product[]> {
+  const mapFallbackProducts = (items: Product[]) => {
+    return items.map((item) => ({
+      ...item,
+      saleItemCount: 0,
+      canDelete: true
+    }))
+  }
+
   const client = await createAuthedClient()
   if (!client) {
-    return demoProducts
+    return mapFallbackProducts(demoProducts)
   }
 
-  const result = await client.database.from("products").select("*").order("name", { ascending: true })
+  const [result, saleItemsResult] = await Promise.all([
+    client.database.from("products").select("*").order("name", { ascending: true }),
+    client.database.from("sale_items").select("product_id").eq("item_type", "product")
+  ])
+
   if (result.error || !result.data) {
-    return demoProducts
+    return mapFallbackProducts(demoProducts)
   }
 
-  return (result.data as DbRow[]).map(mapProductRow)
+  const saleItemCountByProductId = new Map<string, number>()
+
+  if (!saleItemsResult.error && saleItemsResult.data) {
+    for (const row of saleItemsResult.data as DbRow[]) {
+      const productId = String(row.product_id ?? "")
+      if (!productId) {
+        continue
+      }
+
+      saleItemCountByProductId.set(productId, (saleItemCountByProductId.get(productId) ?? 0) + 1)
+    }
+  }
+
+  return (result.data as DbRow[]).map((row) => {
+    const base = mapProductRow(row)
+    const saleItemCount = saleItemCountByProductId.get(base.id) ?? 0
+
+    return {
+      ...base,
+      saleItemCount,
+      canDelete: saleItemCount === 0
+    }
+  })
+}
+
+export async function getStaffProfiles(): Promise<Array<{
+  id: string
+  fullName: string
+  email: string
+  role: "admin" | "trainer"
+  isActive: boolean
+}>> {
+  const client = await createAuthedClient()
+  if (!client) {
+    return []
+  }
+
+  const result = await client.database
+    .from("profiles")
+    .select("id,full_name,email,role,is_active")
+    .in("role", ["admin", "trainer"])
+    .order("full_name", { ascending: true })
+
+  if (result.error || !result.data) {
+    return []
+  }
+
+  return (result.data as DbRow[]).map((row) => ({
+    id: String(row.id),
+    fullName: String(row.full_name ?? ""),
+    email: String(row.email ?? ""),
+    role: String(row.role ?? "trainer") as "admin" | "trainer",
+    isActive: Boolean(row.is_active)
+  }))
 }
 
 export async function getSales(): Promise<Sale[]> {

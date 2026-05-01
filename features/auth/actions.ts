@@ -56,6 +56,46 @@ export async function signInAction(
   redirect("/dashboard")
 }
 
+export async function verifyStaffEmailAction(
+  _prevState: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = String(formData.get("email") ?? "").trim()
+  const otp = String(formData.get("otp") ?? "").trim()
+
+  if (!email || !otp) {
+    return {
+      error: "Introduce email y codigo de activacion.",
+      verificationRequired: true,
+      email
+    }
+  }
+
+  try {
+    const client = createServerInsforgeClient() as any
+    const result = await client.auth.verifyEmail({ email, otp })
+
+    if (result.error || !result.data?.accessToken) {
+      return {
+        error: result.error?.message ?? "No se pudo verificar el email.",
+        verificationRequired: true,
+        email
+      }
+    }
+
+    return completeStaffAuthentication({
+      accessToken: result.data.accessToken,
+      refreshToken: result.data.refreshToken ?? null
+    })
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "No se pudo verificar el email.",
+      verificationRequired: true,
+      email
+    }
+  }
+}
+
 export async function signOutAction() {
   await clearAuthCookies()
   redirect("/login")
