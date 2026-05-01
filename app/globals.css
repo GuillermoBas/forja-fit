@@ -259,6 +259,29 @@ a {
     @apply rounded-[1.15rem] border border-border/90 bg-surface px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)];
   }
 
+  .staff-sidebar-nav-scroll {
+    scrollbar-color: rgba(18, 191, 166, 0.55) rgba(255, 255, 255, 0.08);
+    scrollbar-width: thin;
+  }
+
+  .staff-sidebar-nav-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .staff-sidebar-nav-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+  }
+
+  .staff-sidebar-nav-scroll::-webkit-scrollbar-thumb {
+    background: rgba(18, 191, 166, 0.55);
+    border-radius: 999px;
+  }
+
+  .staff-sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(18, 191, 166, 0.78);
+  }
+
   .app-page-header {
     @apply flex flex-col gap-3 border-b border-border/70 bg-surface/95 px-4 py-3 sm:px-5 sm:py-4 md:flex-row md:items-center md:justify-between;
     min-height: 72px;

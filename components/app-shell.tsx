@@ -56,7 +56,7 @@ export function AppShell({
     <div className="min-h-screen bg-transparent">
       <div className="mobile-page-shell mx-auto grid min-h-screen max-w-[1600px] gap-5 lg:grid-cols-[248px_1fr] lg:px-6 lg:py-6">
         <aside className="page-section grid gap-2.5 border-trainium-dark/80 bg-trainium-dark p-2.5 text-white sm:gap-3 sm:p-3 md:grid-cols-[8.75rem_minmax(0,1fr)] md:items-stretch lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:flex-col lg:p-4">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-[1.05rem] border border-white/10 bg-white/[0.04] p-2.5 shadow-[0_10px_24px_rgba(7,17,29,0.24)] md:block md:p-3 lg:mb-1 lg:p-4">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-[1.05rem] border border-white/10 bg-white/[0.04] p-2.5 shadow-[0_10px_24px_rgba(7,17,29,0.24)] md:block md:p-3 lg:mb-1 lg:shrink-0 lg:p-4">
             <p className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60 lg:text-[11px] lg:tracking-[0.2em]">
               Gestion del gimnasio
             </p>
@@ -75,7 +75,7 @@ export function AppShell({
 
           <nav
             aria-label="Navegacion principal del gimnasio"
-            className="grid grid-cols-4 gap-1.5 min-[520px]:grid-cols-5 sm:gap-2 md:grid-rows-2 lg:flex-1 lg:grid-cols-1 lg:grid-rows-none"
+            className="staff-sidebar-nav-scroll grid grid-cols-4 gap-1.5 min-[520px]:grid-cols-5 sm:gap-2 md:grid-rows-2 lg:min-h-0 lg:flex-1 lg:grid-cols-1 lg:grid-rows-none lg:content-start lg:overflow-y-auto lg:overscroll-contain lg:pr-1"
           >
             {navItems.map((item) => (
               <AppNavLink key={item.href} href={item.href} label={item.label} />
