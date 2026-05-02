@@ -12,6 +12,7 @@ Funciones previstas:
 
 - `bootstrap_admin`
 - `create_staff_user`
+- `resend_staff_activation`
 - `upsert_client`
 - `delete_client`
 - `upsert_pass_type`

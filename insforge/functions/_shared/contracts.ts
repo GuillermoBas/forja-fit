@@ -146,6 +146,12 @@ export const updateProfileCalendarColorSchema = z.object({
   calendarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/)
 })
 
+export const updateBusinessSettingsSchema = z.object({
+  businessName: z.string().min(2),
+  reminderDaysDefault: z.number().int().min(0).max(30),
+  defaultVatRate: z.number().nonnegative()
+})
+
 export const runDailyExpiryScanSchema = z.object({
   runOn: z.string().optional()
 })

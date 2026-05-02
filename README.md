@@ -139,6 +139,7 @@ Los usuarios staff nuevos pueden necesitar verificar su email con un codigo de 6
 La pantalla `/settings` ya incluye dos operaciones protegidas para admins:
 
 - alta y mantenimiento de usuarios staff (`trainer` y `admin`) mediante la Function `create_staff_user`
+- reenvio del codigo de activacion para staff pendiente mediante la Function `resend_staff_activation`
 - ejecucion manual de `run_daily_expiry_scan` como fallback si el Schedule falla o no esta disponible
 
 La pantalla `/products` ya permite a admins:
@@ -378,6 +379,7 @@ npx @insforge/cli db import insforge/sql/003_phase3_clients_passes.sql
 npx @insforge/cli db import insforge/sql/009_delete_client.sql
 npx @insforge/cli db import insforge/sql/017_agenda_multi_passes.sql
 npx @insforge/cli db import insforge/sql/020_clients_last_name_optional.sql
+npx @insforge/cli db import insforge/sql/023_delete_pass_cascade_cleanup.sql
 npx @insforge/cli db import insforge/sql/022_grant_invoice_sequence_all_roles.sql
 ```
 
@@ -505,7 +507,7 @@ npm run deploy
 3. Editar cliente.
 4. Crear pase.
 5. Editar un pase existente.
-6. Borrar un pase limpio y comprobar que un cliente sin relaciones ya se puede borrar.
+6. Borrar un pase de prueba y comprobar que tambien limpia consumos, pausas y la venta asociada cuando no hay renovaciones ni agenda vinculada.
 7. Crear o editar un tipo de bono con sesiones flexibles o mensual.
 8. Borrar un tipo de bono limpio sin bonos asociados.
 9. Consumir una sesion.
@@ -518,12 +520,13 @@ npm run deploy
 16. Crear venta y verificar decremento de stock.
 17. Anular una venta como admin y verificar reposicion de stock si aplica.
 18. Crear o actualizar un usuario staff desde Ajustes.
-19. Crear gasto.
-20. Crear sesion de agenda.
-21. Verificar que un bono compartido asocia todos sus titulares a la cita.
-22. Ejecutar `run_daily_expiry_scan` una vez y verificar idempotencia.
-23. Generar ticket PDF.
-24. Verificar que cargan los informes.
+19. Reenviar el codigo de activacion de un staff pendiente desde Ajustes.
+20. Crear gasto.
+21. Crear sesion de agenda.
+22. Verificar que un bono compartido asocia todos sus titulares a la cita.
+23. Ejecutar `run_daily_expiry_scan` una vez y verificar idempotencia.
+24. Generar ticket PDF.
+25. Verificar que cargan los informes.
 
 ## Smoke checklist de Fase 2
 

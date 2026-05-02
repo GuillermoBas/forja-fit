@@ -98,7 +98,7 @@ export async function createPassAction(
   }
 
   try {
-    await invokeProtectedFunction("create_pass", {
+    const result = await invokeProtectedFunction("create_pass", {
       passTypeId: String(formData.get("passTypeId") ?? ""),
       holderClientIds,
       purchasedByClientId: String(formData.get("purchasedByClientId") ?? "").trim() || clientId,
@@ -107,6 +107,27 @@ export async function createPassAction(
       contractedOn: String(formData.get("contractedOn") ?? ""),
       notes: String(formData.get("notes") ?? "").trim()
     })
+
+    if (result?.saleId) {
+      try {
+        await invokeProtectedFunction("generate_ticket_pdf", {
+          saleId: result.saleId
+        })
+      } catch (error) {
+        revalidatePath("/passes")
+        revalidatePath("/sales")
+        revalidatePath("/reports")
+        revalidatePath("/dashboard")
+        revalidatePath(`/clients/${clientId}`)
+        return {
+          success: true,
+          error:
+            error instanceof Error
+              ? `El bono se creó, pero el ticket de la venta no se pudo generar: ${error.message}`
+              : "El bono se creó, pero el ticket de la venta no se pudo generar"
+        }
+      }
+    }
   } catch (error) {
     return toActionError(error, "No se pudo crear el bono")
   }
@@ -245,7 +266,7 @@ export async function renewPassAction(
 ): Promise<ClientActionState> {
   const clientId = String(formData.get("clientId") ?? "")
   try {
-    await invokeProtectedFunction("renew_pass", {
+    const result = await invokeProtectedFunction("renew_pass", {
       passId: String(formData.get("passId") ?? ""),
       passTypeId: String(formData.get("passTypeId") ?? ""),
       paymentMethod: String(formData.get("paymentMethod") ?? ""),
@@ -253,6 +274,28 @@ export async function renewPassAction(
       contractedOn: String(formData.get("contractedOn") ?? ""),
       notes: String(formData.get("notes") ?? "").trim()
     })
+
+    if (result?.saleId) {
+      try {
+        await invokeProtectedFunction("generate_ticket_pdf", {
+          saleId: result.saleId
+        })
+      } catch (error) {
+        revalidatePath("/passes")
+        revalidatePath("/sales")
+        revalidatePath("/reports")
+        revalidatePath("/dashboard")
+        revalidatePath("/notifications")
+        revalidatePath(`/clients/${clientId}`)
+        return {
+          success: true,
+          error:
+            error instanceof Error
+              ? `El bono se renovó, pero el ticket de la venta no se pudo generar: ${error.message}`
+              : "El bono se renovó, pero el ticket de la venta no se pudo generar"
+        }
+      }
+    }
   } catch (error) {
     return toActionError(error, "No se pudo renovar el bono")
   }

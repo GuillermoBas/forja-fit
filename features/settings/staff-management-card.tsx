@@ -1,19 +1,33 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
+import { useFormStatus } from "react-dom"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { AuthFormSubmit } from "@/features/auth/auth-form-submit"
-import { upsertStaffUserAction } from "@/features/settings/actions"
+import {
+  resendStaffActivationAction,
+  upsertStaffUserAction
+} from "@/features/settings/actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { nativeSelectClassName } from "@/lib/utils"
+import type { StaffProfileSummary } from "@/types/domain"
 
-type StaffProfileRow = {
-  id: string
-  fullName: string
-  email: string
-  role: "admin" | "trainer"
-  isActive: boolean
+function InlineSubmit({
+  idleLabel,
+  pendingLabel
+}: {
+  idleLabel: string
+  pendingLabel: string
+}) {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      {pending ? pendingLabel : idleLabel}
+    </Button>
+  )
 }
 
 function ActionToast({
@@ -41,44 +55,78 @@ function ActionToast({
 function StaffRowForm({
   profile
 }: {
-  profile: StaffProfileRow
+  profile: StaffProfileSummary
 }) {
-  const [state, formAction] = useActionState(upsertStaffUserAction, {})
+  const [updateState, updateAction] = useActionState(upsertStaffUserAction, {})
+  const [resendState, resendAction] = useActionState(resendStaffActivationAction, {})
+  const [fullName, setFullName] = useState(profile.fullName)
+  const [role, setRole] = useState(profile.role)
+  const [isActive, setIsActive] = useState(profile.isActive)
+
+  useEffect(() => {
+    setFullName(profile.fullName)
+    setRole(profile.role)
+    setIsActive(profile.isActive)
+  }, [profile.fullName, profile.role, profile.isActive])
 
   return (
-    <form action={formAction} className="grid gap-4 rounded-2xl border p-4 lg:grid-cols-[2fr_2fr_1fr_auto_auto]">
-      <ActionToast error={state.error} success={state.success} />
-      <input type="hidden" name="profileId" value={profile.id} />
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Nombre</label>
-        <Input name="fullName" defaultValue={profile.fullName} required />
+    <div className="space-y-4 rounded-2xl border p-4">
+      <ActionToast error={updateState.error} success={updateState.success} />
+      <ActionToast error={resendState.error} success={resendState.success} />
+      <form action={updateAction} className="grid gap-4 lg:grid-cols-[2fr_2fr_1fr_auto_auto]">
+        <input type="hidden" name="profileId" value={profile.id} />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Nombre</label>
+          <Input name="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Email</label>
+          <Input value={profile.email} disabled className="cursor-not-allowed bg-slate-100 text-slate-500" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Rol</label>
+          <select
+            name="role"
+            className={nativeSelectClassName}
+            value={role}
+            onChange={(event) => setRole(event.target.value as StaffProfileSummary["role"])}
+          >
+            <option value="trainer">Entrenador</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-sm lg:self-end lg:pb-3">
+          <input
+            type="checkbox"
+            name="isActive"
+            checked={isActive}
+            onChange={(event) => setIsActive(event.target.checked)}
+          />
+          Activo
+        </label>
+        <div className="lg:self-end">
+          <AuthFormSubmit idleLabel="Guardar" pendingLabel="Guardando..." />
+        </div>
+      </form>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-alt/60 px-3 py-2 text-sm">
+        <span className={profile.emailVerified ? "text-text-secondary" : "font-medium text-amber-700"}>
+          {profile.emailVerified ? "Acceso activado" : "Pendiente de activacion por codigo"}
+        </span>
+        {!profile.emailVerified ? (
+          <form action={resendAction}>
+            <input type="hidden" name="profileId" value={profile.id} />
+            <InlineSubmit idleLabel="Reenviar codigo" pendingLabel="Reenviando..." />
+          </form>
+        ) : null}
       </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Email</label>
-        <Input value={profile.email} disabled readOnly />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Rol</label>
-        <select name="role" className={nativeSelectClassName} defaultValue={profile.role}>
-          <option value="trainer">Entrenador</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-      <label className="flex items-center gap-2 text-sm lg:self-end lg:pb-3">
-        <input type="checkbox" name="isActive" defaultChecked={profile.isActive} />
-        Activo
-      </label>
-      <div className="lg:self-end">
-        <AuthFormSubmit idleLabel="Guardar" pendingLabel="Guardando..." />
-      </div>
-    </form>
+    </div>
   )
 }
 
 export function StaffManagementCard({
   staffProfiles
 }: {
-  staffProfiles: StaffProfileRow[]
+  staffProfiles: StaffProfileSummary[]
 }) {
   const [createState, createAction] = useActionState(upsertStaffUserAction, {})
 
@@ -125,7 +173,7 @@ export function StaffManagementCard({
           <div>
             <h3 className="text-sm font-semibold">Equipo actual</h3>
             <p className="text-sm text-muted-foreground">
-              Puedes cambiar nombre, rol o activar y desactivar accesos sin tocar la base de datos.
+              Puedes cambiar nombre, rol o activar y desactivar accesos. Si un codigo ha caducado, tambien puedes reenviarlo.
             </p>
           </div>
           {staffProfiles.length ? (

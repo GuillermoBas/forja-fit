@@ -285,6 +285,7 @@ Create and maintain these InsForge Functions:
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
 - `create_staff_user`
+- `resend_staff_activation`
 - `run_daily_expiry_scan`
 - `send_expiry_email`
 - `create_internal_notification`
@@ -540,6 +541,7 @@ If automated tests are missing, run these manual checks:
 12. create product sale and verify stock decrement
 13. void a sale as admin and verify stock rollback
 14. create or update a staff user from settings
+14.1. resend a staff activation code from settings for an unverified user
 15. create expense
 16. create agenda session
 17. verify shared-pass holders are all associated automatically

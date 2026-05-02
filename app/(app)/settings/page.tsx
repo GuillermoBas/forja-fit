@@ -3,12 +3,12 @@ import { BlockedState } from "@/components/blocked-state"
 import { PageHeader } from "@/components/page-header"
 import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { DailyExpiryScanForm } from "@/features/notifications/notification-forms"
+import { BusinessSettingsCard } from "@/features/settings/business-settings-card"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
 import { StaffManagementCard } from "@/features/settings/staff-management-card"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
-import { appConfig } from "@/lib/config"
-import { getStaffProfiles } from "@/lib/data"
+import { getBusinessSettings, getStaffProfiles } from "@/lib/data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
 
@@ -94,9 +94,10 @@ export default async function SettingsPage() {
   }
 
   const isAdmin = profile.role === "admin"
-  const [manualPushClients, staffProfiles] = await Promise.all([
+  const [manualPushClients, staffProfiles, businessSettings] = await Promise.all([
     getManualPushClients(),
-    isAdmin ? getStaffProfiles() : Promise.resolve([])
+    isAdmin ? getStaffProfiles() : Promise.resolve([]),
+    isAdmin ? getBusinessSettings() : Promise.resolve(null)
   ])
 
   return (
@@ -128,17 +129,7 @@ export default async function SettingsPage() {
 
         {isAdmin ? (
           <>
-            <Card className="rounded-3xl">
-              <CardHeader>
-                <CardTitle>Negocio</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p><span className="font-medium">Nombre:</span> {appConfig.businessName}</p>
-                <p><span className="font-medium">Zona horaria:</span> {appConfig.timezone}</p>
-                <p><span className="font-medium">Aviso por defecto:</span> 7 dias</p>
-                <p><span className="font-medium">IVA por defecto:</span> configurable en UI futura</p>
-              </CardContent>
-            </Card>
+            {businessSettings ? <BusinessSettingsCard settings={businessSettings} /> : null}
 
             <DailyExpiryScanForm />
 

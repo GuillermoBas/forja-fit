@@ -8,11 +8,12 @@ import {
   demoProducts,
   demoSales
 } from "@/lib/demo-data"
-import { isInsforgeConfigured } from "@/lib/config"
-import { getCurrentAccessToken } from "@/lib/auth/session"
+import { appConfig, isInsforgeConfigured } from "@/lib/config"
+import { getCurrentAccessToken, getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
 import type {
+  BusinessSettings,
   CalendarSession,
   Client,
   ClientPortalAccountSummary,
@@ -22,7 +23,8 @@ import type {
   Pass,
   PassType,
   Product,
-  Sale
+  Sale,
+  StaffProfileSummary
 } from "@/types/domain"
 
 export type ClientHistoryItem = {
@@ -67,8 +69,19 @@ function mapClientRow(row: DbRow): Client {
     lastName,
     email: row.email ? String(row.email) : null,
     phone: row.phone ? String(row.phone) : null,
+    taxId: row.tax_id ? String(row.tax_id) : null,
     notes: row.notes ? String(row.notes) : null,
     isActive: Boolean(row.is_active)
+  }
+}
+
+function mapBusinessSettingsRow(row: DbRow): BusinessSettings {
+  return {
+    id: String(row.id ?? ""),
+    businessName: String(row.business_name ?? ""),
+    timezone: String(row.timezone ?? "Europe/Madrid"),
+    reminderDaysDefault: Number(row.reminder_days_default ?? 7),
+    defaultVatRate: Number(row.default_vat_rate ?? 21)
   }
 }
 
@@ -578,26 +591,38 @@ export async function getProducts(): Promise<Product[]> {
   })
 }
 
-export async function getStaffProfiles(): Promise<Array<{
-  id: string
-  fullName: string
-  email: string
-  role: "admin" | "trainer"
-  isActive: boolean
-}>> {
+export async function getStaffProfiles(): Promise<StaffProfileSummary[]> {
   const client = await createAuthedClient()
   if (!client) {
     return []
   }
 
-  const result = await client.database
-    .from("profiles")
-    .select("id,full_name,email,role,is_active")
-    .in("role", ["admin", "trainer"])
-    .order("full_name", { ascending: true })
+  const { profile } = await getSessionContext()
+  if (!profile) {
+    return []
+  }
+
+  const [result, verificationResult] = await Promise.all([
+    client.database
+      .from("profiles")
+      .select("id,full_name,email,role,is_active")
+      .in("role", ["admin", "trainer"])
+      .order("full_name", { ascending: true }),
+    client.database.rpc("app_get_staff_verification_states", {
+      p_actor_profile_id: profile.id
+    })
+  ])
 
   if (result.error || !result.data) {
     return []
+  }
+
+  const verificationByProfileId = new Map<string, boolean>()
+
+  if (!verificationResult.error && Array.isArray(verificationResult.data)) {
+    for (const row of verificationResult.data as DbRow[]) {
+      verificationByProfileId.set(String(row.profile_id ?? ""), Boolean(row.email_verified))
+    }
   }
 
   return (result.data as DbRow[]).map((row) => ({
@@ -605,8 +630,31 @@ export async function getStaffProfiles(): Promise<Array<{
     fullName: String(row.full_name ?? ""),
     email: String(row.email ?? ""),
     role: String(row.role ?? "trainer") as "admin" | "trainer",
-    isActive: Boolean(row.is_active)
+    isActive: Boolean(row.is_active),
+    emailVerified: verificationByProfileId.get(String(row.id)) ?? false
   }))
+}
+
+export async function getBusinessSettings(): Promise<BusinessSettings> {
+  const fallback: BusinessSettings = {
+    id: "default-settings",
+    businessName: appConfig.businessName,
+    timezone: appConfig.timezone,
+    reminderDaysDefault: 7,
+    defaultVatRate: 21
+  }
+
+  const client = await createAuthedClient()
+  if (!client) {
+    return fallback
+  }
+
+  const result = await client.database.from("settings").select("*").limit(1).maybeSingle()
+  if (result.error || !result.data) {
+    return fallback
+  }
+
+  return mapBusinessSettingsRow(result.data as DbRow)
 }
 
 export async function getSales(): Promise<Sale[]> {

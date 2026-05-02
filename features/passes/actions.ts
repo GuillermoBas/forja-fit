@@ -145,6 +145,7 @@ export async function deletePassAction(
   formData: FormData
 ): Promise<PassActionState> {
   const passId = String(formData.get("passId") ?? "").trim()
+  const returnClientId = String(formData.get("returnClientId") ?? "").trim()
   const confirmationText = String(formData.get("confirmationText") ?? "").trim()
 
   if (!passId) {
@@ -163,8 +164,11 @@ export async function deletePassAction(
 
   revalidatePath("/passes")
   revalidatePath("/clients")
+  if (returnClientId) {
+    revalidatePath(`/clients/${returnClientId}`)
+  }
   return {
     success: true,
-    redirectTo: "/passes"
+    redirectTo: returnClientId ? `/clients/${returnClientId}` : "/passes"
   }
 }

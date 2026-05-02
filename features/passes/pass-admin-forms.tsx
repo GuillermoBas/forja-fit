@@ -492,7 +492,7 @@ export function PassEditorForm({
         <CardHeader>
           <CardTitle className="text-destructive">Zona peligrosa</CardTitle>
           <CardDescription>
-            Solo se puede borrar un bono limpio, sin consumos, pausas, ventas, renovaciones, notificaciones ni sesiones vinculadas.
+            Si el bono se creo por error en pruebas, el borrado limpiara consumos, pausas, notificaciones y la venta asociada. El bloqueo se mantiene si ya hay renovaciones o agenda vinculada.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -508,11 +508,16 @@ export function PassEditorForm({
             <div className="space-y-3">
               <h3 className="text-xl font-semibold text-destructive">Confirmar borrado del bono</h3>
               <p className="text-sm text-muted-foreground">
-                Esta accion solo es recomendable para pruebas o altas erróneas. Para continuar, escribe
+                Esta accion es para limpiar bonos creados por error. Si existen consumos, pausas o la venta asociada, se borraran en cascada. Para continuar, escribe
                 <span className="font-semibold text-foreground"> CONFIRMO</span>.
               </p>
               <form action={deleteFormAction} className="space-y-4">
                 <input type="hidden" name="passId" value={pass.id} />
+                <input
+                  type="hidden"
+                  name="returnClientId"
+                  value={pass.purchasedByClientId ?? pass.holderClientIds[0] ?? ""}
+                />
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Texto de confirmacion</label>
                   <Input name="confirmationText" autoFocus placeholder="CONFIRMO" />

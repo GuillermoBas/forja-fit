@@ -125,7 +125,7 @@ export function ClientForm({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">NIF</label>
-              <Input name="taxId" />
+              <Input name="taxId" defaultValue={client?.taxId ?? ""} />
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Notas</label>

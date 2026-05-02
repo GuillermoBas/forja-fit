@@ -73,18 +73,18 @@ export default async function ClientDetailPage({
           <CardHeader>
             <CardTitle>Datos del cliente</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
+          <CardContent className="grid gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium">{client.email ?? "Sin email"}</p>
+              <p className="font-medium break-words">{client.email ?? "Sin email"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Teléfono</p>
-              <p className="font-medium">{client.phone ?? "Sin teléfono"}</p>
+              <p className="font-medium break-words">{client.phone ?? "Sin teléfono"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Notas</p>
-              <p className="font-medium">{client.notes ?? "Sin notas"}</p>
+              <p className="font-medium break-words">{client.notes ?? "Sin notas"}</p>
             </div>
           </CardContent>
         </Card>
@@ -160,13 +160,6 @@ export default async function ClientDetailPage({
             ) : null}
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <CreatePassForm clientId={client.id} clients={allClients} passTypes={passTypes} />
-        <ConsumeSessionForm clientId={client.id} passes={passes} />
-        <PausePassForm clientId={client.id} passes={passes} />
-        <RenewPassForm clientId={client.id} passes={passes} passTypes={passTypes} />
       </div>
 
       <Tabs defaultValue="passes">
@@ -252,6 +245,13 @@ export default async function ClientDetailPage({
           </Card>
         </TabsContent>
       </Tabs>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <ConsumeSessionForm clientId={client.id} passes={passes} />
+        <RenewPassForm clientId={client.id} passes={passes} passTypes={passTypes} />
+        <CreatePassForm clientId={client.id} clients={allClients} passTypes={passTypes} />
+        <PausePassForm clientId={client.id} passes={passes} />
+      </div>
     </div>
   )
 }

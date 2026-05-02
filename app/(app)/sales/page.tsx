@@ -57,7 +57,7 @@ export default async function SalesPage() {
             },
             ticket: row.ticketPublicUrl
               ? { text: "Abrir PDF", href: row.ticketPublicUrl }
-              : { text: "Pendiente" }
+              : { text: "Sin PDF", subtext: "Usa Generar ticket" }
           }
         }))}
         columns={[

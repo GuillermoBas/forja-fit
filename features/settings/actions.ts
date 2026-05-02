@@ -26,6 +26,16 @@ export type StaffActionState = {
   success?: string
 }
 
+export type BusinessSettingsActionState = {
+  error?: string
+  success?: string
+}
+
+export type StaffActivationResendActionState = {
+  error?: string
+  success?: string
+}
+
 function createBrowserStyleInsforgeClient() {
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
   const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY
@@ -225,5 +235,65 @@ export async function upsertStaffUserAction(
     }
   } catch (error) {
     return toActionError(error, "No se pudo guardar el usuario staff")
+  }
+}
+
+export async function resendStaffActivationAction(
+  _prevState: StaffActivationResendActionState,
+  formData: FormData
+): Promise<StaffActivationResendActionState> {
+  const profileId = String(formData.get("profileId") ?? "").trim()
+
+  if (!profileId) {
+    return { error: "Falta identificar el usuario staff." }
+  }
+
+  try {
+    await invokeProtectedFunction("resend_staff_activation", { profileId })
+  } catch (error) {
+    return toActionError(error, "No se pudo reenviar el codigo de activacion")
+  }
+
+  revalidatePath("/settings")
+
+  return {
+    success: "Codigo de activacion reenviado correctamente."
+  }
+}
+
+export async function updateBusinessSettingsAction(
+  _prevState: BusinessSettingsActionState,
+  formData: FormData
+): Promise<BusinessSettingsActionState> {
+  const businessName = String(formData.get("businessName") ?? "").trim()
+  const reminderDaysDefault = Number(formData.get("reminderDaysDefault") ?? 7)
+  const defaultVatRate = Number(formData.get("defaultVatRate") ?? 21)
+
+  if (!businessName) {
+    return { error: "El nombre del negocio es obligatorio." }
+  }
+
+  if (!Number.isInteger(reminderDaysDefault) || reminderDaysDefault < 0 || reminderDaysDefault > 30) {
+    return { error: "El aviso por defecto debe estar entre 0 y 30 dias." }
+  }
+
+  if (!Number.isFinite(defaultVatRate) || defaultVatRate < 0) {
+    return { error: "El IVA por defecto debe ser un numero valido." }
+  }
+
+  try {
+    await invokeProtectedFunction("update_business_settings", {
+      businessName,
+      reminderDaysDefault,
+      defaultVatRate
+    })
+  } catch (error) {
+    return toActionError(error, "No se pudo guardar la configuracion del negocio")
+  }
+
+  revalidatePath("/settings")
+
+  return {
+    success: "Configuracion del negocio actualizada correctamente."
   }
 }

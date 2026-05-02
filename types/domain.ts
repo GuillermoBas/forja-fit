@@ -17,6 +17,23 @@ export interface Profile {
   calendarColor: string
 }
 
+export interface StaffProfileSummary {
+  id: string
+  fullName: string
+  email: string
+  role: AppRole
+  isActive: boolean
+  emailVerified: boolean
+}
+
+export interface BusinessSettings {
+  id: string
+  businessName: string
+  timezone: string
+  reminderDaysDefault: number
+  defaultVatRate: number
+}
+
 export interface Client {
   id: string
   fullName: string
@@ -24,6 +41,7 @@ export interface Client {
   lastName?: string
   email: string | null
   phone: string | null
+  taxId?: string | null
   notes: string | null
   isActive: boolean
 }
