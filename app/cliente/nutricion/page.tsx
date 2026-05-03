@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { CardListSkeleton, FormPanelSkeleton } from "@/components/skeletons"
+import { Card } from "@/components/ui/card"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
-import { NutritionChat } from "@/features/client-portal/nutrition/chat"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { WeeklyNutritionPlansList } from "@/features/client-portal/nutrition/weekly-plans-list"
 
@@ -20,22 +20,26 @@ async function NutritionData() {
   return (
     <section className="space-y-4">
       <PortalShellMeta clientName={data.client.fullName} />
-      <div className="max-w-3xl">
-        <h3 className="font-heading text-[1.35rem] font-bold text-text-primary sm:text-[1.55rem] lg:text-2xl">
-          Asistente nutricional
-        </h3>
-        <p className="mt-2 text-[13px] leading-5 text-text-secondary sm:text-sm sm:leading-6">
-          El onboarding inicial sucede en la propia conversacion. Empieza contando tu objetivo, tus horarios o cualquier restriccion alimentaria que quieras tener en cuenta. Tambien puedes abrir este mismo chat desde el acceso flotante fijo en cualquier pantalla del area cliente.
-        </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="rounded-[1.35rem] border border-border/80 bg-surface-alt/70 px-4 py-3">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Hoy</p>
+          <p className="mt-1 text-base font-semibold text-text-primary">
+            {data.quota.dailyUsed}/{data.quota.dailyLimit} usados
+          </p>
+          <p className="text-sm text-text-secondary">
+            Quedan {data.quota.dailyRemaining} mensajes
+          </p>
+        </Card>
+        <Card className="rounded-[1.35rem] border border-border/80 bg-surface-alt/70 px-4 py-3">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Mes</p>
+          <p className="mt-1 text-base font-semibold text-text-primary">
+            {data.quota.monthlyUsed}/{data.quota.monthlyLimit} usados
+          </p>
+          <p className="text-sm text-text-secondary">
+            Quedan {data.quota.monthlyRemaining} mensajes
+          </p>
+        </Card>
       </div>
-
-      <NutritionChat
-        initialMessages={data.messages}
-        initialThreadId={data.threadId}
-        clientFirstName={data.client.firstName ?? data.client.fullName}
-        initialQuota={data.quota}
-        mode="page"
-      />
 
       <WeeklyNutritionPlansList plans={data.savedPlans} />
     </section>

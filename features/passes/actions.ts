@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
 
@@ -24,6 +25,7 @@ const passEditSchema = z.object({
   passTypeId: z.string().uuid(),
   holderClientIds: z.array(z.string().uuid()).min(1).max(5),
   purchasedByClientId: z.string().uuid().optional(),
+  passSubType: z.enum(["individual", "shared_2", "shared_3"]).optional().or(z.literal("")),
   contractedOn: z.string().min(1),
   status: z.enum(["active", "paused", "out_of_sessions", "expired", "cancelled"]),
   sessionsLeft: z.number().int().min(0).nullable(),
@@ -111,6 +113,7 @@ export async function updatePassAction(
     passTypeId: String(formData.get("passTypeId") ?? "").trim(),
     holderClientIds,
     purchasedByClientId: String(formData.get("purchasedByClientId") ?? "").trim() || undefined,
+    passSubType: String(formData.get("passSubType") ?? "").trim(),
     contractedOn: String(formData.get("contractedOn") ?? "").trim(),
     status: String(formData.get("status") ?? "active").trim(),
     sessionsLeft: sessionsValue ? Number(sessionsValue) : null,
@@ -166,9 +169,8 @@ export async function deletePassAction(
   revalidatePath("/clients")
   if (returnClientId) {
     revalidatePath(`/clients/${returnClientId}`)
+    redirect(`/clients/${returnClientId}`)
   }
-  return {
-    success: true,
-    redirectTo: returnClientId ? `/clients/${returnClientId}` : "/passes"
-  }
+
+  redirect("/passes")
 }

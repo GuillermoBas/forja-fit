@@ -65,6 +65,7 @@ export default async function(request: Request) {
       p_pass_type_id: body.passTypeId,
       p_holder_client_ids: holderClientIds,
       p_purchased_by_client_id: body.purchasedByClientId ?? holderClientIds[0],
+      p_pass_sub_type: body.passSubType ?? "",
       p_contracted_on: body.contractedOn,
       p_status: body.status ?? "active",
       p_sessions_left: body.sessionsLeft === "" || body.sessionsLeft === null || body.sessionsLeft === undefined

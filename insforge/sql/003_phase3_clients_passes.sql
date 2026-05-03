@@ -201,6 +201,7 @@ CREATE OR REPLACE FUNCTION app_create_pass(
   p_pass_type_id UUID,
   p_holder_client_ids UUID[],
   p_purchased_by_client_id UUID,
+  p_pass_sub_type TEXT,
   p_payment_method TEXT,
   p_price_gross_override NUMERIC,
   p_contracted_on DATE,
@@ -233,6 +234,11 @@ BEGIN
     RAISE EXCEPTION 'Metodo de pago no valido';
   END IF;
 
+  IF NULLIF(COALESCE(p_pass_sub_type, ''), '') IS NOT NULL
+     AND p_pass_sub_type NOT IN ('individual', 'shared_2', 'shared_3') THEN
+    RAISE EXCEPTION 'Sub tipo de bono no valido';
+  END IF;
+
   IF p_price_gross_override IS NOT NULL AND (
     p_price_gross_override < 0
     OR p_price_gross_override <> trunc(p_price_gross_override)
@@ -248,6 +254,7 @@ BEGIN
     purchased_by_client_id,
     contracted_on,
     expires_on,
+    pass_sub_type,
     sold_price_gross,
     status,
     original_sessions,
@@ -260,6 +267,7 @@ BEGIN
     p_purchased_by_client_id,
     p_contracted_on,
     calculate_pass_expiry(v_pass_type.kind, p_contracted_on),
+    NULLIF(p_pass_sub_type, ''),
     v_price_gross,
     'active',
     CASE WHEN v_pass_type.kind = 'session' THEN v_pass_type.sessions_total ELSE NULL END,
@@ -287,7 +295,7 @@ BEGIN
     internal_note
   )
   VALUES (
-    NOW(),
+    ((p_contracted_on::timestamp + TIME '12:00') AT TIME ZONE 'Europe/Madrid'),
     v_primary_holder_id,
     p_actor_profile_id,
     p_payment_method,
@@ -334,7 +342,8 @@ BEGIN
       'holder_count', COALESCE(array_length(p_holder_client_ids, 1), 0),
       'sale_id', v_sale_id,
       'price_gross', v_price_gross,
-      'payment_method', p_payment_method
+      'payment_method', p_payment_method,
+      'pass_sub_type', NULLIF(p_pass_sub_type, '')
     )
   );
 
@@ -351,6 +360,7 @@ CREATE OR REPLACE FUNCTION app_update_pass(
   p_pass_type_id UUID,
   p_holder_client_ids UUID[],
   p_purchased_by_client_id UUID,
+  p_pass_sub_type TEXT,
   p_contracted_on DATE,
   p_status TEXT,
   p_sessions_left INTEGER,
@@ -383,6 +393,11 @@ BEGIN
 
   IF NOT v_pass_type.shared_allowed AND COALESCE(array_length(p_holder_client_ids, 1), 0) > 1 THEN
     RAISE EXCEPTION 'Este tipo de bono no admite titulares compartidos';
+  END IF;
+
+  IF NULLIF(COALESCE(p_pass_sub_type, ''), '') IS NOT NULL
+     AND p_pass_sub_type NOT IN ('individual', 'shared_2', 'shared_3') THEN
+    RAISE EXCEPTION 'Sub tipo de bono no valido';
   END IF;
 
   IF p_status NOT IN ('active', 'paused', 'out_of_sessions', 'expired', 'cancelled') THEN
@@ -420,6 +435,7 @@ BEGIN
            purchased_by_client_id = p_purchased_by_client_id,
            contracted_on = p_contracted_on,
            expires_on = calculate_pass_expiry(v_pass_type.kind, p_contracted_on) + v_pause_days,
+           pass_sub_type = NULLIF(p_pass_sub_type, ''),
            sold_price_gross = COALESCE(v_pass.sold_price_gross, v_pass_type.price_gross),
            status = p_status,
          original_sessions = CASE WHEN v_pass_type.kind = 'session' THEN v_pass_type.sessions_total ELSE NULL END,
@@ -441,7 +457,8 @@ BEGIN
       'kind', v_pass_type.kind,
       'sessions_left', v_effective_sessions_left,
       'status', p_status,
-      'holder_count', COALESCE(array_length(p_holder_client_ids, 1), 0)
+      'holder_count', COALESCE(array_length(p_holder_client_ids, 1), 0),
+      'pass_sub_type', NULLIF(p_pass_sub_type, '')
     )
   );
 
@@ -702,7 +719,7 @@ BEGIN
     internal_note
   )
   VALUES (
-    NOW(),
+    ((p_contracted_on::timestamp + TIME '12:00') AT TIME ZONE 'Europe/Madrid'),
     v_primary_holder_id,
     p_actor_profile_id,
     p_payment_method,
@@ -779,8 +796,8 @@ $$ LANGUAGE plpgsql;
 
 GRANT EXECUTE ON FUNCTION app_upsert_client(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION app_upsert_pass_type(UUID, UUID, TEXT, TEXT, INTEGER, NUMERIC, NUMERIC, BOOLEAN, BOOLEAN, INTEGER) TO authenticated;
-GRANT EXECUTE ON FUNCTION app_create_pass(UUID, UUID, UUID[], UUID, TEXT, NUMERIC, DATE, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION app_update_pass(UUID, UUID, UUID, UUID[], UUID, DATE, TEXT, INTEGER, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_create_pass(UUID, UUID, UUID[], UUID, TEXT, TEXT, NUMERIC, DATE, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_update_pass(UUID, UUID, UUID, UUID[], UUID, TEXT, DATE, TEXT, INTEGER, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION app_delete_pass(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION app_consume_session(UUID, UUID, UUID, TIMESTAMPTZ, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION app_pause_pass(UUID, UUID, DATE, DATE, TEXT) TO authenticated;

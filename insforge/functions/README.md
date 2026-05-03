@@ -36,6 +36,7 @@ Funciones previstas:
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
 - `run_daily_expiry_scan`
+- `send_client_communication`
 - `send_expiry_email`
 - `create_internal_notification`
 - `generate_ticket_pdf`

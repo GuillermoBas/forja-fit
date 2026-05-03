@@ -9,6 +9,7 @@ const badgeVariants = cva(
         default: "border-primary/20 bg-primary-soft text-primary-hover",
         secondary: "border-border/90 bg-surface-alt text-text-secondary",
         success: "border-success/18 bg-success/10 text-success",
+        paused: "border-info/20 bg-info/10 text-info",
         warning: "border-warning/18 bg-warning/10 text-warning",
         danger: "border-error/18 bg-error/10 text-error"
       }

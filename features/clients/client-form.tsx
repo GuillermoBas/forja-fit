@@ -154,7 +154,7 @@ export function ClientForm({
           <CardHeader>
             <CardTitle>Portal del cliente</CardTitle>
             <CardDescription>
-              Estado de preparacion del portal y acciones de soporte para admin.
+              Estado de preparación del portal y acciones de soporte para admin.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -199,11 +199,11 @@ export function ClientForm({
                     ? portalSupport.portalAccount.primaryProvider === "google"
                       ? "Google"
                       : "Email y clave"
-                    : "Pendiente de claim"}
+                    : "Pendiente de activación"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Ultimo acceso</p>
+                <p className="text-sm text-muted-foreground">Último acceso</p>
                 <p className="font-medium">
                   {portalSupport.portalAccount?.lastLoginAt ?? "Sin accesos"}
                 </p>
@@ -241,13 +241,13 @@ export function ClientForm({
                 <div className="space-y-3">
                   <h3 className="text-xl font-semibold text-destructive">Confirmar borrado</h3>
                   <p className="text-sm text-muted-foreground">
-                    Esta accion eliminara el cliente de forma permanente. Para continuar, escribe
+                    Esta acción eliminará el cliente de forma permanente. Para continuar, escribe
                     <span className="font-semibold text-foreground"> CONFIRMO</span>.
                   </p>
                   <form action={deleteFormAction} className="space-y-4">
                     <input type="hidden" name="clientId" value={client.id} />
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Texto de confirmacion</label>
+                      <label className="text-sm font-medium">Texto de confirmación</label>
                       <Input name="confirmationText" autoFocus placeholder="CONFIRMO" />
                     </div>
                     <div className="flex gap-3">

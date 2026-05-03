@@ -1,17 +1,30 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import { getCurrentAccessToken } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 
 export type ClientActionState = {
   error?: string
   fieldErrors?: Partial<Record<"firstName" | "lastName" | "email", string>>
   success?: boolean
   redirectTo?: string
+}
+
+type PassTypeScheduleMeta = {
+  kind: "session" | "monthly"
+  sessionCount: number | null
+}
+
+type SchedulePatternEntry = {
+  weekday: number
+  hour: string
+  trainerProfileId: string
 }
 
 const clientFormSchema = z.object({
@@ -26,6 +39,107 @@ const clientFormSchema = z.object({
       message: "El email no tiene un formato valido."
     })
 })
+
+const schedulePatternSchema = z.array(z.object({
+  weekday: z.number().int().min(1).max(7),
+  hour: z.string().regex(/^([01]\d|2[0-3]):00$/),
+  trainerProfileId: z.string().uuid()
+})).max(30)
+
+async function createAuthedDatabaseClient() {
+  const accessToken = await getCurrentAccessToken()
+
+  if (!accessToken) {
+    throw new Error("La sesión ha caducado. Vuelve a iniciar sesión.")
+  }
+
+  return createServerInsforgeClient({ accessToken }) as any
+}
+
+function parseSchedulePattern(formData: FormData) {
+  const rawValue = String(formData.get("schedulePattern") ?? "[]").trim() || "[]"
+
+  try {
+    const parsed = schedulePatternSchema.parse(JSON.parse(rawValue))
+    const uniqueKeys = new Set<string>()
+
+    for (const entry of parsed) {
+      const key = `${entry.weekday}-${entry.hour}-${entry.trainerProfileId}`
+
+      if (uniqueKeys.has(key)) {
+        throw new Error("El patrón semanal no puede contener filas duplicadas.")
+      }
+
+      uniqueKeys.add(key)
+    }
+
+    return parsed
+  } catch (error) {
+    if (error instanceof Error && error.message === "El patrón semanal no puede contener filas duplicadas.") {
+      throw error
+    }
+
+    throw new Error("El patrón semanal de agenda no es válido.")
+  }
+}
+
+async function getPassTypeScheduleMeta(passTypeId: string): Promise<PassTypeScheduleMeta | null> {
+  const client = await createAuthedDatabaseClient()
+  const result = await client.database
+    .from("pass_types")
+    .select("kind,sessions_total")
+    .eq("id", passTypeId)
+    .maybeSingle()
+
+  if (result.error || !result.data) {
+    return null
+  }
+
+  return {
+    kind: result.data.kind === "monthly" ? "monthly" : "session",
+    sessionCount:
+      typeof result.data.sessions_total === "number"
+        ? result.data.sessions_total
+        : result.data.sessions_total === null
+          ? null
+          : Number(result.data.sessions_total)
+  }
+}
+
+async function schedulePassSessionsIfNeeded({
+  passId,
+  passTypeId,
+  startOn,
+  schedulePattern,
+  mode = "all"
+}: {
+  passId?: string | null
+  passTypeId: string
+  startOn: string
+  schedulePattern: SchedulePatternEntry[]
+  mode?: "all" | "pending"
+}) {
+  if (!passId || schedulePattern.length === 0) {
+    return
+  }
+
+  const passType = await getPassTypeScheduleMeta(passTypeId)
+
+  if (!passType || passType.kind !== "session" || !passType.sessionCount) {
+    return
+  }
+
+  await invokeProtectedFunction("schedule_pass_sessions", {
+    passId,
+    startOn,
+    mode,
+    entries: schedulePattern
+  })
+}
+
+function buildWarning(prefix: string, error: unknown) {
+  return error instanceof Error ? `${prefix}: ${error.message}` : prefix
+}
 
 export async function upsertClientAction(
   _prevState: ClientActionState,
@@ -92,51 +206,83 @@ export async function createPassAction(
     .map((value) => String(value ?? "").trim())
     .filter(Boolean)
   const clientId = holderClientIds[0] ?? String(formData.get("holder1ClientId") ?? "")
+  const passTypeId = String(formData.get("passTypeId") ?? "").trim()
+  const contractedOn = String(formData.get("contractedOn") ?? "").trim()
 
   if (!clientId || holderClientIds.length < 1) {
     return { error: "Debes indicar al menos un titular para el bono." }
   }
 
+  let schedulePattern: SchedulePatternEntry[] = []
+
   try {
-    const result = await invokeProtectedFunction("create_pass", {
-      passTypeId: String(formData.get("passTypeId") ?? ""),
+    schedulePattern = parseSchedulePattern(formData)
+  } catch (error) {
+    return toActionError(error, "No se pudo validar el patrón semanal")
+  }
+
+  let result: { passId?: string | null; saleId?: string | null } | null = null
+  const warnings: string[] = []
+
+  try {
+    result = await invokeProtectedFunction("create_pass", {
+      passTypeId,
       holderClientIds,
       purchasedByClientId: String(formData.get("purchasedByClientId") ?? "").trim() || clientId,
+      passSubType: String(formData.get("passSubType") ?? "individual").trim() || "individual",
       paymentMethod: String(formData.get("paymentMethod") ?? "").trim(),
       priceGross: String(formData.get("priceGross") ?? "").trim(),
-      contractedOn: String(formData.get("contractedOn") ?? ""),
+      contractedOn,
       notes: String(formData.get("notes") ?? "").trim()
     })
-
-    if (result?.saleId) {
-      try {
-        await invokeProtectedFunction("generate_ticket_pdf", {
-          saleId: result.saleId
-        })
-      } catch (error) {
-        revalidatePath("/passes")
-        revalidatePath("/sales")
-        revalidatePath("/reports")
-        revalidatePath("/dashboard")
-        revalidatePath(`/clients/${clientId}`)
-        return {
-          success: true,
-          error:
-            error instanceof Error
-              ? `El bono se creó, pero el ticket de la venta no se pudo generar: ${error.message}`
-              : "El bono se creó, pero el ticket de la venta no se pudo generar"
-        }
-      }
-    }
   } catch (error) {
     return toActionError(error, "No se pudo crear el bono")
+  }
+
+  if (result?.passId) {
+    try {
+      await schedulePassSessionsIfNeeded({
+        passId: result.passId,
+        passTypeId,
+        startOn: contractedOn,
+        schedulePattern
+      })
+    } catch (error) {
+      warnings.push(
+        buildWarning(
+          "El bono se creó, pero no se pudieron agendar automáticamente las sesiones",
+          error
+        )
+      )
+    }
+  }
+
+  if (result?.saleId) {
+    try {
+      await invokeProtectedFunction("generate_ticket_pdf", {
+        saleId: result.saleId
+      })
+    } catch (error) {
+      warnings.push(
+        buildWarning("El bono se creó, pero el ticket de la venta no se pudo generar", error)
+      )
+    }
   }
 
   revalidatePath("/passes")
   revalidatePath("/sales")
   revalidatePath("/reports")
   revalidatePath("/dashboard")
+  revalidatePath("/agenda")
   revalidatePath(`/clients/${clientId}`)
+
+  if (warnings.length) {
+    return {
+      success: true,
+      error: warnings.join(" ")
+    }
+  }
+
   return { success: true }
 }
 
@@ -148,7 +294,7 @@ export async function deleteClientAction(
   const confirmationText = String(formData.get("confirmationText") ?? "").trim()
 
   if (!clientId) {
-    return { error: "No se ha encontrado el cliente a borrar." }
+    return { error: "No se ha encontrado el cliente que quieres borrar." }
   }
 
   if (confirmationText !== "CONFIRMO") {
@@ -157,7 +303,7 @@ export async function deleteClientAction(
 
   try {
     if (await isStaffPreview()) {
-      return { success: true, redirectTo: "/clients" }
+      redirect("/clients")
     }
 
     const accessToken = await getCurrentAccessToken()
@@ -212,10 +358,7 @@ export async function deleteClientAction(
   }
 
   revalidatePath("/clients")
-  return {
-    success: true,
-    redirectTo: "/clients"
-  }
+  redirect("/clients")
 }
 
 export async function consumeSessionAction(
@@ -223,6 +366,7 @@ export async function consumeSessionAction(
   formData: FormData
 ): Promise<ClientActionState> {
   const clientId = String(formData.get("clientId") ?? "")
+
   try {
     await invokeProtectedFunction("consume_session", {
       passId: String(formData.get("passId") ?? ""),
@@ -244,6 +388,7 @@ export async function pausePassAction(
   formData: FormData
 ): Promise<ClientActionState> {
   const clientId = String(formData.get("clientId") ?? "")
+
   try {
     await invokeProtectedFunction("pause_pass", {
       passId: String(formData.get("passId") ?? ""),
@@ -265,46 +410,114 @@ export async function renewPassAction(
   formData: FormData
 ): Promise<ClientActionState> {
   const clientId = String(formData.get("clientId") ?? "")
+  const passTypeId = String(formData.get("passTypeId") ?? "").trim()
+  const contractedOn = String(formData.get("contractedOn") ?? "").trim()
+  let schedulePattern: SchedulePatternEntry[] = []
+
   try {
-    const result = await invokeProtectedFunction("renew_pass", {
+    schedulePattern = parseSchedulePattern(formData)
+  } catch (error) {
+    return toActionError(error, "No se pudo validar el patrón semanal")
+  }
+
+  let result: { passId?: string | null; saleId?: string | null } | null = null
+  const warnings: string[] = []
+
+  try {
+    result = await invokeProtectedFunction("renew_pass", {
       passId: String(formData.get("passId") ?? ""),
-      passTypeId: String(formData.get("passTypeId") ?? ""),
+      passTypeId,
       paymentMethod: String(formData.get("paymentMethod") ?? ""),
       priceGross: String(formData.get("priceGross") ?? "").trim(),
-      contractedOn: String(formData.get("contractedOn") ?? ""),
+      contractedOn,
       notes: String(formData.get("notes") ?? "").trim()
     })
-
-    if (result?.saleId) {
-      try {
-        await invokeProtectedFunction("generate_ticket_pdf", {
-          saleId: result.saleId
-        })
-      } catch (error) {
-        revalidatePath("/passes")
-        revalidatePath("/sales")
-        revalidatePath("/reports")
-        revalidatePath("/dashboard")
-        revalidatePath("/notifications")
-        revalidatePath(`/clients/${clientId}`)
-        return {
-          success: true,
-          error:
-            error instanceof Error
-              ? `El bono se renovó, pero el ticket de la venta no se pudo generar: ${error.message}`
-              : "El bono se renovó, pero el ticket de la venta no se pudo generar"
-        }
-      }
-    }
   } catch (error) {
     return toActionError(error, "No se pudo renovar el bono")
+  }
+
+  if (result?.passId) {
+    try {
+      await schedulePassSessionsIfNeeded({
+        passId: result.passId,
+        passTypeId,
+        startOn: contractedOn,
+        schedulePattern
+      })
+    } catch (error) {
+      warnings.push(
+        buildWarning(
+          "El bono se renovó, pero no se pudieron agendar automáticamente las sesiones",
+          error
+        )
+      )
+    }
+  }
+
+  if (result?.saleId) {
+    try {
+      await invokeProtectedFunction("generate_ticket_pdf", {
+        saleId: result.saleId
+      })
+    } catch (error) {
+      warnings.push(
+        buildWarning("El bono se renovó, pero el ticket de la venta no se pudo generar", error)
+      )
+    }
   }
 
   revalidatePath("/passes")
   revalidatePath("/sales")
   revalidatePath("/reports")
   revalidatePath("/dashboard")
+  revalidatePath("/agenda")
   revalidatePath("/notifications")
+  revalidatePath(`/clients/${clientId}`)
+
+  if (warnings.length) {
+    return {
+      success: true,
+      error: warnings.join(" ")
+    }
+  }
+
+  return { success: true }
+}
+
+export async function scheduleExistingPassSessionsAction(
+  _prevState: ClientActionState,
+  formData: FormData
+): Promise<ClientActionState> {
+  const clientId = String(formData.get("clientId") ?? "").trim()
+  const passId = String(formData.get("passId") ?? "").trim()
+  const passTypeId = String(formData.get("passTypeId") ?? "").trim()
+  const startOn = getTodayDateKeyInAppTimeZone()
+  let schedulePattern: SchedulePatternEntry[] = []
+
+  if (!clientId || !passId || !passTypeId) {
+    return { error: "No se ha encontrado el bono que quieres agendar." }
+  }
+
+  try {
+    schedulePattern = parseSchedulePattern(formData)
+  } catch (error) {
+    return toActionError(error, "No se pudo validar el patrón semanal")
+  }
+
+  try {
+    await schedulePassSessionsIfNeeded({
+      passId,
+      passTypeId,
+      startOn,
+      schedulePattern,
+      mode: "pending"
+    })
+  } catch (error) {
+    return toActionError(error, "No se pudieron agendar las sesiones pendientes")
+  }
+
+  revalidatePath("/passes")
+  revalidatePath("/agenda")
   revalidatePath(`/clients/${clientId}`)
   return { success: true }
 }

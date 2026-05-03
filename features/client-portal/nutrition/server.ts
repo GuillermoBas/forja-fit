@@ -185,7 +185,7 @@ function mapWeeklyPlan(row: DbRow): WeeklyNutritionPlan {
 
   return {
     id: String(row.id),
-    title: String(row.title ?? "Menu semanal"),
+    title: String(row.title ?? "Menú semanal"),
     weekStartsOn: String(row.week_starts_on ?? ""),
     generatedByModel: row.generated_by_model ? String(row.generated_by_model) : null,
     createdAt: String(row.created_at ?? ""),
@@ -236,7 +236,7 @@ async function callPortalFunction<T>(
   if (!response.ok || !payload) {
     throw new Error(
       (payload && "message" in payload && payload.message) ||
-      "No se pudo completar la operacion nutricional."
+      "No se pudo completar la operación nutricional."
     )
   }
 
@@ -363,7 +363,7 @@ async function buildRecentTrainingSummary(accessToken: string, clientId: string)
   const sessions = sessionsResult.data as DbRow[]
 
   if (!sessions.length) {
-    return "No hay sesiones registradas en los ultimos 30 dias."
+    return "No hay sesiones registradas en los últimos 30 días."
   }
 
   const lastSession = String(sessions[0].consumed_at ?? "")
@@ -373,8 +373,8 @@ async function buildRecentTrainingSummary(accessToken: string, clientId: string)
     .filter(Boolean)
 
   return [
-    `Sesiones registradas en los ultimos 30 dias: ${sessions.length}.`,
-    `Ultima sesion: ${format(new Date(lastSession), "dd/MM/yyyy")}.`,
+    `Sesiones registradas en los últimos 30 días: ${sessions.length}.`,
+    `Última sesión: ${format(new Date(lastSession), "dd/MM/yyyy")}.`,
     notes.length ? `Notas recientes: ${notes.join(" | ")}.` : "Sin notas recientes de entrenamiento."
   ].join(" ")
 }
@@ -408,7 +408,7 @@ export async function loadPortalNutritionConversation(
   ])
 
   if (clientResult.error || !clientResult.data) {
-    throw new Error("No se ha podido cargar el perfil del cliente para nutricion.")
+    throw new Error("No se ha podido cargar el perfil del cliente para nutrición.")
   }
 
   let messages: NutritionChatMessage[] = []
@@ -452,7 +452,7 @@ export async function getPortalNutritionData(): Promise<PortalNutritionData> {
   const accessToken = await getCurrentPortalAccessToken()
 
   if (!accessToken) {
-    throw new Error("No se ha podido validar la sesion nutricional del portal.")
+    throw new Error("No se ha podido validar la sesión nutricional del portal.")
   }
 
   const ensured = await ensurePortalNutritionThread(accessToken)
@@ -486,13 +486,13 @@ export function buildNutritionMemoryBlock(memory: NutritionMemory) {
     `Altura: ${memory.heightCm ?? "sin dato"} cm`,
     `Peso: ${memory.weightKg ?? "sin dato"} kg`,
     `Objetivo: ${memory.goal ?? "sin dato"}`,
-    `Comidas al dia: ${memory.mealsPerDay ?? "sin dato"}`,
-    `Patron alimentario: ${memory.dietaryPattern ?? "sin dato"}`,
+    `Comidas al día: ${memory.mealsPerDay ?? "sin dato"}`,
+    `Patrón alimentario: ${memory.dietaryPattern ?? "sin dato"}`,
     `Ayuno intermitente: ${
       memory.intermittentFasting === null
         ? "sin dato"
         : memory.intermittentFasting
-          ? "si"
+          ? "sí"
           : "no"
     }`,
     `Alergias: ${memory.allergies ?? "sin dato"}`,

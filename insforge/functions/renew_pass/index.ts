@@ -52,25 +52,22 @@ async function notifyPassAssigned(client: any, passId: string) {
 
     const passTypeName = passTypeResult.data?.name ?? "Bono"
     const expiresOn = String(passResult.data.expires_on)
-    const [year, month, day] = expiresOn.slice(0, 10).split("-")
-    const formattedDate = year && month && day ? `${day}/${month}/${year}` : expiresOn
 
-    for (const holder of holdersResult.data) {
-      const clientId = String(holder.client_id)
-      await client.functions.invoke("send_push_to_client", {
-        body: {
-          clientId,
-          passId,
-          eventType: "pass_assigned",
-          dedupeKey: `pass_assigned:${passId}:${clientId}`,
-          title: "Nuevo bono asignado",
-          body: `Tu ${passTypeName} ya esta activo. Caduca el ${formattedDate}.`,
-          url: "/cliente/dashboard"
+    await client.functions.invoke("send_client_communication", {
+      body: {
+        clientIds: holdersResult.data.map((holder) => String(holder.client_id)),
+        passId,
+        eventType: "pass_assigned",
+        channels: ["email", "push"],
+        dedupeSeed: passId,
+        templateData: {
+          passTypeName,
+          expiresOn
         }
-      })
-    }
+      }
+    })
   } catch {
-    // Push complementa al flujo principal: nunca debe revertir la renovacion del bono.
+    // La comunicacion complementa al flujo principal: nunca debe revertir la renovacion del bono.
   }
 }
 

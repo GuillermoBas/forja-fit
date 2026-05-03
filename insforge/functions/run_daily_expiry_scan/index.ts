@@ -2,7 +2,6 @@
 import { createClient } from "npm:@insforge/sdk"
 
 const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
-const MAX_EMAILS_PER_RUN = 10
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -12,9 +11,7 @@ function json(data: unknown, status = 200) {
 }
 
 function madridDateString(input?: string) {
-  if (input) {
-    return input
-  }
+  if (input) return input
 
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
@@ -53,43 +50,71 @@ async function getActor(client: any) {
   return { profile: profileResult.data }
 }
 
-async function getPassMap(client: any, passIds: string[]) {
+async function loadPassContext(client: any, passIds: string[]) {
   if (!passIds.length) {
-    return new Map()
+    return { passTypes: new Map(), holdersByPass: new Map() }
   }
 
-  const [passesResult, holdersResult] = await Promise.all([
-    client.database.from("passes").select("*").in("id", passIds),
-    client.database
-      .from("pass_holders")
-      .select("pass_id,client_id,holder_order")
-      .in("pass_id", passIds)
+  const passTypeIds = new Set<string>()
+  const passesResult = await client.database.from("passes").select("id,pass_type_id").in("id", passIds)
+  if (passesResult.error) {
+    throw new Error(passesResult.error.message)
+  }
+
+  for (const row of passesResult.data ?? []) {
+    passTypeIds.add(String(row.pass_type_id))
+  }
+
+  const [holdersResult, passTypesResult] = await Promise.all([
+    client.database.from("pass_holders").select("pass_id,client_id").in("pass_id", passIds),
+    passTypeIds.size
+      ? client.database.from("pass_types").select("id,name").in("id", Array.from(passTypeIds))
+      : { data: [], error: null }
   ])
 
-  if (passesResult.error || !passesResult.data || holdersResult.error || !holdersResult.data) {
-    throw new Error(
-      passesResult.error?.message ??
-      holdersResult.error?.message ??
-      "No se pudieron cargar los bonos"
-    )
+  if (holdersResult.error || passTypesResult.error) {
+    throw new Error(holdersResult.error?.message ?? passTypesResult.error?.message ?? "No se pudo cargar contexto de bonos")
   }
 
-  const primaryHolderMap = new Map<string, string>()
-
-  for (const row of holdersResult.data as Array<Record<string, unknown>>) {
-    if (Number(row.holder_order ?? 0) !== 1) {
-      continue
-    }
-    primaryHolderMap.set(String(row.pass_id ?? ""), String(row.client_id ?? ""))
+  const holdersByPass = new Map<string, string[]>()
+  for (const row of holdersResult.data ?? []) {
+    const passId = String(row.pass_id)
+    const holders = holdersByPass.get(passId) ?? []
+    holders.push(String(row.client_id))
+    holdersByPass.set(passId, holders)
   }
 
-  return new Map((passesResult.data as Array<Record<string, unknown>>).map((row) => [
-    String(row.id),
-    {
-      ...row,
-      primary_holder_client_id: primaryHolderMap.get(String(row.id)) ?? null
+  const passTypes = new Map((passTypesResult.data ?? []).map((row) => [String(row.id), String(row.name ?? "Bono")]))
+  return { passTypes, holdersByPass }
+}
+
+async function sendExpiryCommunication(client: any, pass: Record<string, unknown>, eventType: string, context: any) {
+  const passId = String(pass.id)
+  const holderIds = context.holdersByPass.get(passId) ?? []
+  if (!holderIds.length) {
+    return { skipped: true, reason: "no_holders" }
+  }
+
+  const result = await client.functions.invoke("send_client_communication", {
+    body: {
+      clientIds: holderIds,
+      passId,
+      eventType,
+      channels: ["email", "push"],
+      dedupeSeed: `${passId}:${pass.expires_on}`,
+      templateData: {
+        passTypeName: context.passTypes.get(String(pass.pass_type_id)) ?? "Bono",
+        expiresOn: pass.expires_on,
+        sessionsLeft: pass.sessions_left
+      }
     }
-  ]))
+  })
+
+  if (result.error) {
+    return { failed: true, reason: result.error.message }
+  }
+
+  return result.data ?? { ok: true }
 }
 
 export default async function(request: Request) {
@@ -103,11 +128,7 @@ export default async function(request: Request) {
     const runForDate = madridDateString(body?.runOn)
     const d7Date = addDays(runForDate, 7)
 
-    const client = createClient({
-      baseUrl: BASE_URL,
-      edgeFunctionToken: token
-    })
-
+    const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
     const actor = await getActor(client)
     if (actor.error) {
       return actor.error
@@ -151,12 +172,12 @@ export default async function(request: Request) {
       const [d7PassesResult, d0PassesResult] = await Promise.all([
         client.database
           .from("passes")
-          .select("id,expires_on,status")
+          .select("id,pass_type_id,expires_on,sessions_left,status")
           .eq("expires_on", d7Date)
           .in("status", ["active", "paused", "out_of_sessions"]),
         client.database
           .from("passes")
-          .select("id,expires_on,status")
+          .select("id,pass_type_id,expires_on,sessions_left,status")
           .eq("expires_on", runForDate)
           .in("status", ["active", "paused", "out_of_sessions"])
       ])
@@ -165,87 +186,37 @@ export default async function(request: Request) {
         throw new Error(d7PassesResult.error?.message ?? d0PassesResult.error?.message ?? "No se pudieron cargar bonos")
       }
 
-      let attemptedEmails = 0
+      const d7Passes = (d7PassesResult.data ?? []) as Array<Record<string, unknown>>
+      const d0Passes = (d0PassesResult.data ?? []) as Array<Record<string, unknown>>
+      const passIds = Array.from(new Set([...d7Passes, ...d0Passes].map((pass) => String(pass.id))))
+      const context = await loadPassContext(client, passIds)
       const summary = {
-        d7Candidates: (d7PassesResult.data ?? []).length,
-        d0Candidates: (d0PassesResult.data ?? []).length,
-        attemptedEmails: 0,
+        d7Candidates: d7Passes.length,
+        d0Candidates: d0Passes.length,
         sent: 0,
         skipped: 0,
         failed: 0,
         expired: 0
       }
 
-      for (const candidate of [
-        ...((d7PassesResult.data as Array<Record<string, unknown>> | null) ?? []).map((row) => ({
-          passId: String(row.id),
-          reminderType: "expiry_reminder_d7"
-        })),
-        ...((d0PassesResult.data as Array<Record<string, unknown>> | null) ?? []).map((row) => ({
-          passId: String(row.id),
-          reminderType: "expiry_reminder_d0"
-        }))
-      ]) {
-        const existingLog = await client.database
-          .from("notification_log")
-          .select("id,status")
-          .eq("pass_id", candidate.passId)
-          .eq("channel", "email")
-          .eq("event_type", candidate.reminderType)
-          .limit(1)
-          .maybeSingle()
+      for (const pass of d7Passes) {
+        const result = await sendExpiryCommunication(client, pass, "pass_expiry_d7", context)
+        summary.sent += Number(result.sent ?? 0)
+        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
+        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
+      }
 
-        if (!existingLog.error && existingLog.data?.id) {
-          summary.skipped += 1
-          continue
-        }
-
-        if (attemptedEmails >= MAX_EMAILS_PER_RUN) {
-          const passMap = await getPassMap(client, [candidate.passId])
-          const passRow = passMap.get(candidate.passId)
-          await client.database.from("notification_log").insert([
-            {
-              client_id: passRow?.primary_holder_client_id ?? null,
-              pass_id: candidate.passId,
-              channel: "email",
-              event_type: candidate.reminderType,
-              status: "skipped",
-              subject: "Email omitido por throttling",
-              body: "Se ha omitido el envío para respetar el límite horario de emails.",
-              payload: { throttled: true, job_run_id: jobRunId },
-              error_message: "throttled_hourly_limit"
-            }
-          ])
-          summary.skipped += 1
-          continue
-        }
-
-        attemptedEmails += 1
-        summary.attemptedEmails = attemptedEmails
-
-        const sendResult = await client.functions.invoke("send_expiry_email", {
-          body: {
-            passId: candidate.passId,
-            reminderType: candidate.reminderType
-          }
-        })
-
-        if (sendResult.error) {
-          summary.failed += 1
-          continue
-        }
-
-        if (sendResult.data?.skipped) {
-          summary.skipped += 1
-        } else {
-          summary.sent += 1
-        }
+      for (const pass of d0Passes) {
+        const result = await sendExpiryCommunication(client, pass, "pass_expiry_d0", context)
+        summary.sent += Number(result.sent ?? 0)
+        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
+        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
       }
 
       const expireResult = await client.database
         .from("passes")
         .update({ status: "expired" })
-        .eq("expires_on", runForDate)
+        .lt("expires_on", runForDate)
         .in("status", ["active", "paused", "out_of_sessions"])
         .select("id")
 
@@ -257,10 +228,7 @@ export default async function(request: Request) {
 
       const completeResult = await client.database
         .from("job_runs")
-        .update({
-          status: "completed",
-          details: summary
-        })
+        .update({ status: "completed", details: summary })
         .eq("id", jobRunId)
 
       if (completeResult.error) {
@@ -277,11 +245,7 @@ export default async function(request: Request) {
         }
       ])
 
-      return json({
-        ok: true,
-        runForDate,
-        ...summary
-      })
+      return json({ ok: true, runForDate, ...summary })
     } catch (jobError) {
       await client.database.from("audit_logs").insert([
         {
@@ -300,9 +264,7 @@ export default async function(request: Request) {
         .from("job_runs")
         .update({
           status: "failed",
-          details: {
-            error: jobError instanceof Error ? jobError.message : "unknown_error"
-          }
+          details: { error: jobError instanceof Error ? jobError.message : "unknown_error" }
         })
         .eq("id", jobRunId)
 

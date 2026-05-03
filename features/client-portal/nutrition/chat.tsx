@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Loader2, Send, Sparkles } from "lucide-react"
+import { CalendarDays, Loader2, Send, ShieldAlert, Sparkles, SunMedium } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn, formatDate } from "@/lib/utils"
@@ -99,6 +99,7 @@ export function NutritionChat({
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [quota, setQuota] = useState<NutritionQuotaStatus>(initialQuota)
+  const [isSafetyHintOpen, setIsSafetyHintOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   const visibleMessages = useMemo(
@@ -174,7 +175,7 @@ export function NutritionChat({
           setQuota(payload.quota)
         }
 
-        throw new Error(payload?.message ?? "No se pudo iniciar la conversacion nutricional.")
+        throw new Error(payload?.message ?? "No se pudo iniciar la conversación nutricional.")
       }
 
       const reader = response.body.getReader()
@@ -247,7 +248,7 @@ export function NutritionChat({
             <div className="min-w-0">
               <p className="section-kicker">Asistente nutricional</p>
               <h3 className="mt-1 font-heading text-base font-bold text-text-primary sm:text-lg">
-                Nutricion en chat
+                Nutrición en chat
               </h3>
             </div>
             <div className="flex items-center gap-2 rounded-full border border-primary/18 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary-hover">
@@ -325,10 +326,6 @@ export function NutritionChat({
         </div>
 
         <div className="border-t border-border/70 px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] sm:px-4 sm:py-3.5 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <div className="mb-3 rounded-2xl border border-dashed border-border/80 bg-surface-alt/70 px-3 py-2 text-xs leading-5 text-text-secondary">
-            Solo respondemos dudas de nutricion y habitos saludables. Rechazamos temas fuera de alcance, diagnosticos, TCA y patologia compleja.
-          </div>
-
           {error ? (
             <p className="mb-3 rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-sm text-error">
               {error}
@@ -356,12 +353,33 @@ export function NutritionChat({
             />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {mode === "modal" ? (
-                <div className="flex min-w-0 flex-col gap-2 sm:flex-1 sm:flex-row">
-                  <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
-                    Hoy te quedan {quota.dailyRemaining} mensajes
+                <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 sm:flex-1 sm:pb-0">
+                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
+                    <SunMedium className="h-4 w-4 text-primary" />
+                    <span>{quota.dailyRemaining}/{quota.dailyLimit}</span>
                   </div>
-                  <div className="rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
-                    Este mes te quedan {quota.monthlyRemaining} mensajes
+                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    <span>{quota.monthlyRemaining}/{quota.monthlyLimit}</span>
+                  </div>
+                  <div className="group relative shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Información de seguridad del asistente"
+                      aria-expanded={isSafetyHintOpen}
+                      onClick={() => setIsSafetyHintOpen((current) => !current)}
+                      className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-surface-alt/70 text-text-secondary transition hover:border-primary/35 hover:text-primary"
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                    </button>
+                    <div
+                      className={cn(
+                        "absolute bottom-full right-0 z-20 mb-2 w-64 rounded-2xl border border-border/80 bg-surface px-3 py-2 text-xs leading-5 text-text-secondary shadow-[0_18px_45px_rgba(15,23,42,0.16)] group-hover:block",
+                        isSafetyHintOpen ? "block" : "hidden"
+                      )}
+                    >
+                      Solo respondemos dudas de nutrición y hábitos saludables. Rechazamos temas fuera de alcance, diagnósticos, TCA y patología compleja.
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -371,11 +389,17 @@ export function NutritionChat({
               )}
               <Button
                 type="submit"
-                className="h-11 w-full gap-2.5 rounded-2xl px-4 sm:min-w-[7.75rem] sm:w-auto sm:self-auto sm:px-5"
+                aria-label="Enviar mensaje"
+                className={cn(
+                  "h-11 rounded-2xl",
+                  mode === "modal"
+                    ? "w-10 shrink-0 px-0 sm:h-10 sm:w-10"
+                    : "w-full gap-2.5 px-4 sm:min-w-[7.75rem] sm:w-auto sm:self-auto sm:px-5"
+                )}
                 disabled={isStreaming || !input.trim() || quota.blocked}
               >
                 {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Enviar
+                {mode === "modal" ? <span className="sr-only">Enviar</span> : "Enviar"}
               </Button>
             </div>
           </form>

@@ -13,16 +13,18 @@ import {
   getClientPortalSupportState,
   getPassTypes,
   getPasses,
-  getSales
+  getSales,
+  getTrainerProfiles
 } from "@/lib/data"
 import { getCurrentProfile } from "@/lib/auth/session"
 import { isAdmin } from "@/lib/permissions/roles"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, formatPassStatus } from "@/lib/utils"
 import {
   ConsumeSessionForm,
   CreatePassForm,
   PausePassForm,
-  RenewPassForm
+  RenewPassForm,
+  ScheduleExistingPassForm
 } from "@/features/clients/pass-operation-forms"
 import { Button } from "@/components/ui/button"
 import { ClientPortalAdminForm } from "@/features/clients/client-portal-admin-form"
@@ -39,7 +41,18 @@ export default async function ClientDetailPage({
     notFound()
   }
 
-  const [allClients, allPasses, notifications, sales, passTypes, history, profile, portalAccount, portalSupport] = await Promise.all([
+  const [
+    allClients,
+    allPasses,
+    notifications,
+    sales,
+    passTypes,
+    history,
+    profile,
+    portalAccount,
+    portalSupport,
+    allTrainerProfiles
+  ] = await Promise.all([
     getClients(),
     getPasses(),
     getNotifications(),
@@ -48,13 +61,17 @@ export default async function ClientDetailPage({
     getClientHistory(id),
     getCurrentProfile(),
     getClientPortalAccountByClientId(id),
-    getClientPortalSupportState(id)
+    getClientPortalSupportState(id),
+    getTrainerProfiles()
   ])
 
   const passes = allPasses.filter((item) => item.holderClientIds.includes(client.id))
   const clientNotifications = notifications.filter((item) => item.clientName === client.fullName)
   const clientSales = sales.filter((item) => item.clientName === client.fullName)
   const canManagePasses = isAdmin(profile?.role)
+  const trainerProfiles = profile?.role === "admin"
+    ? allTrainerProfiles
+    : allTrainerProfiles.filter((trainer) => trainer.id === profile?.id)
 
   return (
     <div className="space-y-6">
@@ -177,7 +194,24 @@ export default async function ClientDetailPage({
                 <div key={item.id} className="rounded-2xl border p-4">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">{item.passTypeName}</p>
-                    <p className="text-sm text-muted-foreground">Caduca {formatDate(item.expiresOn)}</p>
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant={
+                          item.status === "expired"
+                            ? "danger"
+                            : item.status === "paused" || item.status === "out_of_sessions"
+                              ? "warning"
+                              : "success"
+                        }
+                      >
+                        {formatPassStatus(item.status)}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        {item.status === "expired"
+                          ? `Caducado el ${formatDate(item.expiresOn)}`
+                          : `Caduca ${formatDate(item.expiresOn)}`}
+                      </p>
+                    </div>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Titulares: {item.holderNames.join(" / ")}
@@ -188,10 +222,15 @@ export default async function ClientDetailPage({
                       : `Sesiones restantes: ${item.sessionsLeft ?? 0}`}
                   </p>
                   {canManagePasses ? (
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-wrap gap-3">
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/passes/${item.id}/edit`}>Editar bono</Link>
                       </Button>
+                      <ScheduleExistingPassForm
+                        clientId={client.id}
+                        pass={item}
+                        trainerProfiles={trainerProfiles}
+                      />
                     </div>
                   ) : null}
                 </div>
@@ -248,8 +287,18 @@ export default async function ClientDetailPage({
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ConsumeSessionForm clientId={client.id} passes={passes} />
-        <RenewPassForm clientId={client.id} passes={passes} passTypes={passTypes} />
-        <CreatePassForm clientId={client.id} clients={allClients} passTypes={passTypes} />
+        <RenewPassForm
+          clientId={client.id}
+          passes={passes}
+          passTypes={passTypes}
+          trainerProfiles={trainerProfiles}
+        />
+        <CreatePassForm
+          clientId={client.id}
+          clients={allClients}
+          passTypes={passTypes}
+          trainerProfiles={trainerProfiles}
+        />
         <PausePassForm clientId={client.id} passes={passes} />
       </div>
     </div>

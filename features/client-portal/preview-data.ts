@@ -48,7 +48,7 @@ const previewQuota: NutritionQuotaStatus = {
 const previewMemory: NutritionMemory = {
   heightCm: 178,
   weightKg: 78,
-  goal: "Ganar fuerza manteniendo energia para entrenar",
+  goal: "Ganar fuerza manteniendo energía para entrenar",
   mealsPerDay: 4,
   dietaryPattern: "Mediterranea flexible",
   intermittentFasting: false,
@@ -106,14 +106,14 @@ export function getPreviewPortalDashboardData(rangeParam?: string): PortalDashbo
         id: "preview-history-1",
         kind: "session",
         happenedAt: subDays(today, 2).toISOString(),
-        title: "Sesion consumida",
+        title: "Sesión consumida",
         detail: "Bono 10 sesiones"
       },
       {
         id: "preview-history-2",
         kind: "renewal",
         happenedAt: subDays(today, 9).toISOString(),
-        title: "Renovacion registrada",
+        title: "Renovación registrada",
         detail: "Confirmacion interna generada"
       },
       {
@@ -121,7 +121,7 @@ export function getPreviewPortalDashboardData(rangeParam?: string): PortalDashbo
         kind: "pause",
         happenedAt: subDays(today, 16).toISOString(),
         title: "Pausa aplicada",
-        detail: "Pausa de 4 dias"
+        detail: "Pausa de 4 días"
       }
     ],
     activePasses: [
@@ -132,7 +132,7 @@ export function getPreviewPortalDashboardData(rangeParam?: string): PortalDashbo
         status: "active",
         expiresOn: toIsoDay(addDays(today, 12)),
         sessionsLeft: 7,
-        holderSummary: "Titular unico"
+        holderSummary: "Titular único"
       },
       {
         id: "preview-pass-2",
@@ -171,7 +171,7 @@ export function getPreviewClientCalendarSessions(): ClientCalendarSession[] {
       status: "scheduled",
       trainerName: "Admin Trainium",
       isShared: true,
-      displayTitle: "Sesion compartida",
+      displayTitle: "Sesión compartida",
       canCancel: true,
       cancellationReason: null
     },
@@ -183,9 +183,9 @@ export function getPreviewClientCalendarSessions(): ClientCalendarSession[] {
       status: "completed",
       trainerName: "Admin Trainium",
       isShared: false,
-      displayTitle: "Sesion completada",
+      displayTitle: "Sesión completada",
       canCancel: false,
-      cancellationReason: "Esta sesion ya no permite cancelacion."
+      cancellationReason: "Esta sesión ya no permite cancelación."
     }
   ]
 }
@@ -193,22 +193,22 @@ export function getPreviewClientCalendarSessions(): ClientCalendarSession[] {
 function getPreviewWeeklyPlan(): WeeklyNutritionPlan {
   return {
     id: "preview-weekly-plan",
-    title: "Menu semanal de preview",
+    title: "Menú semanal de preview",
     weekStartsOn: toIsoDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
     generatedByModel: nutritionAssistantConfig.modelId,
     createdAt: subDays(new Date(), 1).toISOString(),
     plan: {
-      weekGoal: "Mantener energia estable para entrenar fuerza.",
+      weekGoal: "Mantener energía estable para entrenar fuerza.",
       notes: "Preview local para comprobar el render de planes guardados.",
       shoppingList: ["Arroz integral", "Huevos", "Pollo", "Yogur natural", "Verduras", "Fruta"],
       days: {
         lunes: { focus: "Fuerza", meals: [{ title: "Comida", detail: "Arroz con pollo y verduras" }] },
-        martes: { focus: "Recuperacion", meals: [{ title: "Cena", detail: "Tortilla con ensalada" }] },
+        martes: { focus: "Recuperación", meals: [{ title: "Cena", detail: "Tortilla con ensalada" }] },
         miercoles: { focus: "Entreno", meals: [{ title: "Merienda", detail: "Yogur con fruta" }] },
         jueves: { focus: "Base", meals: [{ title: "Comida", detail: "Legumbre con arroz" }] },
         viernes: { focus: "Fuerza", meals: [{ title: "Cena", detail: "Pescado con patata" }] },
-        sabado: { focus: "Flexible", meals: [{ title: "Comida", detail: "Bowl mediterraneo" }] },
-        domingo: { focus: "Preparacion", meals: [{ title: "Cena", detail: "Crema de verduras y huevos" }] }
+        sabado: { focus: "Flexible", meals: [{ title: "Comida", detail: "Bowl mediterráneo" }] },
+        domingo: { focus: "Preparación", meals: [{ title: "Cena", detail: "Crema de verduras y huevos" }] }
       }
     }
   }
@@ -221,7 +221,7 @@ export function getPreviewPortalNutritionData(): PortalNutritionData {
     assistantConfigId: nutritionAssistantConfig.id,
     memory: previewMemory,
     quota: previewQuota,
-    recentTrainingSummary: "3 sesiones en los ultimos 14 dias, con buena regularidad semanal.",
+    recentTrainingSummary: "3 sesiones en los últimos 14 días, con buena regularidad semanal.",
     savedPlans: [getPreviewWeeklyPlan()],
     messages: [
       {
@@ -230,7 +230,7 @@ export function getPreviewPortalNutritionData(): PortalNutritionData {
         clientId: previewClient.id,
         role: "assistant",
         content:
-          "Soy tu asistente de nutricion de Trainium. En preview puedo ayudarte a comprobar el diseno del chat sin llamar al modelo real.",
+          "Soy tu asistente de nutrición de Trainium. En preview puedo ayudarte a comprobar el diseño del chat sin llamar al modelo real.",
         modelId: nutritionAssistantConfig.modelId,
         createdAt: subDays(new Date(), 2).toISOString(),
         metadata: { preview: true }
@@ -251,7 +251,7 @@ export function getPreviewPortalNutritionData(): PortalNutritionData {
         clientId: previewClient.id,
         role: "assistant",
         content:
-          "Perfecto. Para entrenar por la tarde, prioriza una comida principal completa y una merienda ligera con carbohidrato y proteina.",
+          "Perfecto. Para entrenar por la tarde, prioriza una comida principal completa y una merienda ligera con carbohidrato y proteína.",
         modelId: nutritionAssistantConfig.modelId,
         createdAt: new Date().toISOString(),
         metadata: { preview: true }

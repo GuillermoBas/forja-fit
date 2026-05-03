@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS passes (
   renewed_from_pass_id UUID REFERENCES passes(id),
   contracted_on DATE NOT NULL,
   expires_on DATE NOT NULL,
+  pass_sub_type TEXT CHECK (pass_sub_type IN ('individual', 'shared_2', 'shared_3')),
   sold_price_gross NUMERIC(10,2) NOT NULL CHECK (sold_price_gross >= 0),
   status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'out_of_sessions', 'expired', 'cancelled')),
   original_sessions INTEGER,
@@ -222,6 +223,7 @@ CREATE TABLE IF NOT EXISTS notification_log (
       'expiry_reminder_d0',
       'manual_note',
       'pass_expiry_d7',
+      'pass_expiry_d0',
       'pass_assigned',
       'calendar_session_24h'
     )

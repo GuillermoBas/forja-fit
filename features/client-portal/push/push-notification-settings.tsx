@@ -239,7 +239,7 @@ export function PushNotificationSettings({ vapidPublicKey, initialPreferences }:
 
         <div className="space-y-3">
           <PreferenceToggle
-            label="Aviso de bono 7 días antes de caducar"
+            label="Avisos de caducidad de bono"
             checked={preferences.passExpiryEnabled}
             disabled={isPending}
             onChange={(checked) => updatePreference("passExpiryEnabled", checked)}

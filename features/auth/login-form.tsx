@@ -29,7 +29,7 @@ export function LoginForm({
 }) {
   const [activationState, activationAction] = useActionState(verifyStaffEmailAction, initialState)
   const normalizedRouteError =
-    errorMessage === "Invalid credentials" ? "Email o Contrasena incorrectos." : errorMessage
+    errorMessage === "Invalid credentials" ? "Email o contraseña incorrectos." : errorMessage
   const normalizedErrorMessage = normalizedRouteError ?? activationState.error
   const resolvedActivationEmail = activationState.email ?? activationEmail ?? ""
   const showActivationForm = activationRequired || Boolean(activationState.verificationRequired)
@@ -48,7 +48,7 @@ export function LoginForm({
 
   return (
     <StaffAuthShell
-      description="Accede al portal de administracion y entrenadores con Google o Email."
+      description="Accede al portal de administración y entrenadores con Google o email."
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           {canBootstrap ? (
@@ -65,13 +65,13 @@ export function LoginForm({
               }
               className="text-text-secondary hover:text-text-primary hover:underline"
             >
-              Ya tengo codigo de activacion
+              Ya tengo código de activación
             </Link>
             <Link
               href="/recuperar-clave"
               className="text-text-secondary hover:text-text-primary hover:underline"
             >
-              Recuperar contrasena
+              Recuperar contraseña
             </Link>
           </div>
         </div>
@@ -79,7 +79,7 @@ export function LoginForm({
     >
       {verifyStatus === "success" ? (
         <div className="rounded-2xl border border-success/20 bg-success/10 p-3 text-sm text-success">
-          Email verificado correctamente. Ya puedes iniciar sesion.
+          Email verificado correctamente. Ya puedes iniciar sesión.
         </div>
       ) : null}
 
@@ -92,7 +92,7 @@ export function LoginForm({
       {showActivationForm ? (
         <form className="space-y-4" action={activationAction}>
           <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-3 text-sm text-text-primary">
-            Este usuario staff todavia no esta activado. Introduce el codigo recibido por email para completar el acceso.
+            Este usuario staff todavía no está activado. Introduce el código recibido por email para completar el acceso.
           </div>
           <div className="field-shell">
             <label className="field-label">Email</label>
@@ -105,7 +105,7 @@ export function LoginForm({
             />
           </div>
           <div className="field-shell">
-            <label className="field-label">Codigo de activacion</label>
+            <label className="field-label">Código de activación</label>
             <Input
               name="otp"
               placeholder="123456"
@@ -145,7 +145,7 @@ export function LoginForm({
                 />
               </div>
               <div className="field-shell">
-                <label className="field-label">Contrasena</label>
+                <label className="field-label">Contraseña</label>
                 <Input
                   type="password"
                   name="password"

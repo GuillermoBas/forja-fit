@@ -19,14 +19,6 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-function formatTimeEs(isoString: string) {
-  return new Intl.DateTimeFormat("es-ES", {
-    timeZone: "Europe/Madrid",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(isoString))
-}
-
 async function requireStaffActor(client: any) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
@@ -132,24 +124,25 @@ export default async function(request: Request) {
       }
 
       for (const clientId of clients) {
-        const result = await client.functions.invoke("send_push_to_client", {
+        const result = await client.functions.invoke("send_client_communication", {
           body: {
-            clientId,
+            clientIds: [clientId],
             eventType: "calendar_session_24h",
-            dedupeKey: `calendar_session_24h:${session.id}:${clientId}`,
-            title: "Recuerda tu sesion de manana",
-            body: `Tienes una sesion programada a las ${formatTimeEs(String(session.starts_at))}.`,
-            url: "/cliente/actividad"
+            channels: ["email", "push"],
+            dedupeSeed: String(session.id),
+            templateData: {
+              calendarSessionId: session.id,
+              startsAt: session.starts_at
+            }
           }
         })
 
         if (result.error) {
           failed += 1
-        } else if (result.data?.skipped) {
-          skipped += 1
         } else {
-          sent += Number(result.data?.sent ?? 0) > 0 ? 1 : 0
-          if (Number(result.data?.sent ?? 0) <= 0) skipped += 1
+          sent += Number(result.data?.sent ?? 0)
+          skipped += Number(result.data?.skipped ?? 0)
+          failed += Number(result.data?.failed ?? 0)
         }
       }
     }

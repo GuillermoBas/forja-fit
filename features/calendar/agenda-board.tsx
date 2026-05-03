@@ -41,7 +41,7 @@ type ModalState =
   | null
 
 const hours = Array.from({ length: 16 }, (_, index) => index + 7)
-const weekDayLabels = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"]
+const weekDayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 function pad(value: number) {
   return String(value).padStart(2, "0")
@@ -138,6 +138,14 @@ function getSelectedClientNames(passes: Pass[], selectedPassIds: string[]) {
   )
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim()
+}
+
 function buildAgendaUrl(view: AgendaView, day: string, trainerId: string) {
   return `/agenda?view=${view}&day=${day}&trainer=${trainerId}`
 }
@@ -154,6 +162,16 @@ function compareAgendaSessions(left: CalendarSession, right: CalendarSession) {
   return new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
 }
 
+function getAgendaStatusLabel(status: CalendarSession["status"]) {
+  return status === "scheduled"
+    ? "Programada"
+    : status === "completed"
+      ? "Consumida"
+      : status === "no_show"
+        ? "No asistió"
+        : "Cancelada"
+}
+
 function AgendaEventButton({
   session,
   onOpen
@@ -161,31 +179,46 @@ function AgendaEventButton({
   session: CalendarSession
   onOpen: (session: CalendarSession) => void
 }) {
-  const statusLabel =
-    session.status === "scheduled"
-      ? "Programada"
-      : session.status === "completed"
-        ? "Consumida"
-        : session.status === "no_show"
-          ? "No asistió"
-          : "Cancelada"
+  const statusLabel = getAgendaStatusLabel(session.status)
+  const sessionTitle = session.clientNames.join(" / ") || "Sesion"
 
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(session)}
-      className="w-full rounded-md border px-2 py-1.5 text-left text-[12px] leading-4 shadow-sm transition hover:-translate-y-0.5"
-      style={{
-        backgroundColor: session.status === "cancelled" ? "#E2E8F0" : session.trainerColor,
-        borderColor: session.status === "cancelled" ? "#CBD5E1" : session.trainerColor,
-        color: session.status === "cancelled" ? "#475569" : "#0f172a"
-      }}
-    >
-      <span className="block truncate font-semibold">{session.clientNames.join(" / ") || "Sesión"}</span>
-      <span className="block truncate opacity-80">
-        {formatDateInAppTimeZone(session.startsAt, { hour: "2-digit", minute: "2-digit" })} - {statusLabel}
-      </span>
-    </button>
+    <div className="group relative z-0 hover:z-20 focus-within:z-20">
+      <button
+        type="button"
+        onClick={() => onOpen(session)}
+        className="w-full rounded-md border px-2 py-1.5 text-left text-[12px] leading-4 shadow-sm transition hover:-translate-y-0.5"
+        style={{
+          backgroundColor: session.status === "cancelled" ? "#E2E8F0" : session.trainerColor,
+          borderColor: session.status === "cancelled" ? "#CBD5E1" : session.trainerColor,
+          color: session.status === "cancelled" ? "#475569" : "#0f172a"
+        }}
+      >
+        <span className="block truncate font-semibold">{sessionTitle}</span>
+        <span className="block truncate opacity-80">
+          {formatDateInAppTimeZone(session.startsAt, { hour: "2-digit", minute: "2-digit" })} - {statusLabel}
+        </span>
+      </button>
+      <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-72 rounded-2xl border border-border/90 bg-surface p-3 text-left shadow-[0_18px_45px_rgba(15,23,42,0.22)] group-hover:block group-focus-within:block">
+        <p className="text-sm font-semibold text-text-primary">{sessionTitle}</p>
+        <p className="mt-1 text-xs text-text-secondary">
+          {formatDateInAppTimeZone(session.startsAt, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit"
+          })}
+          {" - "}
+          {formatDateInAppTimeZone(session.endsAt, { hour: "2-digit", minute: "2-digit" })}
+        </p>
+        <p className="mt-2 text-xs text-text-secondary">Estado: {statusLabel}</p>
+        <p className="mt-1 text-xs text-text-secondary">Entrenador: {session.trainerName}</p>
+        {session.notes ? (
+          <p className="mt-2 text-xs leading-5 text-text-secondary">{session.notes}</p>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -216,14 +249,29 @@ function AgendaModal({
     ? currentProfile.role === "admin" || editingSession.trainerProfileId === currentProfile.id
     : canManageSelectedTrainer))
   const modalIdentity = state?.mode === "create" ? state.slot.startsAt : editingSession?.id
-  const [selectedPassIds, setSelectedPassIds] = useState<string[]>([])
-  const visiblePasses = passes.filter(
+  const initialSelectedPassIds = state?.mode === "edit" ? state.session.passIds : []
+  const [selectedPassIds, setSelectedPassIds] = useState<string[]>(initialSelectedPassIds)
+  const [passSearch, setPassSearch] = useState("")
+  const eligiblePasses = passes.filter(
     (pass) => pass.status === "active" || (editingSession?.passIds ?? []).includes(pass.id)
   )
+  const normalizedPassSearch = normalizeSearchText(passSearch)
+  const visiblePasses = eligiblePasses.filter((pass) => {
+    if (!normalizedPassSearch) {
+      return true
+    }
+
+    const searchableText = normalizeSearchText(
+      `${getPassLabel(pass)} ${pass.holderNames.join(" ")}`
+    )
+
+    return searchableText.includes(normalizedPassSearch)
+  })
   const clientNames = getSelectedClientNames(passes, selectedPassIds)
 
   useEffect(() => {
     setSelectedPassIds(state?.mode === "edit" ? state.session.passIds : [])
+    setPassSearch("")
   }, [modalIdentity, state])
 
   if (!state) {
@@ -299,33 +347,45 @@ function AgendaModal({
           </div>
           <div className="space-y-2 md:col-span-2">
             <label className="text-sm font-medium">Bonos asociados</label>
+            <Input
+              value={passSearch}
+              onChange={(event) => setPassSearch(event.target.value)}
+              placeholder="Buscar por titular o nombre del bono"
+              disabled={!eligiblePasses.length}
+            />
             <div className="max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-border/80 bg-surface-alt/40 p-3">
-              {visiblePasses.map((pass) => {
-                const checked = selectedPassIds.includes(pass.id)
-                return (
-                  <label key={pass.id} className="flex items-start gap-3 rounded-xl bg-surface px-3 py-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="passIds"
-                      value={pass.id}
-                      defaultChecked={checked}
-                      disabled={!canManage}
-                      className="mt-1"
-                      onChange={(event) => {
-                        setSelectedPassIds((current) =>
-                          event.target.checked
-                            ? Array.from(new Set([...current, pass.id]))
-                            : current.filter((id) => id !== pass.id)
-                        )
-                      }}
-                    />
-                    <span>
-                      <span className="block font-semibold text-text-primary">{getPassLabel(pass)}</span>
-                      <span className="text-text-secondary">Titulares: {pass.holderNames.join(" / ")}</span>
-                    </span>
-                  </label>
-                )
-              })}
+              {visiblePasses.length ? (
+                visiblePasses.map((pass) => {
+                  const checked = selectedPassIds.includes(pass.id)
+                  return (
+                    <label key={pass.id} className="flex items-start gap-3 rounded-xl bg-surface px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="passIds"
+                        value={pass.id}
+                        checked={checked}
+                        disabled={!canManage}
+                        className="mt-1"
+                        onChange={(event) => {
+                          setSelectedPassIds((current) =>
+                            event.target.checked
+                              ? Array.from(new Set([...current, pass.id]))
+                              : current.filter((id) => id !== pass.id)
+                          )
+                        }}
+                      />
+                      <span>
+                        <span className="block font-semibold text-text-primary">{getPassLabel(pass)}</span>
+                        <span className="text-text-secondary">Titulares: {pass.holderNames.join(" / ")}</span>
+                      </span>
+                    </label>
+                  )
+                })
+              ) : (
+                <p className="rounded-xl bg-surface px-3 py-3 text-sm text-text-secondary">
+                  No hay bonos que coincidan con la búsqueda.
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-2 md:col-span-2">
@@ -399,6 +459,7 @@ export function AgendaBoard({
   const [modalState, setModalState] = useState<ModalState>(null)
   const filteredSessions = useMemo(
     () => sessions
+      .filter((session) => session.status !== "cancelled")
       .filter((session) => session.trainerProfileId === selectedTrainerId)
       .sort(compareAgendaSessions),
     [selectedTrainerId, sessions]

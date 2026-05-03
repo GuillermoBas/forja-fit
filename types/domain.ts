@@ -1,12 +1,17 @@
 export type AppRole = "admin" | "trainer"
 export type PaymentMethod = "cash" | "card" | "transfer" | "bizum"
 export type CalendarStatus = "scheduled" | "completed" | "cancelled" | "no_show"
-export type NotificationChannel = "internal" | "email"
+export type NotificationChannel = "internal" | "email" | "push"
 export type PassKind = "session" | "monthly"
+export type PassSubType = "individual" | "shared_2" | "shared_3"
 export type NotificationType =
   | "renewal_confirmation"
   | "expiry_reminder_d7"
   | "expiry_reminder_d0"
+  | "pass_expiry_d7"
+  | "pass_expiry_d0"
+  | "pass_assigned"
+  | "calendar_session_24h"
   | "manual_note"
 
 export interface Profile {
@@ -90,11 +95,13 @@ export interface Pass {
   passTypeId: string
   passTypeName: string
   passKind: PassKind
+  passSubType: PassSubType | null
   holderClientIds: string[]
   holderNames: string[]
   purchasedByClientId: string | null
   purchasedByName: string | null
   contractedOn: string
+  createdAt?: string
   soldPriceGross: number
   originalSessions: number | null
   sessionsLeft: number | null

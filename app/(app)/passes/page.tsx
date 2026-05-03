@@ -77,7 +77,8 @@ export default async function PassesPage({
               text: formatPassStatus(row.status),
               badgeVariant:
                 row.status === "expired" ? "danger" :
-                row.passKind === "session" && row.sessionsLeft === 0 ? "warning" : "success"
+                row.status === "paused" ? "paused" :
+                row.status === "out_of_sessions" ? "warning" : "success"
             },
             actions: canManage
               ? { text: "Editar", href: `/passes/${row.id}/edit` }

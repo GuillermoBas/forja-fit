@@ -5,15 +5,30 @@ import { PageHeader } from "@/components/page-header"
 import { SearchTable } from "@/components/search-table"
 import { TableSkeleton } from "@/components/skeletons"
 import { getClients, getPasses } from "@/lib/data"
+import { getTodayDateKeyInAppTimeZone, toDateKeyInAppTimeZone } from "@/lib/timezone"
+import { formatPassStatus } from "@/lib/utils"
+
+function getLatestAssignedPass(passes: Awaited<ReturnType<typeof getPasses>>) {
+  return passes.reduce<typeof passes[number] | null>((latest, current) => {
+    if (!latest) {
+      return current
+    }
+
+    const latestKey = `${latest.contractedOn}|${latest.createdAt ?? ""}|${latest.id}`
+    const currentKey = `${current.contractedOn}|${current.createdAt ?? ""}|${current.id}`
+
+    return currentKey > latestKey ? current : latest
+  }, null)
+}
 
 type ClientFilter = "all" | "expiring" | "no_sessions" | "expired"
 
 async function ClientsTable({ filter }: { filter: ClientFilter }) {
   const [clients, passes] = await Promise.all([getClients(), getPasses()])
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKeyInAppTimeZone()
   const plus7 = new Date()
   plus7.setDate(plus7.getDate() + 7)
-  const nextWeek = plus7.toISOString().slice(0, 10)
+  const nextWeek = toDateKeyInAppTimeZone(plus7)
 
   const filteredClients = clients.filter((client) => {
     const ownPasses = passes.filter((pass) => pass.holderClientIds.includes(client.id))
@@ -32,28 +47,50 @@ async function ClientsTable({ filter }: { filter: ClientFilter }) {
 
   return (
     <SearchTable
-      rows={filteredClients.map((row) => ({
-        id: row.id,
-        searchText: `${row.fullName} ${row.phone ?? ""} ${row.email ?? ""}`,
-        cells: {
-          name: {
-            text: row.fullName,
-            href: `/clients/${row.id}`,
-            subtext: row.email ?? "Sin email"
-          },
-          phone: {
-            text: row.phone ?? "Sin telefono"
-          },
-          status: {
-            text: row.isActive ? "Activo" : "Inactivo",
-            badgeVariant: row.isActive ? "success" : "warning"
+      rows={filteredClients.map((row) => {
+        const ownPasses = passes.filter((pass) => pass.holderClientIds.includes(row.id))
+        const latestPass = getLatestAssignedPass(ownPasses)
+
+        return {
+          id: row.id,
+          searchText: `${row.fullName} ${row.phone ?? ""} ${row.email ?? ""}`,
+          cells: {
+            name: {
+              text: row.fullName,
+              href: `/clients/${row.id}`,
+              subtext: row.email ?? "Sin email"
+            },
+            phone: {
+              text: row.phone ?? "Sin telefono"
+            },
+            status: {
+              text: row.isActive ? "Activo" : "Inactivo",
+              badgeVariant: row.isActive ? "success" : "warning"
+            },
+            latestPassStatus: latestPass
+              ? {
+                  text: formatPassStatus(latestPass.status),
+                  badgeVariant:
+                    latestPass.status === "expired"
+                      ? "danger"
+                      : latestPass.status === "paused"
+                        ? "paused"
+                        : latestPass.status === "out_of_sessions"
+                        ? "warning"
+                        : "success"
+                }
+              : {
+                  text: "SIN ASIGNAR",
+                  badgeVariant: "secondary"
+                }
           }
         }
-      }))}
+      })}
       columns={[
         { key: "name", label: "Cliente" },
         { key: "phone", label: "Telefono" },
-        { key: "status", label: "Estado" }
+        { key: "status", label: "Estado ficha" },
+        { key: "latestPassStatus", label: "Estado del bono" }
       ]}
       searchPlaceholder="Buscar por nombre, telefono o email"
     />
@@ -94,7 +131,7 @@ export default async function ClientsPage({
         </Link>
       </div>
 
-      <Suspense fallback={<TableSkeleton rows={7} columns={3} />}>
+      <Suspense fallback={<TableSkeleton rows={7} columns={4} />}>
         <ClientsTable filter={filter} />
       </Suspense>
     </div>

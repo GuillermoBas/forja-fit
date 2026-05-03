@@ -17,7 +17,7 @@ export const nutritionToolDefinitions = [
     type: "function",
     function: {
       name: "update_nutrition_memory",
-      description: "Actualiza campos concretos de memoria nutricional cuando el cliente revele datos personales o cambios de habitos.",
+      description: "Actualiza campos concretos de memoria nutricional cuando el cliente revele datos personales o cambios de hábitos.",
       parameters: {
         type: "object",
         properties: {
@@ -41,7 +41,7 @@ export const nutritionToolDefinitions = [
     type: "function",
     function: {
       name: "save_weekly_plan",
-      description: "Guarda un menu semanal estructurado cuando el cliente pida explicitamente un menu o plan semanal y quiera conservarlo.",
+      description: "Guarda un menú semanal estructurado cuando el cliente pida explícitamente un menú o plan semanal y quiera conservarlo.",
       parameters: {
         type: "object",
         properties: {

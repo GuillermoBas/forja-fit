@@ -187,6 +187,34 @@ export default async function(request: Request) {
       )
     }
 
+    try {
+      const apiKey = Deno.env.get("API_KEY")
+      if (apiKey) {
+        const trustedClient = createClient({
+          baseUrl: BASE_URL,
+          edgeFunctionToken: apiKey
+        })
+        await trustedClient.functions.invoke("send_client_communication", {
+          body: {
+            clientIds: [clientId],
+            eventType: "manual_note",
+            channels: ["email", "push"],
+            dedupeSeed: `client_cancel_session:${calendarSessionId}`,
+            subject: "Sesion cancelada",
+            title: "Sesion cancelada",
+            body: "Hemos registrado la cancelacion de tu sesion.",
+            url: "/cliente/agenda",
+            templateData: {
+              calendarSessionId,
+              startsAt: session.starts_at
+            }
+          }
+        })
+      }
+    } catch {
+      // La confirmacion al cliente no debe revertir la cancelacion ya auditada.
+    }
+
     return json({
       ok: true,
       session: {

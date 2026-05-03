@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-type BadgeVariant = "default" | "secondary" | "success" | "warning" | "danger"
+type BadgeVariant = "default" | "secondary" | "success" | "paused" | "warning" | "danger"
 
 export interface SearchTableColumn {
   key: string

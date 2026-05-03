@@ -54,6 +54,7 @@ ALTER TABLE notification_log
       'expiry_reminder_d0',
       'manual_note',
       'pass_expiry_d7',
+      'pass_expiry_d0',
       'pass_assigned',
       'calendar_session_24h'
     )

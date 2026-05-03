@@ -110,12 +110,12 @@ function StaffRowForm({
       </form>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-alt/60 px-3 py-2 text-sm">
         <span className={profile.emailVerified ? "text-text-secondary" : "font-medium text-amber-700"}>
-          {profile.emailVerified ? "Acceso activado" : "Pendiente de activacion por codigo"}
+          {profile.emailVerified ? "Acceso activado" : "Pendiente de activación por código"}
         </span>
         {!profile.emailVerified ? (
           <form action={resendAction}>
             <input type="hidden" name="profileId" value={profile.id} />
-            <InlineSubmit idleLabel="Reenviar codigo" pendingLabel="Reenviando..." />
+            <InlineSubmit idleLabel="Reenviar código" pendingLabel="Reenviando..." />
           </form>
         ) : null}
       </div>
@@ -173,7 +173,7 @@ export function StaffManagementCard({
           <div>
             <h3 className="text-sm font-semibold">Equipo actual</h3>
             <p className="text-sm text-muted-foreground">
-              Puedes cambiar nombre, rol o activar y desactivar accesos. Si un codigo ha caducado, tambien puedes reenviarlo.
+              Puedes cambiar nombre, rol o activar y desactivar accesos. Si un código ha caducado, también puedes reenviarlo.
             </p>
           </div>
           {staffProfiles.length ? (

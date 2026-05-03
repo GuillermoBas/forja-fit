@@ -34,7 +34,7 @@ export async function upsertCalendarSessionAction(
       notes: String(formData.get("notes") ?? "").trim()
     })
   } catch (error) {
-    return toActionError(error, "No se pudo guardar la sesion")
+    return toActionError(error, "No se pudo guardar la sesión")
   }
 
   const returnTo = getAgendaReturnTo(formData)
@@ -51,7 +51,7 @@ export async function cancelCalendarSessionAction(
       sessionId: String(formData.get("sessionId") ?? "").trim()
     })
   } catch (error) {
-    return toActionError(error, "No se pudo eliminar la sesion")
+    return toActionError(error, "No se pudo eliminar la sesión")
   }
 
   const returnTo = getAgendaReturnTo(formData)

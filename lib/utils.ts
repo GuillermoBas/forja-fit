@@ -8,6 +8,7 @@ import type {
   Pass,
   PaymentMethod
 } from "@/types/domain"
+import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -60,6 +61,21 @@ export function formatPassStatus(value: Pass["status"] | string) {
     default:
       return String(value)
   }
+}
+
+export function getEffectivePassStatus(
+  pass: Pick<Pass, "status" | "expiresOn">,
+  todayKey = getTodayDateKeyInAppTimeZone()
+): Pass["status"] {
+  if (pass.status === "cancelled" || pass.status === "expired") {
+    return pass.status
+  }
+
+  if (pass.expiresOn && pass.expiresOn < todayKey) {
+    return "expired"
+  }
+
+  return pass.status
 }
 
 export function formatCalendarStatus(value: CalendarStatus | string) {
@@ -121,6 +137,8 @@ export function formatNotificationType(value: NotificationType | string) {
       return "Recordatorio de sesión 24 h"
     case "pass_expiry_d7":
       return "Caducidad de bono D-7"
+    case "pass_expiry_d0":
+      return "Caducidad de bono D-0"
     default:
       return String(value)
   }

@@ -17,6 +17,8 @@ import { cache } from "react"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isClientPreview } from "@/lib/preview-mode"
+import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
+import { getEffectivePassStatus } from "@/lib/utils"
 import {
   getPreviewClientCalendarSessions,
   getPreviewPortalDashboardData
@@ -109,6 +111,8 @@ type NotificationItem = {
   id: string
   createdAt: string
   body: string | null
+  eventType: string
+  passId: string | null
 }
 
 function parseRange(value?: string): PortalActivityRange {
@@ -164,16 +168,18 @@ function mapPortalClient(row: DbRow): Client {
 }
 
 function mapPortalPass(row: DbRow, passTypeName: string, holderIds: string[], holderNames: string[]): Pass {
-  return {
+  const pass = {
     id: String(row.id),
     passTypeId: String(row.pass_type_id),
     passTypeName,
     passKind: String(row.pass_kind ?? "session") as Pass["passKind"],
+    passSubType: row.pass_sub_type ? String(row.pass_sub_type) as Pass["passSubType"] : null,
     holderClientIds: holderIds,
     holderNames,
     purchasedByClientId: row.purchased_by_client_id ? String(row.purchased_by_client_id) : null,
     purchasedByName: null,
     contractedOn: String(row.contracted_on ?? ""),
+    createdAt: row.created_at ? String(row.created_at) : undefined,
     soldPriceGross: Number(row.sold_price_gross ?? 0),
     originalSessions: row.original_sessions === null || row.original_sessions === undefined
       ? null
@@ -184,6 +190,11 @@ function mapPortalPass(row: DbRow, passTypeName: string, holderIds: string[], ho
     expiresOn: String(row.expires_on ?? ""),
     status: String(row.status ?? "active") as Pass["status"],
     notes: row.notes ? String(row.notes) : null
+  } satisfies Pass
+
+  return {
+    ...pass,
+    status: getEffectivePassStatus(pass, getTodayDateKeyInAppTimeZone())
   }
 }
 
@@ -329,8 +340,8 @@ function buildHistory(
       id: `renewal-${renewal.id}`,
       kind: "renewal",
       happenedAt: renewal.createdAt,
-      title: "Renovacion registrada",
-      detail: renewal.body ?? "Se ha renovado uno de tus bonos."
+      title: renewal.eventType === "pass_assigned" ? "Bono activado" : "Renovacion registrada",
+      detail: renewal.body ?? (renewal.eventType === "pass_assigned" ? "Tienes un bono activo." : "Se ha renovado uno de tus bonos.")
     })
   }
 
@@ -416,9 +427,9 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
       client.database.from("pass_pauses").select("*").order("created_at", { ascending: false }),
       client.database
         .from("notification_log")
-        .select("id,created_at,body,event_type")
+        .select("id,created_at,body,event_type,pass_id")
         .eq("client_id", portalAccount.clientId)
-        .eq("event_type", "renewal_confirmation")
+        .in("event_type", ["renewal_confirmation", "pass_assigned"])
         .order("created_at", { ascending: false })
     ])
 
@@ -528,8 +539,13 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
   const renewals = (renewalsResult.data as DbRow[]).map((row) => ({
     id: String(row.id),
     createdAt: String(row.created_at ?? ""),
-    body: row.body ? String(row.body) : null
-  }))
+    body: row.body ? String(row.body) : null,
+    eventType: String(row.event_type ?? ""),
+    passId: row.pass_id ? String(row.pass_id) : null
+  })).filter((row, index, rows) => {
+    const key = `${row.eventType}:${row.passId ?? row.id}`
+    return rows.findIndex((candidate) => `${candidate.eventType}:${candidate.passId ?? candidate.id}` === key) === index
+  })
 
   const today = new Date()
   const last30Start = startOfDay(subDays(today, 29))

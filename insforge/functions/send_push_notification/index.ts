@@ -5,7 +5,9 @@ import * as webpush from "jsr:@negrel/webpush"
 const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
 const ALLOWED_EVENT_TYPES = new Set([
   "pass_expiry_d7",
+  "pass_expiry_d0",
   "pass_assigned",
+  "renewal_confirmation",
   "calendar_session_24h",
   "manual_note"
 ])

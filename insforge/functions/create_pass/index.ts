@@ -52,25 +52,22 @@ async function notifyPassAssigned(client: any, passId: string) {
 
     const passTypeName = passTypeResult.data?.name ?? "Bono"
     const expiresOn = String(passResult.data.expires_on)
-    const [year, month, day] = expiresOn.slice(0, 10).split("-")
-    const formattedDate = year && month && day ? `${day}/${month}/${year}` : expiresOn
 
-    for (const holder of holdersResult.data) {
-      const clientId = String(holder.client_id)
-      await client.functions.invoke("send_push_to_client", {
-        body: {
-          clientId,
-          passId,
-          eventType: "pass_assigned",
-          dedupeKey: `pass_assigned:${passId}:${clientId}`,
-          title: "Nuevo bono asignado",
-          body: `Tu ${passTypeName} ya esta activo. Caduca el ${formattedDate}.`,
-          url: "/cliente/dashboard"
+    await client.functions.invoke("send_client_communication", {
+      body: {
+        clientIds: holdersResult.data.map((holder) => String(holder.client_id)),
+        passId,
+        eventType: "pass_assigned",
+        channels: ["email", "push"],
+        dedupeSeed: passId,
+        templateData: {
+          passTypeName,
+          expiresOn
         }
-      })
-    }
+      }
+    })
   } catch {
-    // Push complementa al flujo principal: nunca debe revertir la creacion del bono.
+    // La comunicacion complementa al flujo principal: nunca debe revertir la creacion del bono.
   }
 }
 
@@ -119,6 +116,7 @@ export default async function(request: Request) {
       p_pass_type_id: body.passTypeId,
       p_holder_client_ids: holderClientIds,
       p_purchased_by_client_id: body.purchasedByClientId ?? holderClientIds[0],
+      p_pass_sub_type: body.passSubType ?? "individual",
       p_payment_method: body.paymentMethod,
       p_price_gross_override:
         body?.priceGross === undefined || body?.priceGross === null || body?.priceGross === ""

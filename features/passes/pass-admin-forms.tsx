@@ -18,6 +18,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { nativeSelectClassName } from "@/lib/utils"
 
+const passSubTypeOptions = [
+  { value: "individual", label: "Individual" },
+  { value: "shared_2", label: "Compartido 2" },
+  { value: "shared_3", label: "Compartido 3" }
+] as const
+
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100
 }
@@ -414,6 +420,21 @@ export function PassEditorForm({
                 {passTypes.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sub tipo</label>
+              <select
+                name="passSubType"
+                defaultValue={pass.passSubType ?? ""}
+                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+              >
+                <option value="">Sin indicar</option>
+                {passSubTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>

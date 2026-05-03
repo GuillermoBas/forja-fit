@@ -39,17 +39,17 @@ const pageCopy = [
   {
     matches: ["/cliente/agenda"],
     title: "Agenda",
-    description: "Consulta tus sesiones por semana o mes y cancela solo con mas de 24 horas de antelacion."
+    description: "Consulta tus sesiones por semana o mes y cancela solo con más de 24 horas de antelación."
   },
   {
     matches: ["/cliente/nutricion"],
     title: "Nutrición",
-    description: "Habla con el asistente IA de nutricion y conserva el historial de la conversacion en tu portal."
+    description: "Disponibilidad del asistente IA nutricional y menú semanal."
   },
   {
     matches: ["/cliente/ajustes"],
     title: "Ajustes",
-    description: "Gestiona tus datos personales, datos del historial de nutricion y los ajustes de notificaciones push."
+    description: "Gestiona tus datos personales, datos del historial de nutrición y los ajustes de notificaciones push."
   },
   {
     matches: ["/cliente/dashboard", "/cliente/actividad"],
@@ -96,14 +96,14 @@ function DesktopClientSidebar({
           className="mt-3 h-auto w-36 rounded-xl bg-white object-contain p-1.5"
         />
         <p className="mt-3 text-sm leading-6 text-white/70">
-          Tu actividad, agenda, bonos, nutricion y ajustes de contacto.
+          Tu actividad, agenda, bonos, nutrición y ajustes de contacto.
         </p>
         <Badge variant="default" className="mt-4 w-fit max-w-full truncate">
           {clientName}
         </Badge>
       </div>
 
-      <nav aria-label="Navegacion del portal de cliente" className="space-y-2">
+      <nav aria-label="Navegación del portal de cliente" className="space-y-2">
         {navItems.map((item) => (
           <PortalDesktopNavLink
             key={item.href}
@@ -119,7 +119,7 @@ function DesktopClientSidebar({
       <form action={portalSignOutAction} className="mt-auto pt-5">
         <Button variant="outline" className="w-full gap-2 rounded-2xl">
           <LogOut className="h-4 w-4" />
-          Cerrar sesion
+          Cerrar sesión
         </Button>
       </form>
     </aside>
@@ -145,7 +145,7 @@ function MobileClientTopbar({ clientName }: { clientName: string }) {
           type="submit"
           variant="outline"
           className="h-11 w-11 rounded-2xl p-0"
-          aria-label="Cerrar sesion"
+          aria-label="Cerrar sesión"
         >
           <LogOut className="h-4 w-4" />
         </Button>
@@ -156,7 +156,7 @@ function MobileClientTopbar({ clientName }: { clientName: string }) {
 
 function MobileClientBottomNav({ currentPath }: { currentPath: string }) {
   return (
-    <nav aria-label="Navegacion del portal de cliente" className="portal-mobile-bottom-nav">
+    <nav aria-label="Navegación del portal de cliente" className="portal-mobile-bottom-nav">
       <div className="portal-mobile-bottom-nav-grid">
         {navItems.map((item) => (
           <PortalMobileNavLink

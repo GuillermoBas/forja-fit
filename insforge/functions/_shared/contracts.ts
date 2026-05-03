@@ -26,6 +26,7 @@ export const createPassSchema = z.object({
   passTypeId: z.string().uuid(),
   holderClientIds: z.array(z.string().uuid()).min(1).max(5),
   purchasedByClientId: z.string().uuid().optional(),
+  passSubType: z.enum(["individual", "shared_2", "shared_3"]).optional(),
   paymentMethod: z.enum(["cash", "card", "transfer", "bizum"]),
   priceGross: z.number().int().nonnegative().optional(),
   contractedOn: z.string(),
@@ -49,6 +50,7 @@ export const updatePassSchema = z.object({
   passTypeId: z.string().uuid(),
   holderClientIds: z.array(z.string().uuid()).min(1).max(5),
   purchasedByClientId: z.string().uuid().optional(),
+  passSubType: z.enum(["individual", "shared_2", "shared_3"]).optional().or(z.literal("")),
   contractedOn: z.string(),
   status: z.enum(["active", "paused", "out_of_sessions", "expired", "cancelled"]),
   sessionsLeft: z.number().int().nonnegative().nullable(),
@@ -80,6 +82,17 @@ export const renewPassSchema = z.object({
   priceGross: z.number().int().nonnegative().optional(),
   contractedOn: z.string(),
   notes: z.string().optional()
+})
+
+export const schedulePassSessionsSchema = z.object({
+  passId: z.string().uuid(),
+  startOn: z.string(),
+  mode: z.enum(["all", "pending"]).optional(),
+  entries: z.array(z.object({
+    weekday: z.number().int().min(1).max(7),
+    hour: z.string().regex(/^([01]\d|2[0-3]):00$/),
+    trainerProfileId: z.string().uuid()
+  })).min(1).max(30)
 })
 
 export const upsertProductSchema = z.object({
@@ -158,7 +171,7 @@ export const runDailyExpiryScanSchema = z.object({
 
 export const sendExpiryEmailSchema = z.object({
   passId: z.string().uuid(),
-  reminderType: z.enum(["pass_expiry_d7", "pass_expiry_d0"])
+  reminderType: z.enum(["expiry_reminder_d7", "expiry_reminder_d0", "pass_expiry_d7", "pass_expiry_d0"])
 })
 
 export const createInternalNotificationSchema = z.object({

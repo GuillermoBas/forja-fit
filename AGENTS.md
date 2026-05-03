@@ -166,7 +166,9 @@ Only two application roles exist:
   - `bizum`
 - Renewal is manual
 - Creating a pass must also register its sale for accounting
+- Pass sales and pass renewals must use `contracted_on` as the accounting sale date
 - Pass creation must capture payment method and the agreed gross price for that client
+- Session-based pass creation or renewal may auto-schedule agenda blocks from a weekly pattern
 - Renewal creates an internal in-app notification that simulates a WhatsApp confirmation
 - Expiry reminders must be generated for:
   - D-7
@@ -272,6 +274,7 @@ Create and maintain these InsForge Functions:
 - `consume_session`
 - `pause_pass`
 - `renew_pass`
+- `schedule_pass_sessions`
 - `upsert_product`
 - `add_stock`
 - `reduce_stock`
@@ -287,6 +290,7 @@ Create and maintain these InsForge Functions:
 - `create_staff_user`
 - `resend_staff_activation`
 - `run_daily_expiry_scan`
+- `send_client_communication`
 - `send_expiry_email`
 - `create_internal_notification`
 - `generate_ticket_pdf`

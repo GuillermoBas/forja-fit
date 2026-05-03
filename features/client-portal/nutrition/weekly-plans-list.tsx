@@ -44,9 +44,6 @@ export function WeeklyNutritionPlansList({
                   Semana del {formatDate(plan.weekStartsOn)}. Guardado {formatDate(plan.createdAt)}.
                 </p>
               </div>
-              <div className="rounded-2xl border border-primary/18 bg-primary-soft px-3 py-2 text-xs text-primary-hover">
-                {plan.generatedByModel ?? "Plan manual"}
-              </div>
             </div>
             <p className="text-[13px] leading-5 text-text-secondary sm:text-sm">{plan.plan.weekGoal}</p>
           </CardHeader>

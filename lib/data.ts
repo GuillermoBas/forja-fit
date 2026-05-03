@@ -12,6 +12,8 @@ import { appConfig, isInsforgeConfigured } from "@/lib/config"
 import { getCurrentAccessToken, getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
+import { getEffectivePassStatus } from "@/lib/utils"
 import type {
   BusinessSettings,
   CalendarSession,
@@ -36,6 +38,13 @@ export type ClientHistoryItem = {
 }
 
 type DbRow = Record<string, unknown>
+
+function withEffectivePassStatus(pass: Pass, todayKey = getTodayDateKeyInAppTimeZone()): Pass {
+  return {
+    ...pass,
+    status: getEffectivePassStatus(pass, todayKey)
+  }
+}
 
 async function createAuthedClient() {
   if (await isStaffPreview()) {
@@ -242,11 +251,12 @@ async function getPassDataFromDb() {
       .sort((left, right) => left.holderOrder - right.holderOrder)
       .map((holder) => holder.clientId)
 
-    return {
+    return withEffectivePassStatus({
       id: String(row.id),
       passTypeId: String(row.pass_type_id),
       passTypeName: passType?.name ?? "Bono",
       passKind: passType?.kind ?? "session",
+      passSubType: row.pass_sub_type ? String(row.pass_sub_type) as Pass["passSubType"] : null,
       holderClientIds: holders,
       holderNames: holders.map((holderId) => clientMap.get(holderId)?.fullName ?? "Cliente"),
       purchasedByClientId: row.purchased_by_client_id ? String(row.purchased_by_client_id) : null,
@@ -254,6 +264,7 @@ async function getPassDataFromDb() {
         ? clientMap.get(String(row.purchased_by_client_id))?.fullName ?? null
         : null,
       contractedOn: String(row.contracted_on ?? ""),
+      createdAt: row.created_at ? String(row.created_at) : undefined,
       soldPriceGross: Number(row.sold_price_gross ?? 0),
       originalSessions: row.original_sessions === null || row.original_sessions === undefined
         ? null
@@ -264,7 +275,7 @@ async function getPassDataFromDb() {
       expiresOn: String(row.expires_on ?? ""),
       status: String(row.status ?? "active") as Pass["status"],
       notes: row.notes ? String(row.notes) : null
-    } satisfies Pass
+    } satisfies Pass)
   })
 
   return {
@@ -532,10 +543,10 @@ export async function getPassTypes(options?: { includeInactive?: boolean }): Pro
 export async function getPasses(): Promise<Pass[]> {
   const passData = await getPassDataFromDb()
   if (!passData) {
-    return demoPasses
+    return demoPasses.map((pass) => withEffectivePassStatus(pass))
   }
 
-  return passData.passes
+  return passData.passes.map((pass) => withEffectivePassStatus(pass))
 }
 
 export async function getPassById(id: string): Promise<Pass | null> {

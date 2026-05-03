@@ -19,14 +19,6 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-function formatDateEs(dateString: string) {
-  const [year, month, day] = dateString.slice(0, 10).split("-")
-  if (year && month && day) {
-    return `${day}/${month}/${year}`
-  }
-  return dateString
-}
-
 async function requireStaffActor(client: any) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
@@ -47,9 +39,7 @@ async function requireStaffActor(client: any) {
 }
 
 function madridDateString(input?: string) {
-  if (input) {
-    return input
-  }
+  if (input) return input
 
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
@@ -131,29 +121,32 @@ export default async function(request: Request) {
 
     for (const pass of passRows) {
       const holderIds = Array.from(holdersByPass.get(String(pass.id)) ?? [])
-      for (const clientId of holderIds) {
-        const dedupeKey = `pass_expiry_d7:${pass.id}:${clientId}:${pass.expires_on}`
-        const sessionsLeft = pass.sessions_left ?? 0
-        const result = await client.functions.invoke("send_push_to_client", {
-          body: {
-            clientId,
-            passId: pass.id,
-            eventType: "pass_expiry_d7",
-            dedupeKey,
-            title: "Tu bono caduca en 7 dias",
-            body: `Te quedan ${sessionsLeft} sesiones. Caduca el ${formatDateEs(String(pass.expires_on))}.`,
-            url: "/cliente/dashboard"
-          }
-        })
+      if (!holderIds.length) {
+        skipped += 1
+        continue
+      }
 
-        if (result.error) {
-          failed += 1
-        } else if (result.data?.skipped) {
-          skipped += 1
-        } else {
-          sent += Number(result.data?.sent ?? 0) > 0 ? 1 : 0
-          if (Number(result.data?.sent ?? 0) <= 0) skipped += 1
+      const result = await client.functions.invoke("send_client_communication", {
+        body: {
+          clientIds: holderIds,
+          passId: pass.id,
+          eventType: "pass_expiry_d7",
+          channels: ["push"],
+          dedupeSeed: `${pass.id}:${pass.expires_on}`,
+          templateData: {
+            passTypeName: passTypeNames.get(String(pass.pass_type_id)) ?? "Bono",
+            expiresOn: pass.expires_on,
+            sessionsLeft: pass.sessions_left
+          }
         }
+      })
+
+      if (result.error) {
+        failed += 1
+      } else {
+        sent += Number(result.data?.sent ?? 0)
+        skipped += Number(result.data?.skipped ?? 0)
+        failed += Number(result.data?.failed ?? 0)
       }
     }
 

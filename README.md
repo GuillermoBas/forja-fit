@@ -97,6 +97,8 @@ Orden de rollout de Fase 2:
 - Compartidos de hasta `5` titulares
 - Solo los bonos por sesiones descuentan consumos manuales
 - Crear un bono registra tambien su venta con metodo de pago y precio pactado
+- Al crear o renovar un bono por sesiones se puede adjuntar un patron semanal para agendar automaticamente sus citas
+- La fecha contable de ventas y renovaciones de bonos sigue `contracted_on`, aunque el alta en el sistema se haga mas tarde
 
 ## Puesta en marcha local
 
@@ -226,11 +228,13 @@ Limitacion conocida de iOS: los permisos de notificaciones push solo pueden soli
 
 ## Notificaciones push PWA
 
-La Fase 2 de PWA usa Web Push estandar sobre InsForge Database, Auth, Functions y Schedules. No usa Firebase Cloud Messaging ni apps nativas. En esta fase solo existen estos eventos:
+La Fase 2 de PWA usa Web Push estandar sobre InsForge Database, Auth, Functions y Schedules. No usa Firebase Cloud Messaging ni apps nativas. Las comunicaciones de negocio se centralizan en `send_client_communication`, que intenta email y push cuando el canal esta disponible. En esta fase existen estos eventos:
 
 - `pass_expiry_d7`: aviso 7 dias antes de caducar un bono.
+- `pass_expiry_d0`: aviso el dia de caducidad de un bono.
 - `pass_assigned`: confirmacion de nuevo bono o renovacion.
 - `calendar_session_24h`: recordatorio 24 horas antes de una sesion agendada.
+- `manual_note`: aviso manual o confirmacion operativa.
 
 No hay notificaciones push de nutricion, stock, informes ni alertas genericas de staff.
 
@@ -268,7 +272,13 @@ Tablas nuevas:
 - `push_subscriptions`
 - `push_preferences`
 
-`notification_log` queda ampliada para canal `push`, los tres `event_type` soportados y `dedupe_key`.
+`notification_log` queda ampliada para canal `push`, los `event_type` soportados y `dedupe_key`.
+
+Para homogeneizar email y push, aplicar tambien:
+
+```bash
+npx @insforge/cli db import insforge/sql/026_homogeneous_client_communications.sql
+```
 
 ### Functions push
 
@@ -277,6 +287,7 @@ Publicar o actualizar:
 - `save_push_subscription`
 - `remove_push_subscription`
 - `update_push_preferences`
+- `send_client_communication`
 - `send_push_notification`
 - `send_push_to_client`
 - `send_pass_expiry_d7_pushes`
@@ -311,11 +322,12 @@ npx @insforge/cli schedules create \
   --body '{}'
 ```
 
-Los envios usan dedupe:
+Los envios usan dedupe por evento, canal, cliente y entidad:
 
-- `pass_expiry_d7:{pass_id}:{client_id}:{expires_on}`
-- `pass_assigned:{pass_id}:{client_id}`
-- `calendar_session_24h:{calendar_session_id}:{client_id}`
+- `pass_expiry_d7:email:{client_id}:{pass_id}:{expires_on}`
+- `pass_expiry_d7:push:{client_id}:{pass_id}:{expires_on}`
+- `pass_assigned:{channel}:{client_id}:{pass_id}`
+- `calendar_session_24h:{channel}:{client_id}:{calendar_session_id}`
 
 ### Probar en Chrome desktop
 
@@ -394,9 +406,10 @@ Crear un bucket llamado `tickets` en InsForge Storage para los PDFs de ventas.
 
 ### Email experimental
 
-- Los recordatorios de caducidad usan `client.emails.send()` del SDK cuando el servicio este disponible.
-- Si InsForge Email no esta habilitado o devuelve error, la app degrada a fallback no-op y registra el intento en `notification_log` con estado `skipped`.
-- El job diario aplica throttling simple con un maximo de 10 envios por ejecucion para respetar limites horarios conservadores.
+- Las comunicaciones de negocio usan `client.emails.send()` desde `send_client_communication` cuando el cliente tiene email.
+- Si falta email, el intento queda en `notification_log` como `skipped`.
+- Si InsForge Email devuelve error, el canal email queda como `failed` y el resto de canales continua.
+- Los emails de Auth siguen gestionados por InsForge Auth y no pasan por este dispatcher.
 
 ## Despliegue
 
@@ -420,6 +433,7 @@ npx @insforge/cli db import insforge/sql/014_phase2_nutrition_assistant.sql
 npx @insforge/cli db import insforge/sql/015_phase2_nutrition_memory_and_quotas.sql
 npx @insforge/cli db import insforge/sql/016_phase2_weekly_nutrition_plans.sql
 npx @insforge/cli db import insforge/sql/018_pwa_push_notifications.sql
+npx @insforge/cli db import insforge/sql/026_homogeneous_client_communications.sql
 ```
 
 2. Publicar o actualizar las Functions de Fase 2:
@@ -440,6 +454,7 @@ npx @insforge/cli db import insforge/sql/018_pwa_push_notifications.sql
 - `save_push_subscription`
 - `remove_push_subscription`
 - `update_push_preferences`
+- `send_client_communication`
 - `send_push_notification`
 - `send_push_to_client`
 - `send_pass_expiry_d7_pushes`

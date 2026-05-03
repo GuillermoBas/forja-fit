@@ -40,7 +40,9 @@ async function requireStaffActor(client: any) {
 
 const PREFERENCE_BY_EVENT = {
   pass_expiry_d7: "pass_expiry_enabled",
+  pass_expiry_d0: "pass_expiry_enabled",
   pass_assigned: "pass_assigned_enabled",
+  renewal_confirmation: "pass_assigned_enabled",
   calendar_session_24h: "session_reminders_enabled"
 }
 
@@ -67,6 +69,16 @@ export default async function(request: Request) {
       return actor.error
     }
 
+    const existingLog = await client.database
+      .from("notification_log")
+      .select("id,status")
+      .eq("dedupe_key", String(body.dedupeKey))
+      .maybeSingle()
+
+    if (!existingLog.error && existingLog.data?.id) {
+      return json({ ok: true, skipped: true, reason: "dedupe", dedupeKey: body.dedupeKey })
+    }
+
     const accountResult = await client.database
       .from("client_portal_accounts")
       .select("id,status")
@@ -75,6 +87,21 @@ export default async function(request: Request) {
       .maybeSingle()
 
     if (accountResult.error || !accountResult.data) {
+      await client.database.from("notification_log").insert([
+        {
+          client_id: clientId,
+          pass_id: body.passId ?? null,
+          channel: "push",
+          event_type: eventType,
+          status: "skipped",
+          subject: String(body.title),
+          body: String(body.body),
+          payload: { url: body.url ?? "/cliente/dashboard", reason: "no_claimed_portal_account" },
+          dedupe_key: String(body.dedupeKey),
+          processed_at: new Date().toISOString(),
+          error_message: "no_claimed_portal_account"
+        }
+      ])
       return json({ ok: true, skipped: true, reason: "no_claimed_portal_account" })
     }
 
