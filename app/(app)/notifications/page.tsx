@@ -26,28 +26,32 @@ export default async function NotificationsPage() {
       </div>
 
       <SearchTable
-        rows={notifications.map((row) => ({
-          id: row.id,
-          searchText: `${row.type} ${row.clientName ?? ""} ${row.status} ${row.channel} ${row.recipient ?? ""}`,
-          cells: {
-            type: { text: formatNotificationType(row.type) },
-            channel: { text: formatNotificationChannel(row.channel), badgeVariant: row.channel === "email" ? "secondary" : "success" },
-            status: {
-              text: formatNotificationStatus(row.status),
-              badgeVariant:
-                row.status === "sent"
-                  ? "success"
-                  : row.status === "failed"
-                    ? "danger"
-                    : row.status === "skipped"
-                      ? "warning"
-                      : "secondary"
-            },
-            client: { text: row.clientName ?? "Sistema", subtext: row.recipient ?? "" },
-            subject: { text: row.subject ?? "Sin asunto", subtext: row.message.slice(0, 80) },
-            date: { text: formatDate(row.createdAt) }
+        rows={notifications.map((row) => {
+          const visibleRecipient = row.channel === "email" ? row.recipient ?? "" : ""
+
+          return {
+            id: row.id,
+            searchText: `${row.type} ${row.clientName ?? ""} ${row.status} ${row.channel} ${visibleRecipient}`,
+            cells: {
+              type: { text: formatNotificationType(row.type) },
+              channel: { text: formatNotificationChannel(row.channel), badgeVariant: row.channel === "email" ? "secondary" : "success" },
+              status: {
+                text: formatNotificationStatus(row.status),
+                badgeVariant:
+                  row.status === "sent"
+                    ? "success"
+                    : row.status === "failed"
+                      ? "danger"
+                      : row.status === "skipped"
+                        ? "warning"
+                        : "secondary"
+              },
+              client: { text: row.clientName ?? "Sistema", subtext: visibleRecipient || undefined },
+              subject: { text: row.subject ?? "Sin asunto", subtext: row.message.slice(0, 80) },
+              date: { text: formatDate(row.createdAt) }
+            }
           }
-        }))}
+        })}
         columns={[
           { key: "type", label: "Tipo" },
           { key: "channel", label: "Canal" },

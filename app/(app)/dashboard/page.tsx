@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { AlertTriangle, ArrowUpRight, BellRing, Box, CalendarClock, Wallet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
 import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
@@ -17,6 +18,17 @@ const shortcuts = [
 ]
 
 const kpiIcons = [CalendarClock, AlertTriangle, ArrowUpRight, Box, Wallet, BellRing, Wallet]
+
+function getChannelBadgeMeta(channel: "internal" | "email" | "push") {
+  switch (channel) {
+    case "push":
+      return { label: "App", variant: "success" as const }
+    case "email":
+      return { label: "E-mail", variant: "secondary" as const }
+    default:
+      return { label: "Interna", variant: "default" as const }
+  }
+}
 
 function DashboardDataFallback() {
   return (
@@ -123,7 +135,7 @@ async function DashboardData() {
             <p className="section-kicker">Actividad</p>
             <CardTitle>Notificaciones recientes</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3.5">
+          <CardContent className="max-h-[46rem] space-y-3.5 overflow-y-auto pr-2">
             {notifications.length ? (
               notifications.map((item) => (
                 <div
@@ -133,6 +145,16 @@ async function DashboardData() {
                   <div className="flex items-center justify-between gap-4">
                     <p className="font-semibold text-text-primary">{item.clientName ?? "Sistema"}</p>
                     <span className="text-xs text-text-muted">{formatDate(item.createdAt)}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {(item.channels ?? [item.channel]).map((channel) => {
+                      const meta = getChannelBadgeMeta(channel)
+                      return (
+                        <Badge key={`${item.id}-${channel}`} variant={meta.variant}>
+                          {meta.label}
+                        </Badge>
+                      )
+                    })}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-text-secondary">{item.message}</p>
                 </div>

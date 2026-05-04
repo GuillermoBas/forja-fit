@@ -58,7 +58,7 @@ export default async function(request: Request) {
 
     const sessionsResult = await client.database
       .from("calendar_sessions")
-      .select("id,starts_at,client_1_id,client_2_id,status")
+      .select("id,starts_at,trainer_profile_id,client_1_id,client_2_id,status")
       .eq("status", "scheduled")
       .gte("starts_at", windowStart)
       .lt("starts_at", windowEnd)
@@ -69,6 +69,24 @@ export default async function(request: Request) {
 
     const sessions = sessionsResult.data ?? []
     const sessionIds = sessions.map((session) => String(session.id))
+    const trainerProfileIds = Array.from(
+      new Set(
+        sessions
+          .map((session) => session.trainer_profile_id ? String(session.trainer_profile_id) : "")
+          .filter(Boolean)
+      )
+    )
+
+    const trainerProfilesResult = trainerProfileIds.length
+      ? await client.database
+          .from("profiles")
+          .select("id,full_name")
+          .in("id", trainerProfileIds)
+      : { data: [], error: null }
+
+    if (trainerProfilesResult.error) {
+      return json({ code: "TRAINERS_LOAD_FAILED", message: trainerProfilesResult.error.message }, 400)
+    }
 
     const sessionPasses = sessionIds.length
       ? await client.database
@@ -104,6 +122,10 @@ export default async function(request: Request) {
       holdersByPass.set(String(row.pass_id), list)
     }
 
+    const trainerNamesById = new Map(
+      (trainerProfilesResult.data ?? []).map((row) => [String(row.id), String(row.full_name ?? "").trim()])
+    )
+
     let sent = 0
     let skipped = 0
     let failed = 0
@@ -132,7 +154,10 @@ export default async function(request: Request) {
             dedupeSeed: String(session.id),
             templateData: {
               calendarSessionId: session.id,
-              startsAt: session.starts_at
+              startsAt: session.starts_at,
+              trainerName: session.trainer_profile_id
+                ? trainerNamesById.get(String(session.trainer_profile_id)) ?? ""
+                : ""
             }
           }
         })

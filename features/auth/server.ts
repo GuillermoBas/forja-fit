@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation"
-import { appConfig } from "@/lib/config"
 import { clearAuthCookies, setAuthCookies } from "@/lib/auth/cookies"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 
@@ -77,8 +76,4 @@ export async function completeStaffAuthentication({
   }
 
   redirect("/dashboard")
-}
-
-export function getStaffOauthRedirectUrl() {
-  return `${appConfig.appUrl}/api/auth/oauth/callback`
 }

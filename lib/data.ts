@@ -67,6 +67,48 @@ async function createAuthedClient() {
   }
 }
 
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#039;/gi, "'")
+}
+
+function stripHtmlToText(value: string) {
+  return decodeHtmlEntities(
+    value
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|br)>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "• ")
+      .replace(/<[^>]+>/g, " ")
+  )
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim()
+}
+
+function getNormalizedNotificationMessage(row: DbRow) {
+  const payload = row.payload && typeof row.payload === "object"
+    ? row.payload as Record<string, unknown>
+    : null
+  const payloadText = payload?.templateText
+
+  if (typeof payloadText === "string" && payloadText.trim()) {
+    return payloadText.trim()
+  }
+
+  const rawMessage = String(row.body ?? "")
+  return rawMessage.includes("<") && rawMessage.includes(">")
+    ? stripHtmlToText(rawMessage)
+    : rawMessage
+}
+
 function mapClientRow(row: DbRow): Client {
   const firstName = String(row.first_name ?? "").trim()
   const lastName = String(row.last_name ?? "").trim()
@@ -172,8 +214,40 @@ function mapNotificationRow(row: DbRow): NotificationLogItem {
     recipient: row.recipient ? String(row.recipient) : null,
     subject: row.subject ? String(row.subject) : null,
     createdAt: String(row.created_at ?? new Date().toISOString()),
-    message: String(row.body ?? "")
+    message: getNormalizedNotificationMessage(row),
+    dedupeKey: row.dedupe_key ? String(row.dedupe_key) : null
   }
+}
+
+function aggregateDashboardNotifications(notifications: NotificationLogItem[]) {
+  const grouped = new Map<string, NotificationLogItem>()
+
+  for (const item of notifications) {
+    const key = item.dedupeKey
+      ? item.dedupeKey.replace(/^(pass_expiry_d7|pass_expiry_d0|pass_assigned|renewal_confirmation|calendar_session_24h):(email|push|internal):/, "$1:")
+      : `${item.type}|${item.clientName ?? "Sistema"}|${item.message}|${item.createdAt.slice(0, 16)}`
+
+    const existing = grouped.get(key)
+
+    if (!existing) {
+      grouped.set(key, {
+        ...item,
+        channels: [item.channel]
+      })
+      continue
+    }
+
+    const mergedChannels = Array.from(new Set([...(existing.channels ?? [existing.channel]), item.channel]))
+    const shouldReplace = item.createdAt > existing.createdAt
+
+    grouped.set(key, {
+      ...(shouldReplace ? item : existing),
+      channels: mergedChannels
+    })
+  }
+
+  return Array.from(grouped.values())
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 }
 
 function mapCalendarRow(row: DbRow): CalendarSession {
@@ -203,11 +277,12 @@ async function getPassDataFromDb() {
     return null
   }
 
-  const [passesResult, passTypesResult, clientsResult, holdersResult] = await Promise.all([
+  const [passesResult, passTypesResult, clientsResult, holdersResult, pausesResult] = await Promise.all([
     client.database.from("passes").select("*").order("created_at", { ascending: false }),
     client.database.from("pass_types").select("*"),
     client.database.from("clients").select("*"),
-    client.database.from("pass_holders").select("*").order("holder_order", { ascending: true })
+    client.database.from("pass_holders").select("*").order("holder_order", { ascending: true }),
+    client.database.from("pass_pauses").select("pass_id,starts_on,ends_on,created_at").order("created_at", { ascending: false })
   ])
 
   if (
@@ -218,7 +293,9 @@ async function getPassDataFromDb() {
     clientsResult.error ||
     !clientsResult.data ||
     holdersResult.error ||
-    !holdersResult.data
+    !holdersResult.data ||
+    pausesResult.error ||
+    !pausesResult.data
   ) {
     return null
   }
@@ -230,6 +307,7 @@ async function getPassDataFromDb() {
     (passTypesResult.data as DbRow[]).map((row) => [String(row.id), mapPassTypeRow(row)])
   )
   const holderMap = new Map<string, Array<{ clientId: string; holderOrder: number }>>()
+  const latestPauseByPassId = new Map<string, { startsOn: string; endsOn: string }>()
 
   for (const row of holdersResult.data as DbRow[]) {
     const passId = String(row.pass_id ?? "")
@@ -243,6 +321,18 @@ async function getPassDataFromDb() {
       holderOrder: Number(row.holder_order ?? 0)
     })
     holderMap.set(passId, existing)
+  }
+
+  for (const row of pausesResult.data as DbRow[]) {
+    const passId = String(row.pass_id ?? "")
+    if (!passId || latestPauseByPassId.has(passId)) {
+      continue
+    }
+
+    latestPauseByPassId.set(passId, {
+      startsOn: String(row.starts_on ?? ""),
+      endsOn: String(row.ends_on ?? "")
+    })
   }
 
   const passes = (passesResult.data as DbRow[]).map((row) => {
@@ -265,6 +355,8 @@ async function getPassDataFromDb() {
         : null,
       contractedOn: String(row.contracted_on ?? ""),
       createdAt: row.created_at ? String(row.created_at) : undefined,
+      pauseStartsOn: latestPauseByPassId.get(String(row.id))?.startsOn ?? null,
+      pauseEndsOn: latestPauseByPassId.get(String(row.id))?.endsOn ?? null,
       soldPriceGross: Number(row.sold_price_gross ?? 0),
       originalSessions: row.original_sessions === null || row.original_sessions === undefined
         ? null
@@ -339,7 +431,7 @@ export async function getDashboardData() {
           .toFixed(2)
       }
     ],
-    notifications: notifications.slice(0, 5)
+    notifications: aggregateDashboardNotifications(notifications).slice(0, 50)
   }
 }
 

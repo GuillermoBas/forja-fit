@@ -102,6 +102,8 @@ export interface Pass {
   purchasedByName: string | null
   contractedOn: string
   createdAt?: string
+  pauseStartsOn?: string | null
+  pauseEndsOn?: string | null
   soldPriceGross: number
   originalSessions: number | null
   sessionsLeft: number | null
@@ -159,12 +161,14 @@ export interface NotificationLogItem {
   id: string
   type: NotificationType
   channel: NotificationChannel
+  channels?: NotificationChannel[]
   status: "queued" | "sent" | "failed" | "skipped"
   clientName: string | null
   recipient: string | null
   subject: string | null
   createdAt: string
   message: string
+  dedupeKey?: string | null
 }
 
 export interface CalendarSession {

@@ -112,7 +112,7 @@ npm install
 
 - `NEXT_PUBLIC_INSFORGE_URL`
 - `NEXT_PUBLIC_INSFORGE_ANON_KEY`
-- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_APP_URL` como fallback/canonical URL; los redirects de auth intentan usar primero el host publico de la request actual
 - `APP_TIMEZONE`
 - `BUSINESS_NAME`
 
@@ -202,7 +202,7 @@ npm run generate:pwa-icons
 
 ### Instalar en Android
 
-1. Abrir `https://4nc39nmu.insforge.site` en Chrome.
+1. Abrir la URL publica activa de la app en Chrome.
 2. Iniciar sesion si corresponde.
 3. Tocar el aviso `Instalar Trainium` si aparece, o abrir el menu de Chrome.
 4. Elegir `Instalar app` o `Anadir a pantalla de inicio`.
@@ -481,7 +481,7 @@ Nota operativa:
 
 ### URL publicada
 
-- URL actual de produccion: [https://4nc39nmu.insforge.site](https://4nc39nmu.insforge.site)
+- URL publica actual: la definida en InsForge Custom Domains o, en su defecto, la URL nativa `*.insforge.site`
 - Ultimo deployment validado antes de esta iteracion: `64910067-0f06-43cb-97c1-312a3787cb9d`
 
 ### Verificacion rapida en produccion
@@ -509,7 +509,7 @@ npx @insforge/cli deployments list
 
 ```bash
 npx @insforge/cli deployments env list
-npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://4nc39nmu.insforge.site
+npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://app.trainium.es
 npm run deploy
 ```
 

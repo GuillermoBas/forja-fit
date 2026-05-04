@@ -1,9 +1,9 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { appConfig } from "@/lib/config"
 import { clearPortalAuthCookies } from "@/lib/auth/portal-cookies"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { resolvePublicOrigin } from "@/lib/public-origin"
 import { completePortalAuthentication, type PortalActionState } from "@/features/client-portal/auth/server"
 
 function getPasswordValidationError(password: string, confirmPassword?: string) {
@@ -68,10 +68,11 @@ export async function portalSignUpAction(
 
   try {
     const client = createServerInsforgeClient() as any
+    const publicOrigin = await resolvePublicOrigin()
     const result = await client.auth.signUp({
       email,
       password,
-      redirectTo: `${appConfig.appUrl}/cliente/login`
+      redirectTo: `${publicOrigin}/cliente/login`
     })
 
     if (result.error) {
@@ -151,9 +152,10 @@ export async function portalSendResetPasswordAction(
 
   try {
     const client = createServerInsforgeClient() as any
+    const publicOrigin = await resolvePublicOrigin()
     const result = await client.auth.sendResetPasswordEmail({
       email,
-      redirectTo: `${appConfig.appUrl}/cliente/recuperar-clave`
+      redirectTo: `${publicOrigin}/cliente/recuperar-clave`
     })
 
     if (result.error) {

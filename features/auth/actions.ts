@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation"
 import { clearAuthCookies } from "@/lib/auth/cookies"
-import { appConfig } from "@/lib/config"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { resolvePublicOrigin } from "@/lib/public-origin"
 import {
   canBootstrapFirstAdmin,
   completeStaffAuthentication,
@@ -123,12 +123,13 @@ export async function bootstrapFirstAdminAction(
     if (!(await canBootstrapFirstAdmin())) {
       return { error: "Ya existe un admin. El bootstrap inicial esta cerrado." }
     }
+    const publicOrigin = await resolvePublicOrigin()
 
     const signUp = await client.auth.signUp({
       email,
       password,
       name: fullName,
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login`
+      redirectTo: `${publicOrigin}/login`
     })
 
     if (signUp.error || !signUp.data?.user?.id) {
@@ -176,9 +177,10 @@ export async function sendResetPasswordAction(
 
   try {
     const client = createServerInsforgeClient() as any
+    const publicOrigin = await resolvePublicOrigin()
     const result = await client.auth.sendResetPasswordEmail({
       email,
-      redirectTo: `${appConfig.appUrl}/recuperar-clave`
+      redirectTo: `${publicOrigin}/recuperar-clave`
     })
 
     if (result.error) {

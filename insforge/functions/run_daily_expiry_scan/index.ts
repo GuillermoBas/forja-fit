@@ -190,13 +190,36 @@ export default async function(request: Request) {
       const d0Passes = (d0PassesResult.data ?? []) as Array<Record<string, unknown>>
       const passIds = Array.from(new Set([...d7Passes, ...d0Passes].map((pass) => String(pass.id))))
       const context = await loadPassContext(client, passIds)
+      const pausedPassesResult = await client.database
+        .from("passes")
+        .select("id,sessions_left,status")
+        .eq("status", "paused")
+
+      if (pausedPassesResult.error) {
+        throw new Error(pausedPassesResult.error.message)
+      }
+
+      const pausedPassIds = (pausedPassesResult.data ?? []).map((pass) => String(pass.id))
+      const pausesResult = pausedPassIds.length
+        ? await client.database
+            .from("pass_pauses")
+            .select("pass_id,starts_on,ends_on,created_at")
+            .in("pass_id", pausedPassIds)
+            .order("created_at", { ascending: false })
+        : { data: [], error: null }
+
+      if (pausesResult.error) {
+        throw new Error(pausesResult.error.message)
+      }
+
       const summary = {
         d7Candidates: d7Passes.length,
         d0Candidates: d0Passes.length,
         sent: 0,
         skipped: 0,
         failed: 0,
-        expired: 0
+        expired: 0,
+        resumed: 0
       }
 
       for (const pass of d7Passes) {
@@ -225,6 +248,69 @@ export default async function(request: Request) {
       }
 
       summary.expired = (expireResult.data ?? []).length
+
+      const latestPauseByPassId = new Map<string, { startsOn: string; endsOn: string }>()
+      for (const row of (pausesResult.data ?? []) as Array<Record<string, unknown>>) {
+        const passId = String(row.pass_id ?? "")
+        if (!passId || latestPauseByPassId.has(passId)) {
+          continue
+        }
+
+        latestPauseByPassId.set(passId, {
+          startsOn: String(row.starts_on ?? ""),
+          endsOn: String(row.ends_on ?? "")
+        })
+      }
+
+      const pausedPasses = (pausedPassesResult.data ?? []) as Array<Record<string, unknown>>
+      const resumeIdsActive: string[] = []
+      const resumeIdsOutOfSessions: string[] = []
+
+      for (const pass of pausedPasses) {
+        const passId = String(pass.id ?? "")
+        const pauseWindow = latestPauseByPassId.get(passId)
+        const isPauseActive = pauseWindow
+          && pauseWindow.startsOn <= runForDate
+          && runForDate <= pauseWindow.endsOn
+
+        if (isPauseActive) {
+          continue
+        }
+
+        const sessionsLeft = pass.sessions_left === null || pass.sessions_left === undefined
+          ? null
+          : Number(pass.sessions_left)
+
+        if (typeof sessionsLeft === "number" && sessionsLeft <= 0) {
+          resumeIdsOutOfSessions.push(passId)
+        } else {
+          resumeIdsActive.push(passId)
+        }
+      }
+
+      if (resumeIdsActive.length) {
+        const resumeActiveResult = await client.database
+          .from("passes")
+          .update({ status: "active" })
+          .in("id", resumeIdsActive)
+
+        if (resumeActiveResult.error) {
+          throw new Error(resumeActiveResult.error.message)
+        }
+      }
+
+      if (resumeIdsOutOfSessions.length) {
+        const resumeOutOfSessionsResult = await client.database
+          .from("passes")
+          .update({ status: "out_of_sessions" })
+          .in("id", resumeIdsOutOfSessions)
+
+        if (resumeOutOfSessionsResult.error) {
+          throw new Error(resumeOutOfSessionsResult.error.message)
+        }
+      }
+
+      summary.resumed = resumeIdsActive.length + resumeIdsOutOfSessions.length
 
       const completeResult = await client.database
         .from("job_runs")

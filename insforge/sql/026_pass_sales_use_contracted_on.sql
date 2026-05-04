@@ -200,14 +200,16 @@ BEGIN
     RAISE EXCEPTION 'pass type not found or inactive';
   END IF;
 
-  SELECT array_agg(client_id ORDER BY holder_order), MIN(client_id)
-    INTO v_holder_client_ids, v_primary_holder_id
+  SELECT array_agg(client_id ORDER BY holder_order)
+    INTO v_holder_client_ids
   FROM pass_holders
   WHERE pass_id = p_old_pass_id;
 
   IF v_holder_client_ids IS NULL OR array_length(v_holder_client_ids, 1) IS NULL THEN
     RAISE EXCEPTION 'renewal requires at least one holder';
   END IF;
+
+  v_primary_holder_id := v_holder_client_ids[1];
 
   v_price_gross := COALESCE(p_price_gross_override, v_pass_type.price_gross);
 

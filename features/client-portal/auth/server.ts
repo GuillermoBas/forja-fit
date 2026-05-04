@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation"
-import { appConfig } from "@/lib/config"
 import {
   clearPortalAuthCookies,
   getPortalAuthCookies,
@@ -97,10 +96,6 @@ export async function completePortalAuthentication({
 
   await setPortalAuthCookies(accessToken, refreshToken ?? null)
   redirect("/cliente/dashboard")
-}
-
-export async function getPortalOauthRedirectUrl() {
-  return `${appConfig.appUrl}/api/cliente/auth/oauth/callback`
 }
 
 export async function getPortalResetState() {

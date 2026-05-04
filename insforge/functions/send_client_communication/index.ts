@@ -52,6 +52,23 @@ function formatTimeEs(isoString?: string) {
   }).format(new Date(String(isoString)))
 }
 
+function formatSessionReminderDateEs(isoString?: string) {
+  if (!isoString) return ""
+
+  const date = new Date(String(isoString))
+  const weekday = new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    weekday: "long"
+  }).format(date)
+  const dayMonth = new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    day: "2-digit",
+    month: "short"
+  }).format(date).replace(".", "")
+
+  return `${weekday}, ${dayMonth}`
+}
+
 function uniqueStrings(values: unknown[]) {
   return Array.from(new Set(values.filter((value) => typeof value === "string" && value.trim()).map(String)))
 }
@@ -71,6 +88,8 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
   const sessionsLeft = data.sessionsLeft === null || data.sessionsLeft === undefined
     ? null
     : Number(data.sessionsLeft)
+  const trainerName = String(data.trainerName ?? "").trim()
+  const sessionReminderDate = formatSessionReminderDateEs(String(data.startsAt ?? ""))
   const sessionTime = formatTimeEs(String(data.startsAt ?? ""))
 
   if (eventType === "pass_expiry_d0") {
@@ -110,10 +129,11 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
   }
 
   if (eventType === "calendar_session_24h") {
+    const reminderTitle = `Recordatorio de sesión con ${trainerName || "tu entrenador"}`
     return {
-      subject: `${BUSINESS_NAME}: recuerda tu sesion de manana`,
-      title: "Recuerda tu sesion de manana",
-      text: `Tienes una sesion programada${sessionTime ? ` a las ${sessionTime}` : " manana"}.`,
+      subject: reminderTitle,
+      title: reminderTitle,
+      text: `Tu sesión esta agendada para el ${sessionReminderDate || "día previsto"}.${sessionTime ? ` A las ${sessionTime}.` : ""}`,
       url: "/cliente/agenda"
     }
   }
@@ -230,7 +250,7 @@ async function sendEmail({
     recipient: recipient || null,
     subject: template.subject,
     body: html,
-    payload: { templateData },
+    payload: { templateData, templateText: template.text, templateTitle: template.title },
     dedupe_key: dedupeKey,
     processed_at: new Date().toISOString()
   }
@@ -291,7 +311,7 @@ async function sendEmail({
   await insertNotificationLog(client, {
     ...commonLog,
     status: "sent",
-    payload: { templateData, provider: "insforge-email" }
+    payload: { templateData, templateText: template.text, templateTitle: template.title, provider: "insforge-email" }
   })
   await insertAuditLog(client, actorProfileId, {
     channel: "email",

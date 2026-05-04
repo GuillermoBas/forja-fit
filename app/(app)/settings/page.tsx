@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BlockedState } from "@/components/blocked-state"
 import { PageHeader } from "@/components/page-header"
-import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { DailyExpiryScanForm } from "@/features/notifications/notification-forms"
+import { InstallPwaCard } from "@/features/settings/install-pwa-card"
 import { BusinessSettingsCard } from "@/features/settings/business-settings-card"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
@@ -107,14 +107,7 @@ export default async function SettingsPage() {
         description="Preferencias del perfil, configuracion basica del negocio y gestion interna."
       />
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="rounded-3xl">
-          <CardHeader>
-            <CardTitle>Instalacion PWA</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InstallTrainium respectDismissal={false} compact surface="plain" />
-          </CardContent>
-        </Card>
+        <InstallPwaCard />
 
         <Card className="rounded-3xl">
           <CardHeader>

@@ -180,6 +180,8 @@ function mapPortalPass(row: DbRow, passTypeName: string, holderIds: string[], ho
     purchasedByName: null,
     contractedOn: String(row.contracted_on ?? ""),
     createdAt: row.created_at ? String(row.created_at) : undefined,
+    pauseStartsOn: row.pause_starts_on ? String(row.pause_starts_on) : null,
+    pauseEndsOn: row.pause_ends_on ? String(row.pause_ends_on) : null,
     soldPriceGross: Number(row.sold_price_gross ?? 0),
     originalSessions: row.original_sessions === null || row.original_sessions === undefined
       ? null
@@ -505,11 +507,27 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
     ])
   )
 
+  const latestPauseByPassId = new Map<string, { startsOn: string; endsOn: string }>()
+
+  for (const row of pausesResult.data as DbRow[]) {
+    const passId = String(row.pass_id ?? "")
+    if (!passIds.includes(passId) || latestPauseByPassId.has(passId)) {
+      continue
+    }
+
+    latestPauseByPassId.set(passId, {
+      startsOn: String(row.starts_on ?? ""),
+      endsOn: String(row.ends_on ?? "")
+    })
+  }
+
   const passes = relevantPasses.map((row) =>
     mapPortalPass(
       {
         ...row,
-        pass_kind: passTypeKindMap.get(String(row.pass_type_id)) ?? "session"
+        pass_kind: passTypeKindMap.get(String(row.pass_type_id)) ?? "session",
+        pause_starts_on: latestPauseByPassId.get(String(row.id))?.startsOn ?? null,
+        pause_ends_on: latestPauseByPassId.get(String(row.id))?.endsOn ?? null
       },
       allPassTypes.get(String(row.pass_type_id)) ?? "Bono",
       holdersByPass.get(String(row.id)) ?? [],
