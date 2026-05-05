@@ -351,9 +351,16 @@ export function NutritionChat({
               className="min-h-[6.5rem] w-full resize-none rounded-[1.3rem] border border-border bg-background/80 px-3.5 py-3 text-sm leading-6 text-text-primary outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20 sm:min-h-[7.25rem] sm:px-4 sm:py-3.5"
               disabled={quota.blocked}
             />
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              className={cn(
+                "flex gap-3",
+                mode === "modal"
+                  ? "flex-row items-center justify-between"
+                  : "flex-col sm:flex-row sm:items-center sm:justify-between"
+              )}
+            >
               {mode === "modal" ? (
-                <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 sm:flex-1 sm:pb-0">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
                   <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/70 bg-surface-alt/70 px-3 py-2 text-sm font-medium text-text-primary">
                     <SunMedium className="h-4 w-4 text-primary" />
                     <span>{quota.dailyRemaining}/{quota.dailyLimit}</span>
