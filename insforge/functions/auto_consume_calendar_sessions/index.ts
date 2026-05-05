@@ -104,6 +104,7 @@ export default async function(request: Request) {
       return actor.error
     }
 
+    let jobRunId: string | null = null
     const startJob = await client.database.from("job_runs").insert([
       {
         gym_id: gymId,
@@ -118,18 +119,50 @@ export default async function(request: Request) {
 
     if (startJob.error) {
       if (String(startJob.error.message ?? "").toLowerCase().includes("duplicate")) {
-        return json({
-          ok: true,
-          skipped: true,
-          reason: "already_run",
-          runForDate
-        })
-      }
+        const existingJob = await client.database
+          .from("job_runs")
+          .select("id,status,details")
+          .eq("gym_id", gymId)
+          .eq("job_key", "auto_consume_calendar_sessions")
+          .eq("run_for_date", runForDate)
+          .maybeSingle()
 
-      return json({ code: "JOB_START_FAILED", message: startJob.error.message }, 400)
+        if (existingJob.error) {
+          return json({ code: "JOB_LOOKUP_FAILED", message: existingJob.error.message }, 400)
+        }
+
+        if (String(existingJob.data?.status ?? "") === "failed") {
+          jobRunId = String(existingJob.data.id)
+          const restartJob = await client.database.from("job_runs").update({
+            status: "started",
+            details: {
+              consume_before: consumeBefore,
+              retried_failed_job: true,
+              previous_details: existingJob.data.details ?? null
+            },
+            updated_at: now.toISOString()
+          }).eq("id", jobRunId).eq("gym_id", gymId)
+
+          if (restartJob.error) {
+            return json({ code: "JOB_RESTART_FAILED", message: restartJob.error.message }, 400)
+          }
+        } else {
+          return json({
+            ok: true,
+            skipped: true,
+            reason: "already_run",
+            runForDate
+          })
+        }
+      } else {
+        return json({
+          code: "JOB_START_FAILED",
+          message: startJob.error.message
+        }, 400)
+      }
     }
 
-    const jobRunId = String(startJob.data.id)
+    jobRunId = jobRunId ?? String(startJob.data.id)
 
     const sessionsResult = await client.database
       .from("calendar_sessions")
@@ -320,7 +353,12 @@ export default async function(request: Request) {
         }
 
         const pass = passById.get(passId)
-        if (!pass || pass.kind !== "session" || ["expired", "cancelled"].includes(pass.status)) {
+        if (
+          !pass ||
+          pass.kind !== "session" ||
+          pass.status !== "active" ||
+          pass.sessionsLeft <= 0
+        ) {
           skipped += 1
           continue
         }
