@@ -1,7 +1,6 @@
 import { Suspense } from "react"
-import Image from "next/image"
 import { Bell } from "lucide-react"
-import { appConfig } from "@/lib/config"
+import { TenantLogo } from "@/components/branding"
 import { getNotifications } from "@/lib/data"
 import { signOutAction } from "@/features/auth/actions"
 import { AppNavLink } from "@/components/app-nav-link"
@@ -60,9 +59,7 @@ export function AppShell({
             <p className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60 lg:text-[11px] lg:tracking-[0.2em]">
               Gestion del gimnasio
             </p>
-            <Image
-              src="/trainium-logo-full.png"
-              alt={`Logo de ${appConfig.businessName}`}
+            <TenantLogo
               width={320}
               height={320}
               priority

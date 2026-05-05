@@ -2,9 +2,11 @@
 
 import { createClient } from "@insforge/sdk"
 import { revalidatePath } from "next/cache"
+import sharp from "sharp"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
 import { getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import type { BrandAssetVariant } from "@/types/domain"
 
 export type ManualPushClientOption = {
   id: string
@@ -29,6 +31,156 @@ export type StaffActionState = {
 export type BusinessSettingsActionState = {
   error?: string
   success?: string
+}
+
+type GeneratedBrandAsset = {
+  variant: BrandAssetVariant
+  filename: string
+  contentType: "image/png" | "image/webp"
+  width: number
+  height: number
+  sizeBytes: number
+  base64: string
+}
+
+type GeneratedBrandingPayload = {
+  version: string
+  assets: GeneratedBrandAsset[]
+}
+
+const BRAND_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+
+function isPngBuffer(buffer: Buffer) {
+  return PNG_SIGNATURE.every((byte, index) => buffer[index] === byte)
+}
+
+function makeBrandVersion() {
+  const randomPart = crypto.randomUUID().replace(/-/g, "").slice(0, 12)
+  return `${Date.now().toString(36)}-${randomPart}`
+}
+
+async function renderSquarePng(buffer: Buffer, size: number) {
+  return sharp(buffer)
+    .rotate()
+    .resize(size, size, {
+      fit: "contain",
+      background: { r: 255, g: 255, b: 255, alpha: 0 }
+    })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+}
+
+async function renderSquareWebp(buffer: Buffer, size: number) {
+  return sharp(buffer)
+    .rotate()
+    .resize(size, size, {
+      fit: "contain",
+      background: { r: 255, g: 255, b: 255, alpha: 0 }
+    })
+    .webp({ quality: 90 })
+    .toBuffer()
+}
+
+async function renderMaskablePng(buffer: Buffer) {
+  return sharp(buffer)
+    .rotate()
+    .resize(384, 384, {
+      fit: "contain",
+      background: { r: 255, g: 255, b: 255, alpha: 0 }
+    })
+    .extend({
+      top: 64,
+      right: 64,
+      bottom: 64,
+      left: 64,
+      background: { r: 255, g: 255, b: 255, alpha: 0 }
+    })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+}
+
+function toGeneratedAsset(
+  variant: BrandAssetVariant,
+  filename: string,
+  contentType: "image/png" | "image/webp",
+  width: number,
+  height: number,
+  bytes: Buffer
+): GeneratedBrandAsset {
+  return {
+    variant,
+    filename,
+    contentType,
+    width,
+    height,
+    sizeBytes: bytes.byteLength,
+    base64: bytes.toString("base64")
+  }
+}
+
+async function generateBrandingPayload(value: FormDataEntryValue | null): Promise<GeneratedBrandingPayload | null> {
+  if (!(value instanceof File) || value.size === 0) {
+    return null
+  }
+
+  if (value.size > BRAND_IMAGE_MAX_BYTES) {
+    throw new Error("La imagen del negocio no puede superar 10 MB.")
+  }
+
+  if (value.type && value.type !== "image/png") {
+    throw new Error("La imagen del negocio debe ser un PNG cuadrado.")
+  }
+
+  const buffer = Buffer.from(await value.arrayBuffer())
+
+  if (!isPngBuffer(buffer)) {
+    throw new Error("La imagen del negocio debe ser un PNG real.")
+  }
+
+  const metadata = await sharp(buffer).metadata()
+  const width = Number(metadata.width ?? 0)
+  const height = Number(metadata.height ?? 0)
+
+  if (metadata.format !== "png" || !width || !height) {
+    throw new Error("No se pudo leer el PNG del negocio.")
+  }
+
+  if (width !== height) {
+    throw new Error("La imagen del negocio debe ser cuadrada.")
+  }
+
+  if (width < 180) {
+    throw new Error("La imagen del negocio debe medir al menos 180x180 px.")
+  }
+
+  const sourceSize = Math.min(Math.max(width, 512), 1024)
+  const source = await renderSquarePng(buffer, sourceSize)
+  const logoPng = await renderSquarePng(buffer, 512)
+  const logoWebp = await renderSquareWebp(buffer, 512)
+  const favicon16 = await renderSquarePng(buffer, 16)
+  const favicon32 = await renderSquarePng(buffer, 32)
+  const apple = await renderSquarePng(buffer, 180)
+  const icon192 = await renderSquarePng(buffer, 192)
+  const icon512 = await renderSquarePng(buffer, 512)
+  const maskable = await renderMaskablePng(buffer)
+  const badge = await renderSquarePng(buffer, 96)
+
+  return {
+    version: makeBrandVersion(),
+    assets: [
+      toGeneratedAsset("source", "source.png", "image/png", sourceSize, sourceSize, source),
+      toGeneratedAsset("logo-512-png", "logo-512.png", "image/png", 512, 512, logoPng),
+      toGeneratedAsset("logo-512-webp", "logo-512.webp", "image/webp", 512, 512, logoWebp),
+      toGeneratedAsset("favicon-16", "favicon-16.png", "image/png", 16, 16, favicon16),
+      toGeneratedAsset("favicon-32", "favicon-32.png", "image/png", 32, 32, favicon32),
+      toGeneratedAsset("apple-touch-icon-180", "apple-touch-icon-180.png", "image/png", 180, 180, apple),
+      toGeneratedAsset("icon-192", "icon-192.png", "image/png", 192, 192, icon192),
+      toGeneratedAsset("icon-512", "icon-512.png", "image/png", 512, 512, icon512),
+      toGeneratedAsset("maskable-icon-512", "maskable-icon-512.png", "image/png", 512, 512, maskable),
+      toGeneratedAsset("badge-96", "badge-96.png", "image/png", 96, 96, badge)
+    ]
+  }
 }
 
 export type StaffActivationResendActionState = {
@@ -284,19 +436,37 @@ export async function updateBusinessSettingsAction(
     return { error: "El IVA por defecto debe ser un numero valido." }
   }
 
+  let brandingPayload: GeneratedBrandingPayload | null = null
+
+  try {
+    brandingPayload = await generateBrandingPayload(formData.get("brandImage"))
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "No se pudo procesar la imagen del negocio."
+    }
+  }
+
   try {
     await invokeProtectedFunction("update_business_settings", {
       businessName,
       reminderDaysDefault,
-      defaultVatRate
+      defaultVatRate,
+      brandAssetVersion: brandingPayload?.version,
+      brandAssets: brandingPayload?.assets
     })
   } catch (error) {
     return toActionError(error, "No se pudo guardar la configuracion del negocio")
   }
 
   revalidatePath("/settings")
+  revalidatePath("/")
+  revalidatePath("/login")
+  revalidatePath("/cliente/login")
+  revalidatePath("/manifest.webmanifest")
 
   return {
-    success: "Configuracion del negocio actualizada correctamente."
+    success: brandingPayload
+      ? "Configuracion e imagen del negocio actualizadas correctamente."
+      : "Configuracion del negocio actualizada correctamente."
   }
 }

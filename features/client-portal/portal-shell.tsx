@@ -1,9 +1,8 @@
-import Image from "next/image"
 import { LogOut } from "lucide-react"
+import { TenantBusinessName, TenantLogo } from "@/components/branding"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { appConfig } from "@/lib/config"
 import { NutritionAssistantEntrypoint } from "@/features/client-portal/nutrition/assistant-entrypoint"
 import { portalSignOutAction } from "@/features/client-portal/auth/actions"
 import {
@@ -30,9 +29,7 @@ function DesktopClientSidebar({
     <aside className="page-section hidden flex-col border-trainium-dark/80 bg-trainium-dark p-5 text-white lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)]">
       <div className="mb-6 rounded-[1.3rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_12px_28px_rgba(7,17,29,0.24)]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Portal de cliente</p>
-        <Image
-          src="/trainium-logo-full.png"
-          alt={`Logo de ${appConfig.businessName}`}
+        <TenantLogo
           width={320}
           height={320}
           priority
@@ -79,7 +76,7 @@ function MobileClientTopbar({ clientName }: { clientName: string }) {
         <div className="min-w-0">
           <p className="section-kicker">Portal de cliente</p>
           <p className="mt-0.5 truncate font-heading text-base font-bold text-text-primary sm:text-lg md:text-center">
-            {appConfig.businessName}
+            <TenantBusinessName />
           </p>
         </div>
         <Badge variant="default" className="max-w-[40vw] shrink truncate px-2.5 py-1 text-[10px] sm:max-w-[42vw] md:max-w-full md:px-3 md:text-center">

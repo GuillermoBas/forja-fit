@@ -11,6 +11,7 @@ import {
 import { appConfig, isInsforgeConfigured } from "@/lib/config"
 import { getCurrentAccessToken, getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { mergeBrandAssets, normalizeBrandAssets } from "@/lib/branding-shared"
 import { isStaffPreview } from "@/lib/preview-mode"
 import { getCurrentGym } from "@/lib/tenant"
 import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
@@ -142,7 +143,9 @@ function mapBusinessSettingsRow(row: DbRow): BusinessSettings {
     businessName: String(row.business_name ?? ""),
     timezone: String(row.timezone ?? "Europe/Madrid"),
     reminderDaysDefault: Number(row.reminder_days_default ?? 7),
-    defaultVatRate: Number(row.default_vat_rate ?? 21)
+    defaultVatRate: Number(row.default_vat_rate ?? 21),
+    brandAssetVersion: row.brand_asset_version ? String(row.brand_asset_version) : null,
+    brandAssets: mergeBrandAssets(normalizeBrandAssets(row.brand_assets))
   }
 }
 
@@ -768,7 +771,9 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
     businessName: appConfig.businessName,
     timezone: appConfig.timezone,
     reminderDaysDefault: 7,
-    defaultVatRate: 21
+    defaultVatRate: 21,
+    brandAssetVersion: null,
+    brandAssets: mergeBrandAssets({})
   }
 
   const client = await createAuthedClient()

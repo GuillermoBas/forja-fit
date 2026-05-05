@@ -204,6 +204,7 @@ Only two application roles exist:
 - Prefer explicit SQL and clear logic over generic abstractions
 - All writes that affect money, stock, or session balances must be transactional
 - Storage bucket for ticket PDFs must be named `tickets`
+- Storage bucket for tenant branding images must be named `gym-branding`
 - Internal notifications are the MVP replacement for WhatsApp
 - Treat email and deployments conservatively and keep a fallback path if a platform feature is unavailable
 - The client portal must be added alongside the staff app without breaking existing staff routes or permissions

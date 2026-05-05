@@ -38,7 +38,32 @@ export interface BusinessSettings {
   timezone: string
   reminderDaysDefault: number
   defaultVatRate: number
+  brandAssetVersion: string | null
+  brandAssets: BusinessBrandAssets
 }
+
+export type BrandAssetVariant =
+  | "source"
+  | "logo-512-png"
+  | "logo-512-webp"
+  | "favicon-16"
+  | "favicon-32"
+  | "apple-touch-icon-180"
+  | "icon-192"
+  | "icon-512"
+  | "maskable-icon-512"
+  | "badge-96"
+
+export interface BusinessBrandAsset {
+  key: string
+  url: string
+  contentType: string
+  width: number
+  height: number
+  sizeBytes?: number
+}
+
+export type BusinessBrandAssets = Partial<Record<BrandAssetVariant, BusinessBrandAsset>>
 
 export interface Client {
   id: string

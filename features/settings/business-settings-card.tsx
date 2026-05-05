@@ -1,12 +1,13 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
+import { useActionState, useEffect, useState, type ChangeEvent } from "react"
 import { useFormStatus } from "react-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { updateBusinessSettingsAction } from "@/features/settings/actions"
+import { getBrandAssetUrl } from "@/lib/branding-shared"
 import type { BusinessSettings } from "@/types/domain"
 
 function SaveBusinessSettingsButton() {
@@ -25,7 +26,10 @@ export function BusinessSettingsCard({
   settings: BusinessSettings
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [state, formAction] = useActionState(updateBusinessSettingsAction, {})
+  const currentLogoUrl = getBrandAssetUrl(settings.brandAssets, "logo-512-png")
+  const previewImageUrl = previewUrl ?? currentLogoUrl
 
   useEffect(() => {
     if (state.error) {
@@ -36,9 +40,43 @@ export function BusinessSettingsCard({
   useEffect(() => {
     if (state.success) {
       toast.success(state.success)
+      setPreviewUrl((current) => {
+        if (current) {
+          URL.revokeObjectURL(current)
+        }
+
+        return null
+      })
       setIsOpen(false)
     }
   }, [state.success])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  function handleBrandImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
+    setPreviewUrl(file ? URL.createObjectURL(file) : null)
+  }
+
+  function closeModal() {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+
+    setIsOpen(false)
+  }
 
   return (
     <>
@@ -49,17 +87,24 @@ export function BusinessSettingsCard({
             Editar
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p><span className="font-medium">Nombre:</span> {settings.businessName}</p>
-          <p><span className="font-medium">Zona horaria:</span> {settings.timezone}</p>
-          <p><span className="font-medium">Aviso por defecto:</span> {settings.reminderDaysDefault} dias</p>
-          <p><span className="font-medium">IVA por defecto:</span> {settings.defaultVatRate}%</p>
+        <CardContent className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center">
+          <div
+            className="h-20 w-20 shrink-0 rounded-2xl border border-border/90 bg-white bg-contain bg-center bg-no-repeat p-2 shadow-sm"
+            style={{ backgroundImage: `url("${currentLogoUrl}")` }}
+            aria-label={`Logo actual de ${settings.businessName}`}
+          />
+          <div className="space-y-3">
+            <p><span className="font-medium">Nombre:</span> {settings.businessName}</p>
+            <p><span className="font-medium">Zona horaria:</span> {settings.timezone}</p>
+            <p><span className="font-medium">Aviso por defecto:</span> {settings.reminderDaysDefault} dias</p>
+            <p><span className="font-medium">IVA por defecto:</span> {settings.defaultVatRate}%</p>
+          </div>
         </CardContent>
       </Card>
 
       {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
-          <div className="w-full max-w-xl rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
             <div className="mb-6 space-y-2">
               <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Editar negocio</h2>
               <p className="text-sm text-slate-600">
@@ -67,7 +112,7 @@ export function BusinessSettingsCard({
               </p>
             </div>
 
-            <form action={formAction} className="space-y-4">
+            <form action={formAction} className="space-y-4" encType="multipart/form-data">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Nombre</label>
                 <Input name="businessName" defaultValue={settings.businessName} required />
@@ -108,8 +153,30 @@ export function BusinessSettingsCard({
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-border/90 bg-slate-50/80 p-4">
+                <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)] sm:items-center">
+                  <div
+                    className="h-24 w-24 rounded-2xl border border-border/90 bg-white bg-contain bg-center bg-no-repeat p-2 shadow-sm"
+                    style={{ backgroundImage: `url("${previewImageUrl}")` }}
+                    aria-label={`Vista previa del logo de ${settings.businessName}`}
+                  />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Imagen del negocio</label>
+                    <Input
+                      name="brandImage"
+                      type="file"
+                      accept="image/png"
+                      onChange={handleBrandImageChange}
+                    />
+                    <p className="text-xs leading-5 text-slate-500">
+                      Sube un PNG cuadrado. Al guardar se generan automaticamente los iconos, favicon, PWA y variantes del portal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                <Button type="button" variant="outline" onClick={closeModal}>
                   Cancelar
                 </Button>
                 <SaveBusinessSettingsButton />

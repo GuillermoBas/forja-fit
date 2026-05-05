@@ -162,7 +162,28 @@ export const updateProfileCalendarColorSchema = z.object({
 export const updateBusinessSettingsSchema = z.object({
   businessName: z.string().min(2),
   reminderDaysDefault: z.number().int().min(0).max(30),
-  defaultVatRate: z.number().nonnegative()
+  defaultVatRate: z.number().nonnegative(),
+  brandAssetVersion: z.string().optional(),
+  brandAssets: z.array(z.object({
+    variant: z.enum([
+      "source",
+      "logo-512-png",
+      "logo-512-webp",
+      "favicon-16",
+      "favicon-32",
+      "apple-touch-icon-180",
+      "icon-192",
+      "icon-512",
+      "maskable-icon-512",
+      "badge-96"
+    ]),
+    filename: z.string(),
+    contentType: z.enum(["image/png", "image/webp"]),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    sizeBytes: z.number().int().positive(),
+    base64: z.string().min(1)
+  })).optional()
 })
 
 export const runDailyExpiryScanSchema = z.object({

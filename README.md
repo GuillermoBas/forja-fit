@@ -153,6 +153,7 @@ La pantalla `/settings` ya incluye dos operaciones protegidas para admins:
 - alta y mantenimiento de usuarios staff (`trainer` y `admin`) mediante la Function `create_staff_user`
 - reenvio del codigo de activacion para staff pendiente mediante la Function `resend_staff_activation`
 - ejecucion manual de `run_daily_expiry_scan` como fallback si el Schedule falla o no esta disponible
+- edicion del negocio y subida de imagen PNG cuadrada para generar automaticamente logos, favicon e iconos PWA por `gym_id`
 
 La pantalla `/products` ya permite a admins:
 
@@ -200,11 +201,11 @@ La configuracion levanta Next.js en `http://127.0.0.1:3005` con `TRAINIUM_VISUAL
 
 ## PWA instalable
 
-Trainium expone un manifest App Router en `/manifest.webmanifest`, registra un service worker en `/sw.js` y usa los iconos generados en `public/icons`. La instalacion PWA y las notificaciones push web se mantienen separadas: el push solo se activa desde `/cliente/ajustes` tras accion explicita del cliente.
+Trainium expone un manifest App Router en `/manifest.webmanifest`, registra un service worker en `/sw.js` y carga iconos por tenant desde `settings.brand_assets` cuando existen. Si un gimnasio aun no ha subido imagen, se usan los iconos por defecto de `public/icons`. La instalacion PWA y las notificaciones push web se mantienen separadas: el push solo se activa desde `/cliente/ajustes` tras accion explicita del cliente.
 
 ### Regenerar iconos PWA
 
-Los iconos se generan desde `public/trainium-icon.png`:
+Los iconos por defecto se generan desde `public/trainium-icon.png`:
 
 ```bash
 npm run generate:pwa-icons
@@ -405,9 +406,21 @@ npx @insforge/cli db import insforge/sql/023_delete_pass_cascade_cleanup.sql
 npx @insforge/cli db import insforge/sql/022_grant_invoice_sequence_all_roles.sql
 ```
 
-### Bucket de tickets
+### Buckets de Storage
 
 Crear un bucket llamado `tickets` en InsForge Storage para los PDFs de ventas.
+
+Crear tambien un bucket publico llamado `gym-branding` para las imagenes por gimnasio. La Function `update_business_settings` guarda las variantes en rutas versionadas:
+
+```text
+gyms/{gym_id}/branding/{version}/{variant}.{ext}
+```
+
+Aplicar la migracion de columnas de branding antes de usar la subida desde Ajustes:
+
+```bash
+npx @insforge/cli db import insforge/sql/036_business_branding_assets.sql
+```
 
 ### Planificador diario
 

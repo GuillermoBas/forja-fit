@@ -1,6 +1,6 @@
-import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { TenantLogo } from "@/components/branding"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function StaffAuthShell({
@@ -31,9 +31,7 @@ export function StaffAuthShell({
             href="/"
             className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-[1.5rem] border border-primary/15 bg-surface p-2 shadow-[0_14px_34px_rgba(18,191,166,0.12)] sm:h-36 sm:w-36 sm:rounded-[1.75rem]"
           >
-            <Image
-              src="/trainium-logo-full.png"
-              alt="Logo de Trainium"
+            <TenantLogo
               width={280}
               height={280}
               priority

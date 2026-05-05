@@ -30,11 +30,14 @@ export function resolveGymSlugFromHost(host: string | null) {
   if (
     normalizedHost === "localhost" ||
     normalizedHost === "127.0.0.1" ||
-    normalizedHost === "::1" ||
-    normalizedHost.endsWith(".localhost")
+    normalizedHost === "::1"
   ) {
-    const [localSubdomain] = normalizedHost.split(".")
-    return localSubdomain && localSubdomain !== "localhost" ? localSubdomain : defaultGymSlug
+    return defaultGymSlug
+  }
+
+  if (normalizedHost.endsWith(".localhost")) {
+    const localSubdomain = normalizedHost.slice(0, -".localhost".length)
+    return localSubdomain || defaultGymSlug
   }
 
   if (normalizedHost === rootDomain || normalizedHost === `www.${rootDomain}`) {

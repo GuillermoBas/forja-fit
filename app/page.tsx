@@ -1,10 +1,11 @@
-import Image from "next/image"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, ShieldCheck, UserRound } from "lucide-react"
+import { TenantLogo } from "@/components/branding"
 import { Card } from "@/components/ui/card"
 import { getCurrentProfile } from "@/lib/auth/session"
 import { getCurrentPortalAccount } from "@/lib/auth/portal-session"
+import { getCurrentBranding } from "@/lib/branding"
 import { getCurrentGym } from "@/lib/tenant"
 
 const accessOptions = [
@@ -23,10 +24,11 @@ const accessOptions = [
 ]
 
 export default async function HomePage() {
-  const [gym, profile, portalAccount] = await Promise.all([
+  const [gym, profile, portalAccount, branding] = await Promise.all([
     getCurrentGym(),
     getCurrentProfile(),
-    getCurrentPortalAccount()
+    getCurrentPortalAccount(),
+    getCurrentBranding()
   ])
 
   if (!gym) {
@@ -34,9 +36,7 @@ export default async function HomePage() {
       <main className="mobile-page-shell flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <Card className="w-full max-w-lg rounded-2xl border-border/90 bg-surface p-6 text-center shadow-sm">
           <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-primary/15 bg-surface p-2">
-            <Image
-              src="/trainium-logo-full.png"
-              alt="Logo de Trainium"
+            <TenantLogo
               width={160}
               height={160}
               priority
@@ -72,9 +72,7 @@ export default async function HomePage() {
         <Card className="w-full rounded-[1.9rem] border-border/90 bg-surface/96 px-5 py-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:px-8 sm:py-10">
           <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
             <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-[1.7rem] border border-primary/15 bg-surface p-2 shadow-[0_18px_38px_rgba(18,191,166,0.12)] sm:h-40 sm:w-40">
-              <Image
-                src="/trainium-logo-full.png"
-                alt="Logo de Trainium"
+              <TenantLogo
                 width={320}
                 height={320}
                 priority
@@ -83,7 +81,7 @@ export default async function HomePage() {
             </div>
 
             <h1 className="mt-5 text-center font-heading text-[2.35rem] font-bold tracking-[-0.06em] text-text-primary sm:text-[3rem]">
-              Trainium
+              {branding.businessName}
             </h1>
 
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-muted sm:text-xs">

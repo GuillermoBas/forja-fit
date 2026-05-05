@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS settings (
   business_name TEXT NOT NULL,
   reminder_days_default INTEGER NOT NULL DEFAULT 7 CHECK (reminder_days_default BETWEEN 0 AND 30),
   default_vat_rate NUMERIC(5,2) NOT NULL DEFAULT 21 CHECK (default_vat_rate >= 0),
+  brand_asset_version TEXT,
+  brand_assets JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,9 +1,16 @@
 import type { MetadataRoute } from "next"
+import { getCurrentBranding } from "@/lib/branding"
+import { getBrandAssetUrl } from "@/lib/branding-shared"
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic = "force-dynamic"
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const branding = await getCurrentBranding()
+  const appName = branding.businessName || "Trainium"
+
   return {
-    name: "Trainium",
-    short_name: "Trainium",
+    name: appName,
+    short_name: appName,
     description: "La plataforma inteligente para entrenadores personales",
     start_url: "/",
     scope: "/",
@@ -13,17 +20,17 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: getBrandAssetUrl(branding.assets, "icon-192"),
         sizes: "192x192",
         type: "image/png"
       },
       {
-        src: "/icons/icon-512.png",
+        src: getBrandAssetUrl(branding.assets, "icon-512"),
         sizes: "512x512",
         type: "image/png"
       },
       {
-        src: "/icons/maskable-icon-512.png",
+        src: getBrandAssetUrl(branding.assets, "maskable-icon-512"),
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable"
