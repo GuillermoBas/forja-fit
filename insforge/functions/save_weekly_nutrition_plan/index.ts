@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 const dayKeys = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 
 function json(data: unknown, status = 200) {
@@ -100,12 +100,17 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const title = typeof body?.title === "string" ? body.title.trim().slice(0, 120) : ""
     const weekStartsOn = normalizeWeekStartsOn(body?.weekStartsOn)
     const generatedByModel = typeof body?.generatedByModel === "string"
       ? body.generatedByModel.trim().slice(0, 120)
       : null
     const planJson = normalizePlan(body?.plan)
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     if (!title) {
       return json({ code: "INVALID_TITLE", message: "El plan semanal necesita un titulo." }, 400)
@@ -125,6 +130,7 @@ export default async function(request: Request) {
       .from("client_portal_accounts")
       .select("*")
       .eq("auth_user_id", authResult.data.user.id)
+      .eq("gym_id", gymId)
       .maybeSingle()
 
     if (portalAccountResult.error || !portalAccountResult.data) {
@@ -132,7 +138,8 @@ export default async function(request: Request) {
     }
 
     const ensureResult = await client.database.rpc("app_ensure_client_nutrition_thread", {
-      p_auth_user_id: authResult.data.user.id
+      p_auth_user_id: authResult.data.user.id,
+      p_gym_id: gymId,
     })
 
     if (ensureResult.error || !ensureResult.data?.nutrition_profile_id) {
@@ -142,6 +149,7 @@ export default async function(request: Request) {
     const saveResult = await client.database
       .from("weekly_nutrition_plans")
       .upsert([{
+        gym_id: gymId,
         client_id: portalAccountResult.data.client_id,
         nutrition_profile_id: ensureResult.data.nutrition_profile_id,
         week_starts_on: weekStartsOn,
@@ -150,7 +158,7 @@ export default async function(request: Request) {
         generated_by_model: generatedByModel || null,
         updated_at: new Date().toISOString()
       }], {
-        onConflict: "client_id,week_starts_on"
+        onConflict: "gym_id,client_id,week_starts_on"
       })
       .select("*")
       .maybeSingle()
@@ -160,6 +168,7 @@ export default async function(request: Request) {
     }
 
     const auditInsert = await client.database.from("audit_logs").insert([{
+      gym_id: gymId,
       actor_profile_id: null,
       entity_name: "weekly_nutrition_plans",
       entity_id: saveResult.data.id,

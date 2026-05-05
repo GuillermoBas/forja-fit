@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 const allowedKeys = new Set([
   "height_cm",
@@ -95,6 +95,10 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
     const updates = validatePatch(
       body?.updates && typeof body.updates === "object" && !Array.isArray(body.updates)
         ? body.updates
@@ -115,6 +119,7 @@ export default async function(request: Request) {
       .from("client_portal_accounts")
       .select("*")
       .eq("auth_user_id", authResult.data.user.id)
+      .eq("gym_id", gymId)
       .maybeSingle()
 
     if (portalAccountResult.error || !portalAccountResult.data) {
@@ -122,7 +127,8 @@ export default async function(request: Request) {
     }
 
     const ensureResult = await client.database.rpc("app_ensure_client_nutrition_thread", {
-      p_auth_user_id: authResult.data.user.id
+      p_auth_user_id: authResult.data.user.id,
+      p_gym_id: gymId,
     })
 
     if (ensureResult.error || !ensureResult.data?.nutrition_profile_id) {
@@ -137,6 +143,7 @@ export default async function(request: Request) {
         updated_at: new Date().toISOString()
       })
       .eq("id", ensureResult.data.nutrition_profile_id)
+      .eq("gym_id", gymId)
       .select("*")
       .maybeSingle()
 
@@ -146,6 +153,7 @@ export default async function(request: Request) {
 
     const auditInsert = await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: null,
         entity_name: "client_nutrition_profiles",
         entity_id: updateResult.data.id,

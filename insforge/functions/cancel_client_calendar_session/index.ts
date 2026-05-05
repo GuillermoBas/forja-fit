@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -38,9 +38,15 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
     const calendarSessionId = typeof body?.calendarSessionId === "string"
       ? body.calendarSessionId.trim()
       : ""
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     if (!calendarSessionId) {
       return json({ code: "INVALID_INPUT", message: "La sesion es obligatoria." }, 400)
@@ -60,6 +66,7 @@ export default async function(request: Request) {
       .from("client_portal_accounts")
       .select("*")
       .eq("auth_user_id", authResult.data.user.id)
+      .eq("gym_id", gymId)
       .maybeSingle()
 
     if (portalAccountResult.error || !portalAccountResult.data) {
@@ -85,6 +92,7 @@ export default async function(request: Request) {
     const sessionResult = await client.database
       .from("calendar_sessions")
       .select("id,client_1_id,client_2_id,trainer_profile_id,starts_at,ends_at,status")
+      .eq("gym_id", gymId)
       .eq("id", calendarSessionId)
       .maybeSingle()
 
@@ -117,6 +125,7 @@ export default async function(request: Request) {
         updated_at: new Date().toISOString()
       })
       .eq("id", calendarSessionId)
+      .eq("gym_id", gymId)
       .select("id,status,starts_at,ends_at")
       .maybeSingle()
 
@@ -132,6 +141,7 @@ export default async function(request: Request) {
 
     const auditResult = await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: null,
         entity_name: "calendar_sessions",
         entity_id: calendarSessionId,
@@ -159,6 +169,7 @@ export default async function(request: Request) {
 
     const notificationResult = await client.database.from("notification_log").insert([
       {
+        gym_id: gymId,
         client_id: clientId,
         pass_id: null,
         sale_id: null,
@@ -196,6 +207,8 @@ export default async function(request: Request) {
         })
         await trustedClient.functions.invoke("send_client_communication", {
           body: {
+            gymId,
+            gymSlug,
             clientIds: [clientId],
             eventType: "manual_note",
             channels: ["email", "push"],

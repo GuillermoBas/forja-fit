@@ -16,6 +16,7 @@ export type NotificationType =
 
 export interface Profile {
   id: string
+  gymId: string
   email: string
   fullName: string
   role: AppRole
@@ -53,6 +54,7 @@ export interface Client {
 
 export interface ClientPortalAccountSummary {
   id: string
+  gymId: string
   clientId: string
   authUserId: string
   email: string

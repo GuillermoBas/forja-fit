@@ -390,7 +390,7 @@ export function ScheduleExistingPassForm({
 }) {
   const [state, formAction] = useActionState(scheduleExistingPassSessionsAction, {})
   const [isOpen, setIsOpen] = useState(false)
-  const canSchedule = pass.passKind === "session" && pass.status === "active" && (pass.sessionsLeft ?? 0) > 0
+  const canSchedule = pass.passKind === "session"
 
   useClientActionFeedback(state?.error, state?.success, "Sesiones pendientes agendadas correctamente.")
 
@@ -417,7 +417,7 @@ export function ScheduleExistingPassForm({
               <div>
                 <h3 className="text-lg font-semibold">Agendar sesiones pendientes</h3>
                 <p className="text-sm text-muted-foreground">
-                  Se programarán las sesiones pendientes no agendadas de este bono a partir de hoy.
+                  Puedes forzar agenda aunque el bono esté caducado o sin sesiones restantes.
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
@@ -431,7 +431,7 @@ export function ScheduleExistingPassForm({
               <input type="hidden" name="passTypeId" value={pass.passTypeId} />
 
               <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
-                {`Se intentarán programar hasta ${pass.sessionsLeft ?? 0} sesiones restantes de ${pass.passTypeName}.`}
+                {`Se intentará programar agenda pendiente de ${pass.passTypeName}. Si no hay saldo disponible, se creará una sesión forzada.`}
               </div>
 
               <WeeklySchedulePatternField
@@ -714,6 +714,7 @@ export function RenewPassForm({
       return
     }
 
+    setSelectedPassTypeId(selectedPass.passTypeId)
     setPriceGross(String(Math.round(selectedPass.soldPriceGross)))
   }, [selectedPass])
 

@@ -1,6 +1,7 @@
 import { getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { withGymContext } from "@/lib/tenant"
 
 export type ActionState = {
   error?: string
@@ -50,7 +51,7 @@ export async function invokeProtectedFunction(slug: string, body: Record<string,
   }
 
   const client = createServerInsforgeClient({ accessToken }) as any
-  const result = await client.functions.invoke(slug, { body })
+  const result = await client.functions.invoke(slug, { body: await withGymContext(body) })
 
   if (result.error) {
     throw new Error(normalizeActionError(result.error.message))

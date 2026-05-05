@@ -9,7 +9,7 @@ This product is intentionally small:
 - only one gym location
 - only two staff roles: `admin` and `trainer`
 - no customer portal
-- no multi-tenant support
+- multitenant support is limited to subdomain-based `gym_id` isolation
 - no realtime features unless explicitly requested later
 - no microservices
 
@@ -26,6 +26,16 @@ Phase 1 guidance remains in force unless this section overrides it.
 - All sensitive portal writes must go through InsForge Functions
 - Use InsForge as both backend and publishing platform for the portal as well as the staff app
 - AGENTS.md should stay concise and practical; prefer short actionable rules over long narrative text
+
+## Multitenant override
+
+- Resolve the active gym from the request subdomain, e.g. `eltemplo.trainium.es`
+- `trainium.es` and unknown subdomains must not show tenant data
+- Every tenantable table must carry `gym_id NOT NULL`; there is no legacy mode after migration
+- Staff and portal auth must scope lookups by `auth_user_id + gym_id`
+- Emails and Auth users may be reused across gyms
+- Invoice numbering is independent per gym
+- Local development may fall back to `TRAINIUM_DEFAULT_GYM_SLUG=eltemplo`
 
 ---
 
@@ -500,6 +510,8 @@ Expected variables:
 - `NEXT_PUBLIC_INSFORGE_URL`
 - `NEXT_PUBLIC_INSFORGE_ANON_KEY`
 - `NEXT_PUBLIC_APP_URL`
+- `TRAINIUM_ROOT_DOMAIN=trainium.es`
+- `TRAINIUM_DEFAULT_GYM_SLUG=eltemplo`
 - `APP_TIMEZONE=Europe/Madrid`
 - `BUSINESS_NAME`
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`

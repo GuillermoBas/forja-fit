@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 const BUSINESS_NAME = "Trainium"
 const DEFAULT_CHANNELS = ["email", "push"]
 const ALLOWED_CHANNELS = new Set(["email", "push"])
@@ -157,7 +157,7 @@ function buildEmailHtml(fullName: string, subject: string, text: string) {
   `
 }
 
-async function requireStaffActor(client: any) {
+async function requireStaffActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -167,6 +167,7 @@ async function requireStaffActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -180,6 +181,7 @@ async function insertNotificationLog(client: any, payload: Record<string, unknow
   const existing = await client.database
     .from("notification_log")
     .select("id,status")
+    .eq("gym_id", payload.gym_id)
     .eq("dedupe_key", payload.dedupe_key)
     .maybeSingle()
 
@@ -195,9 +197,10 @@ async function insertNotificationLog(client: any, payload: Record<string, unknow
   return { id: String(insertResult.data.id), duplicate: false }
 }
 
-async function insertAuditLog(client: any, actorProfileId: string | null, diff: Record<string, unknown>) {
+async function insertAuditLog(client: any, gymId: string, actorProfileId: string | null, diff: Record<string, unknown>) {
   await client.database.from("audit_logs").insert([
     {
+      gym_id: gymId,
       actor_profile_id: actorProfileId,
       entity_name: "notification_log",
       entity_id: null,
@@ -209,6 +212,7 @@ async function insertAuditLog(client: any, actorProfileId: string | null, diff: 
 
 async function sendEmail({
   client,
+  gymId,
   actorProfileId,
   clientRow,
   passId,
@@ -219,6 +223,7 @@ async function sendEmail({
   templateData
 }: {
   client: any
+  gymId: string
   actorProfileId: string | null
   clientRow: Record<string, unknown>
   passId: string | null
@@ -231,6 +236,7 @@ async function sendEmail({
   const existing = await client.database
     .from("notification_log")
     .select("id,status")
+    .eq("gym_id", gymId)
     .eq("dedupe_key", dedupeKey)
     .maybeSingle()
 
@@ -242,6 +248,7 @@ async function sendEmail({
   const recipient = clientRow.email ? String(clientRow.email).trim() : ""
   const html = buildEmailHtml(fullName, template.subject, template.text)
   const commonLog = {
+    gym_id: gymId,
     client_id: clientRow.id,
     pass_id: passId,
     sale_id: saleId,
@@ -261,7 +268,7 @@ async function sendEmail({
       status: "skipped",
       error_message: "missing_email"
     })
-    await insertAuditLog(client, actorProfileId, {
+    await insertAuditLog(client, gymId, actorProfileId, {
       channel: "email",
       event_type: eventType,
       recipient: null,
@@ -277,7 +284,7 @@ async function sendEmail({
       status: "failed",
       error_message: "email_service_unavailable"
     })
-    await insertAuditLog(client, actorProfileId, {
+    await insertAuditLog(client, gymId, actorProfileId, {
       channel: "email",
       event_type: eventType,
       recipient,
@@ -299,7 +306,7 @@ async function sendEmail({
       status: "failed",
       error_message: sendResult.error.message
     })
-    await insertAuditLog(client, actorProfileId, {
+    await insertAuditLog(client, gymId, actorProfileId, {
       channel: "email",
       event_type: eventType,
       recipient,
@@ -313,7 +320,7 @@ async function sendEmail({
     status: "sent",
     payload: { templateData, templateText: template.text, templateTitle: template.title, provider: "insforge-email" }
   })
-  await insertAuditLog(client, actorProfileId, {
+  await insertAuditLog(client, gymId, actorProfileId, {
     channel: "email",
     event_type: eventType,
     recipient,
@@ -324,6 +331,8 @@ async function sendEmail({
 
 async function sendPush({
   client,
+  gymId,
+  gymSlug,
   clientId,
   passId,
   eventType,
@@ -331,6 +340,8 @@ async function sendPush({
   template
 }: {
   client: any
+  gymId: string
+  gymSlug: string
   clientId: string
   passId: string | null
   eventType: string
@@ -339,6 +350,8 @@ async function sendPush({
 }) {
   const result = await client.functions.invoke("send_push_to_client", {
     body: {
+      gymId,
+      gymSlug,
       clientId,
       passId,
       eventType,
@@ -368,7 +381,12 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
     const eventType = normalizeEventType(String(body?.eventType ?? ""))
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
     if (!ALLOWED_EVENT_TYPES.has(eventType)) {
       return json({ code: "INVALID_INPUT", message: "Tipo de comunicacion no valido" }, 400)
     }
@@ -389,12 +407,12 @@ export default async function(request: Request) {
 
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
     if ("error" in actor) {
       return actor.error
     }
 
-    const clientsResult = await client.database.from("clients").select("*").in("id", clientIds)
+    const clientsResult = await client.database.from("clients").select("*").eq("gym_id", gymId).in("id", clientIds)
     if (clientsResult.error || !clientsResult.data) {
       return json({ code: "CLIENTS_LOAD_FAILED", message: clientsResult.error?.message ?? "No se pudieron cargar clientes" }, 400)
     }
@@ -428,6 +446,7 @@ export default async function(request: Request) {
             clientId,
             ...(await sendEmail({
               client,
+              gymId,
               actorProfileId: actor.profile.id,
               clientRow,
               passId,
@@ -443,13 +462,15 @@ export default async function(request: Request) {
         if (channel === "push") {
           const pushResult = await sendPush({
             client,
+            gymId,
+            gymSlug,
             clientId,
             passId,
             eventType,
             dedupeKey,
             template
           })
-          await insertAuditLog(client, actor.profile.id, {
+          await insertAuditLog(client, gymId, actor.profile.id, {
             channel: "push",
             event_type: eventType,
             client_id: clientId,

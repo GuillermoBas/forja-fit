@@ -11,6 +11,7 @@ import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/s
 import { getBusinessSettings, getStaffProfiles } from "@/lib/data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getCurrentGym } from "@/lib/tenant"
 
 type ManualPushClientRow = {
   id: string
@@ -32,11 +33,16 @@ async function getManualPushClients(): Promise<ManualPushClientRow[]> {
   if (!accessToken) {
     return []
   }
+  const gym = await getCurrentGym()
+  if (!gym) {
+    return []
+  }
 
   const client = createServerInsforgeClient({ accessToken }) as any
   const portalAccountsResult = await client.database
     .from("client_portal_accounts")
     .select("id,client_id,status")
+    .eq("gym_id", gym.id)
     .eq("status", "claimed")
 
   if (portalAccountsResult.error || !portalAccountsResult.data?.length) {
@@ -48,10 +54,11 @@ async function getManualPushClients(): Promise<ManualPushClientRow[]> {
   const portalAccountIds = portalAccounts.map((row) => row.id)
 
   const [clientsResult, subscriptionsResult] = await Promise.all([
-    client.database.from("clients").select("id,first_name,last_name").in("id", clientIds),
+    client.database.from("clients").select("id,first_name,last_name").eq("gym_id", gym.id).in("id", clientIds),
     client.database
       .from("push_subscriptions")
       .select("client_portal_account_id,is_active")
+      .eq("gym_id", gym.id)
       .in("client_portal_account_id", portalAccountIds)
       .eq("is_active", true)
   ])

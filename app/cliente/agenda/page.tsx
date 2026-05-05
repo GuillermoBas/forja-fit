@@ -4,6 +4,9 @@ import { CalendarSkeleton } from "@/components/skeletons"
 import { AgendaCalendar } from "@/features/client-portal/agenda-calendar"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { getClientCalendarSessions, getPortalShellData } from "@/features/client-portal/data"
+import { PortalContentError } from "@/features/client-portal/portal-content-error"
+import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
+import { isNextControlError } from "@/lib/next-control-errors"
 
 type AgendaView = "week" | "month"
 
@@ -57,10 +60,21 @@ async function AgendaData({
     view === "month"
       ? endOfWeek(endOfMonth(baseDate))
       : endOfWeek(addDays(rangeStart, 0))
-  const sessions = await getClientCalendarSessions(
-    rangeStart.toISOString(),
-    rangeEnd.toISOString()
-  )
+  let sessions
+
+  try {
+    sessions = await getClientCalendarSessions(
+      rangeStart.toISOString(),
+      rangeEnd.toISOString()
+    )
+  } catch (error) {
+    if (isNextControlError(error)) {
+      throw error
+    }
+
+    console.error("Portal agenda load failed", error)
+    return <PortalContentError title="No se pudo cargar la agenda" />
+  }
 
   return (
     <AgendaCalendar
@@ -72,7 +86,18 @@ async function AgendaData({
 }
 
 async function PortalIdentity() {
-  const shellData = await getPortalShellData()
+  let shellData
+
+  try {
+    shellData = await getPortalShellData()
+  } catch (error) {
+    if (isNextControlError(error)) {
+      throw error
+    }
+
+    console.error("Portal identity load failed", error)
+    return null
+  }
 
   return <PortalShellMeta clientName={shellData.client.fullName} />
 }
@@ -96,6 +121,7 @@ export default async function ClientPortalAgendaPage({
       <Suspense fallback={<CalendarSkeleton />}>
         <AgendaData view={view} selectedDate={selectedDate} />
       </Suspense>
+      <NutritionAssistantSlot />
     </>
   )
 }

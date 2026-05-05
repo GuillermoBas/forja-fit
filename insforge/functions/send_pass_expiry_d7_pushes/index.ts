@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,7 +19,7 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any) {
+async function requireStaffActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -29,6 +29,7 @@ async function requireStaffActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -63,12 +64,17 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
     const runForDate = madridDateString(body?.runOn)
     const expiresOn = addDays(runForDate, 7)
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
     if ("error" in actor) {
       return actor.error
     }
@@ -76,6 +82,7 @@ export default async function(request: Request) {
     const passesResult = await client.database
       .from("passes")
       .select("id,pass_type_id,expires_on,sessions_left,status")
+      .eq("gym_id", gymId)
       .eq("expires_on", expiresOn)
       .in("status", ["active", "paused", "out_of_sessions"])
 
@@ -89,10 +96,10 @@ export default async function(request: Request) {
 
     const [holdersResult, passTypesResult] = await Promise.all([
       passIds.length
-        ? client.database.from("pass_holders").select("pass_id,client_id").in("pass_id", passIds)
+        ? client.database.from("pass_holders").select("pass_id,client_id").eq("gym_id", gymId).in("pass_id", passIds)
         : { data: [], error: null },
       passTypeIds.length
-        ? client.database.from("pass_types").select("id,name").in("id", passTypeIds)
+        ? client.database.from("pass_types").select("id,name").eq("gym_id", gymId).in("id", passTypeIds)
         : { data: [], error: null }
     ])
 
@@ -128,6 +135,8 @@ export default async function(request: Request) {
 
       const result = await client.functions.invoke("send_client_communication", {
         body: {
+          gymId,
+          gymSlug,
           clientIds: holderIds,
           passId: pass.id,
           eventType: "pass_expiry_d7",

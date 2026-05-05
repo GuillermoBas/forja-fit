@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { isClientPreview } from "@/lib/preview-mode"
+import { withGymContext } from "@/lib/tenant"
 
 export type PortalSettingsState = {
   error?: string
@@ -33,7 +34,7 @@ export async function updatePortalPhoneAction(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ phone })
+    body: JSON.stringify(await withGymContext({ phone }))
   })
 
   const payload = (await response.json().catch(() => null)) as
@@ -79,7 +80,7 @@ async function callPortalSettingsFunction(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({})
+    body: JSON.stringify(await withGymContext({}))
   })
 
   const payload = (await response.json().catch(() => null)) as

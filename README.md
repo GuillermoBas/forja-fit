@@ -72,6 +72,14 @@ Estado actual de Fase 2, Fase 6:
 - se ha preparado una checklist de smoke test especifica de Fase 2 para validar separacion staff/cliente, nutricion y soporte operativo
 - quedan documentados los pasos de despliegue en InsForge Deployments para migraciones SQL, Functions y build final
 
+## Fase 1 multitenant por subdominio
+
+Trainium resuelve el gimnasio activo desde el host. El gimnasio inicial es `eltemplo`, accesible en `eltemplo.trainium.es`; el dominio raiz `trainium.es` no resuelve gimnasio y no debe mostrar datos operativos. En local y preview se usa `TRAINIUM_DEFAULT_GYM_SLUG=eltemplo` como fallback explicito.
+
+La migracion `insforge/sql/032_multitenant_subdomains.sql` crea `gyms`, inserta `eltemplo` de forma idempotente, anade `gym_id` obligatorio a todas las tablas tenantables, migra todos los datos existentes a `eltemplo.id`, reemplaza constraints globales por constraints por gimnasio y prepara facturas con contador independiente por `gym_id`.
+
+Despues de aplicar la migracion no existe modo legacy: cualquier tabla tenantable debe tener `gym_id NOT NULL` y `COUNT(*) WHERE gym_id IS NULL = 0`. Las Functions reciben el contexto de gimnasio desde el subdominio y todas las rutas staff/portal consultan filtrando por `gym_id`.
+
 Orden de rollout de Fase 2:
 
 1. `client portal auth`
@@ -113,6 +121,8 @@ npm install
 - `NEXT_PUBLIC_INSFORGE_URL`
 - `NEXT_PUBLIC_INSFORGE_ANON_KEY`
 - `NEXT_PUBLIC_APP_URL` como fallback/canonical URL; los redirects de auth intentan usar primero el host publico de la request actual
+- `TRAINIUM_ROOT_DOMAIN=trainium.es`
+- `TRAINIUM_DEFAULT_GYM_SLUG=eltemplo`
 - `APP_TIMEZONE`
 - `BUSINESS_NAME`
 
@@ -509,7 +519,9 @@ npx @insforge/cli deployments list
 
 ```bash
 npx @insforge/cli deployments env list
-npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://app.trainium.es
+npx @insforge/cli deployments env set NEXT_PUBLIC_APP_URL https://eltemplo.trainium.es
+npx @insforge/cli deployments env set TRAINIUM_ROOT_DOMAIN trainium.es
+npx @insforge/cli deployments env set TRAINIUM_DEFAULT_GYM_SLUG eltemplo
 npm run deploy
 ```
 

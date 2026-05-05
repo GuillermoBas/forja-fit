@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { clearAuthCookies } from "@/lib/auth/cookies"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { resolvePublicOrigin } from "@/lib/public-origin"
+import { requireCurrentGym } from "@/lib/tenant"
 import {
   canBootstrapFirstAdmin,
   completeStaffAuthentication,
@@ -120,6 +121,7 @@ export async function bootstrapFirstAdminAction(
 
   try {
     const client = createServerInsforgeClient() as any
+    const gym = await requireCurrentGym()
     if (!(await canBootstrapFirstAdmin())) {
       return { error: "Ya existe un admin. El bootstrap inicial esta cerrado." }
     }
@@ -138,6 +140,7 @@ export async function bootstrapFirstAdminAction(
 
     const profileInsert = await client.database.from("profiles").insert([
       {
+        gym_id: gym.id,
         auth_user_id: signUp.data.user.id,
         full_name: fullName,
         email,

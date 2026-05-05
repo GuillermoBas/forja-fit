@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation"
 import {
-  clearPortalAuthCookies,
   getPortalAuthCookies,
   setPortalAuthCookies
 } from "@/lib/auth/portal-cookies"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { requireCurrentGym } from "@/lib/tenant"
 
 export type PortalActionState = {
   error?: string
@@ -72,29 +72,30 @@ export async function completePortalAuthentication({
   refreshToken,
   provider
 }: FinalizeAuthParams): Promise<PortalActionState> {
+  const gym = await requireCurrentGym()
+
+  await setPortalAuthCookies(accessToken, refreshToken ?? null)
+
   const claimResult = await invokePortalFunction<{ ok: boolean }>(
     "claim_client_portal_account",
     accessToken,
-    { provider }
+    { provider, gymId: gym.id, gymSlug: gym.slug }
   )
 
   if (claimResult.error) {
-    await clearPortalAuthCookies()
     return { error: claimResult.error.message }
   }
 
   const loginResult = await invokePortalFunction<{ ok: boolean }>(
     "record_client_portal_login",
     accessToken,
-    { provider }
+    { provider, gymId: gym.id, gymSlug: gym.slug }
   )
 
   if (loginResult.error) {
-    await clearPortalAuthCookies()
     return { error: loginResult.error.message }
   }
 
-  await setPortalAuthCookies(accessToken, refreshToken ?? null)
   redirect("/cliente/dashboard")
 }
 

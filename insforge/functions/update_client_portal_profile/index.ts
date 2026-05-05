@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -18,7 +18,11 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const phone = typeof body?.phone === "string" ? body.phone.trim() : ""
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     const client = createClient({
       baseUrl: BASE_URL,
@@ -34,6 +38,7 @@ export default async function(request: Request) {
       .from("client_portal_accounts")
       .select("*")
       .eq("auth_user_id", authResult.data.user.id)
+      .eq("gym_id", gymId)
       .maybeSingle()
 
     if (portalAccountResult.error || !portalAccountResult.data) {
@@ -63,6 +68,7 @@ export default async function(request: Request) {
         updated_at: new Date().toISOString()
       })
       .eq("id", portalAccountResult.data.client_id)
+      .eq("gym_id", gymId)
       .select("id,phone")
       .maybeSingle()
 
@@ -78,6 +84,7 @@ export default async function(request: Request) {
 
     const auditInsert = await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: null,
         entity_name: "clients",
         entity_id: portalAccountResult.data.client_id,

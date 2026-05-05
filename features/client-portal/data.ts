@@ -14,7 +14,7 @@ import {
   subMonths
 } from "date-fns"
 import { cache } from "react"
-import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
+import { requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isClientPreview } from "@/lib/preview-mode"
 import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
@@ -23,6 +23,7 @@ import {
   getPreviewClientCalendarSessions,
   getPreviewPortalDashboardData
 } from "@/features/client-portal/preview-data"
+import { requireCurrentGym } from "@/lib/tenant"
 import type { CalendarStatus, Client, Pass } from "@/types/domain"
 
 type DbRow = Record<string, unknown>
@@ -382,16 +383,13 @@ export const getPortalShellData = cache(async function getPortalShellData(): Pro
   }
 
   const portalAccount = await requirePortalAccount()
-  const accessToken = await getCurrentPortalAccessToken()
+  const gym = await requireCurrentGym()
 
-  if (!accessToken) {
-    throw new Error("No se ha podido recuperar la sesion del portal.")
-  }
-
-  const client = createServerInsforgeClient({ accessToken }) as any
+  const client = createServerInsforgeClient() as any
   const clientResult = await client.database
     .from("clients")
     .select("*")
+    .eq("gym_id", gym.id)
     .eq("id", portalAccount.clientId)
     .maybeSingle()
 
@@ -410,26 +408,23 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
   }
 
   const portalAccount = await requirePortalAccount()
-  const accessToken = await getCurrentPortalAccessToken()
-
-  if (!accessToken) {
-    throw new Error("No se ha podido recuperar la sesion del portal.")
-  }
 
   const rangeDays = parseRange(rangeParam)
-  const client = createServerInsforgeClient({ accessToken }) as any
+  const client = createServerInsforgeClient() as any
+  const gym = await requireCurrentGym()
 
   const [clientResult, holdersResult, passesResult, passTypesResult, sessionsResult, pausesResult, renewalsResult] =
     await Promise.all([
-      client.database.from("clients").select("*").eq("id", portalAccount.clientId).maybeSingle(),
-      client.database.from("pass_holders").select("*").eq("client_id", portalAccount.clientId),
-      client.database.from("passes").select("*").order("expires_on", { ascending: true }),
-      client.database.from("pass_types").select("*"),
-      client.database.from("session_consumptions").select("*").order("consumed_at", { ascending: false }),
-      client.database.from("pass_pauses").select("*").order("created_at", { ascending: false }),
+      client.database.from("clients").select("*").eq("gym_id", gym.id).eq("id", portalAccount.clientId).maybeSingle(),
+      client.database.from("pass_holders").select("*").eq("gym_id", gym.id).eq("client_id", portalAccount.clientId),
+      client.database.from("passes").select("*").eq("gym_id", gym.id).order("expires_on", { ascending: true }),
+      client.database.from("pass_types").select("*").eq("gym_id", gym.id),
+      client.database.from("session_consumptions").select("*").eq("gym_id", gym.id).order("consumed_at", { ascending: false }),
+      client.database.from("pass_pauses").select("*").eq("gym_id", gym.id).order("created_at", { ascending: false }),
       client.database
         .from("notification_log")
         .select("id,created_at,body,event_type,pass_id")
+        .eq("gym_id", gym.id)
         .eq("client_id", portalAccount.clientId)
         .in("event_type", ["renewal_confirmation", "pass_assigned"])
         .order("created_at", { ascending: false })
@@ -466,6 +461,7 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
   const holderRows = await client.database
     .from("pass_holders")
     .select("*")
+    .eq("gym_id", gym.id)
     .in("pass_id", relevantPasses.map((row) => String(row.id)))
     .order("holder_order", { ascending: true })
 
@@ -478,7 +474,7 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
   )
 
   const holderClientsResult = holderClientIds.length
-    ? await client.database.from("clients").select("id,first_name,last_name").in("id", holderClientIds)
+    ? await client.database.from("clients").select("id,first_name,last_name").eq("gym_id", gym.id).in("id", holderClientIds)
     : { data: [], error: null }
 
   if (holderClientsResult.error || !holderClientsResult.data) {
@@ -631,22 +627,19 @@ export const getClientCalendarSessions = cache(async function getClientCalendarS
   }
 
   const portalAccount = await requirePortalAccount()
-  const accessToken = await getCurrentPortalAccessToken()
+  const gym = await requireCurrentGym()
 
-  if (!accessToken) {
-    throw new Error("No se ha podido recuperar la sesion del portal.")
-  }
-
-  const client = createServerInsforgeClient({ accessToken }) as any
+  const client = createServerInsforgeClient() as any
   const [sessionsResult, profilesResult] = await Promise.all([
     client.database
       .from("calendar_sessions")
       .select("id,trainer_profile_id,client_1_id,client_2_id,starts_at,ends_at,status")
+      .eq("gym_id", gym.id)
       .or(`client_1_id.eq.${portalAccount.clientId},client_2_id.eq.${portalAccount.clientId}`)
       .gte("starts_at", rangeStart)
       .lte("starts_at", rangeEnd)
       .order("starts_at", { ascending: true }),
-    client.database.from("profiles").select("id,full_name")
+    client.database.from("profiles").select("id,full_name").eq("gym_id", gym.id)
   ])
 
   if (

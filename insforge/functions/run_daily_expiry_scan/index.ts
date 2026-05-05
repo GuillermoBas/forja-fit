@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -27,7 +27,7 @@ function addDays(dateString: string, days: number) {
   return date.toISOString().slice(0, 10)
 }
 
-async function getActor(client: any) {
+async function getActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -37,6 +37,7 @@ async function getActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -50,13 +51,13 @@ async function getActor(client: any) {
   return { profile: profileResult.data }
 }
 
-async function loadPassContext(client: any, passIds: string[]) {
+async function loadPassContext(client: any, gymId: string, passIds: string[]) {
   if (!passIds.length) {
     return { passTypes: new Map(), holdersByPass: new Map() }
   }
 
   const passTypeIds = new Set<string>()
-  const passesResult = await client.database.from("passes").select("id,pass_type_id").in("id", passIds)
+  const passesResult = await client.database.from("passes").select("id,pass_type_id").eq("gym_id", gymId).in("id", passIds)
   if (passesResult.error) {
     throw new Error(passesResult.error.message)
   }
@@ -66,9 +67,9 @@ async function loadPassContext(client: any, passIds: string[]) {
   }
 
   const [holdersResult, passTypesResult] = await Promise.all([
-    client.database.from("pass_holders").select("pass_id,client_id").in("pass_id", passIds),
+    client.database.from("pass_holders").select("pass_id,client_id").eq("gym_id", gymId).in("pass_id", passIds),
     passTypeIds.size
-      ? client.database.from("pass_types").select("id,name").in("id", Array.from(passTypeIds))
+      ? client.database.from("pass_types").select("id,name").eq("gym_id", gymId).in("id", Array.from(passTypeIds))
       : { data: [], error: null }
   ])
 
@@ -88,7 +89,7 @@ async function loadPassContext(client: any, passIds: string[]) {
   return { passTypes, holdersByPass }
 }
 
-async function sendExpiryCommunication(client: any, pass: Record<string, unknown>, eventType: string, context: any) {
+async function sendExpiryCommunication(client: any, gymId: string, gymSlug: string, pass: Record<string, unknown>, eventType: string, context: any) {
   const passId = String(pass.id)
   const holderIds = context.holdersByPass.get(passId) ?? []
   if (!holderIds.length) {
@@ -98,6 +99,8 @@ async function sendExpiryCommunication(client: any, pass: Record<string, unknown
   const result = await client.functions.invoke("send_client_communication", {
     body: {
       clientIds: holderIds,
+      gymId,
+      gymSlug,
       passId,
       eventType,
       channels: ["email", "push"],
@@ -125,11 +128,12 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const runForDate = madridDateString(body?.runOn)
     const d7Date = addDays(runForDate, 7)
 
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = await getActor(client)
+    const actor = await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
@@ -137,6 +141,7 @@ export default async function(request: Request) {
     const startJob = await client.database.from("job_runs").insert([
       {
         job_key: "daily_expiry_scan",
+        gym_id: gymId,
         run_for_date: runForDate,
         status: "started",
         details: { timezone: "Europe/Madrid" }
@@ -147,6 +152,7 @@ export default async function(request: Request) {
       if (String(startJob.error.message ?? "").toLowerCase().includes("duplicate")) {
         await client.database.from("audit_logs").insert([
           {
+            gym_id: gymId,
             actor_profile_id: actor.profile.id,
             entity_name: "job_runs",
             entity_id: null,
@@ -173,11 +179,13 @@ export default async function(request: Request) {
         client.database
           .from("passes")
           .select("id,pass_type_id,expires_on,sessions_left,status")
+          .eq("gym_id", gymId)
           .eq("expires_on", d7Date)
           .in("status", ["active", "paused", "out_of_sessions"]),
         client.database
           .from("passes")
           .select("id,pass_type_id,expires_on,sessions_left,status")
+          .eq("gym_id", gymId)
           .eq("expires_on", runForDate)
           .in("status", ["active", "paused", "out_of_sessions"])
       ])
@@ -189,10 +197,11 @@ export default async function(request: Request) {
       const d7Passes = (d7PassesResult.data ?? []) as Array<Record<string, unknown>>
       const d0Passes = (d0PassesResult.data ?? []) as Array<Record<string, unknown>>
       const passIds = Array.from(new Set([...d7Passes, ...d0Passes].map((pass) => String(pass.id))))
-      const context = await loadPassContext(client, passIds)
+      const context = await loadPassContext(client, gymId, passIds)
       const pausedPassesResult = await client.database
         .from("passes")
         .select("id,sessions_left,status")
+        .eq("gym_id", gymId)
         .eq("status", "paused")
 
       if (pausedPassesResult.error) {
@@ -204,6 +213,7 @@ export default async function(request: Request) {
         ? await client.database
             .from("pass_pauses")
             .select("pass_id,starts_on,ends_on,created_at")
+            .eq("gym_id", gymId)
             .in("pass_id", pausedPassIds)
             .order("created_at", { ascending: false })
         : { data: [], error: null }
@@ -223,14 +233,14 @@ export default async function(request: Request) {
       }
 
       for (const pass of d7Passes) {
-        const result = await sendExpiryCommunication(client, pass, "pass_expiry_d7", context)
+        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d7", context)
         summary.sent += Number(result.sent ?? 0)
         summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
         summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
       }
 
       for (const pass of d0Passes) {
-        const result = await sendExpiryCommunication(client, pass, "pass_expiry_d0", context)
+        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d0", context)
         summary.sent += Number(result.sent ?? 0)
         summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
         summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
@@ -239,6 +249,7 @@ export default async function(request: Request) {
       const expireResult = await client.database
         .from("passes")
         .update({ status: "expired" })
+        .eq("gym_id", gymId)
         .lt("expires_on", runForDate)
         .in("status", ["active", "paused", "out_of_sessions"])
         .select("id")
@@ -292,6 +303,7 @@ export default async function(request: Request) {
         const resumeActiveResult = await client.database
           .from("passes")
           .update({ status: "active" })
+          .eq("gym_id", gymId)
           .in("id", resumeIdsActive)
 
         if (resumeActiveResult.error) {
@@ -303,6 +315,7 @@ export default async function(request: Request) {
         const resumeOutOfSessionsResult = await client.database
           .from("passes")
           .update({ status: "out_of_sessions" })
+          .eq("gym_id", gymId)
           .in("id", resumeIdsOutOfSessions)
 
         if (resumeOutOfSessionsResult.error) {
@@ -315,6 +328,7 @@ export default async function(request: Request) {
       const completeResult = await client.database
         .from("job_runs")
         .update({ status: "completed", details: summary })
+        .eq("gym_id", gymId)
         .eq("id", jobRunId)
 
       if (completeResult.error) {
@@ -323,6 +337,7 @@ export default async function(request: Request) {
 
       await client.database.from("audit_logs").insert([
         {
+          gym_id: gymId,
           actor_profile_id: actor.profile.id,
           entity_name: "job_runs",
           entity_id: jobRunId,
@@ -335,6 +350,7 @@ export default async function(request: Request) {
     } catch (jobError) {
       await client.database.from("audit_logs").insert([
         {
+          gym_id: gymId,
           actor_profile_id: actor.profile.id,
           entity_name: "job_runs",
           entity_id: jobRunId,
@@ -352,6 +368,7 @@ export default async function(request: Request) {
           status: "failed",
           details: { error: jobError instanceof Error ? jobError.message : "unknown_error" }
         })
+        .eq("gym_id", gymId)
         .eq("id", jobRunId)
 
       throw jobError

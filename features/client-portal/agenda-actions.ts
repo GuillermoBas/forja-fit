@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
 import { isClientPreview } from "@/lib/preview-mode"
+import { withGymContext } from "@/lib/tenant"
 
 export type PortalAgendaActionState = {
   error?: string
@@ -45,7 +46,7 @@ async function invokePortalFunction(slug: string, body: Record<string, unknown>)
   }
 
   const client = createServerInsforgeClient({ accessToken }) as any
-  const result = await client.functions.invoke(slug, { body })
+  const result = await client.functions.invoke(slug, { body: await withGymContext(body) })
 
   if (result.error) {
     throw new Error(normalizePortalAgendaError(result.error.message))

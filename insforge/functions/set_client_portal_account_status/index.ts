@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -10,7 +10,7 @@ function json(data: unknown, status = 200) {
   })
 }
 
-async function getActor(client: any) {
+async function getActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -20,6 +20,7 @@ async function getActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -41,8 +42,13 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const clientId = typeof body?.clientId === "string" ? body.clientId.trim() : ""
     const status = typeof body?.status === "string" ? body.status.trim() : ""
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     if (!clientId) {
       return json({ code: "INVALID_INPUT", message: "El cliente es obligatorio" }, 400)
@@ -57,7 +63,7 @@ export default async function(request: Request) {
       edgeFunctionToken: token
     })
 
-    const actor = await getActor(client)
+    const actor = await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
@@ -65,6 +71,7 @@ export default async function(request: Request) {
     const portalAccountResult = await client.database
       .from("client_portal_accounts")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("client_id", clientId)
       .maybeSingle()
 
@@ -83,6 +90,7 @@ export default async function(request: Request) {
         updated_at: new Date().toISOString()
       })
       .eq("id", portalAccountResult.data.id)
+      .eq("gym_id", gymId)
       .select("*")
       .maybeSingle()
 
@@ -92,6 +100,7 @@ export default async function(request: Request) {
 
     const auditInsert = await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: actor.profile.id,
         entity_name: "client_portal_accounts",
         entity_id: portalAccountResult.data.id,

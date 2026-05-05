@@ -57,7 +57,7 @@ export default async function ClientDetailPage({
     getPasses(),
     getNotifications(),
     getSales(),
-    getPassTypes(),
+    getPassTypes({ includeInactive: true }),
     getClientHistory(id),
     getCurrentProfile(),
     getClientPortalAccountByClientId(id),
@@ -66,6 +66,7 @@ export default async function ClientDetailPage({
   ])
 
   const passes = allPasses.filter((item) => item.holderClientIds.includes(client.id))
+  const activePassTypes = passTypes.filter((item) => item.isActive)
   const clientNotifications = notifications.filter((item) => item.clientName === client.fullName)
   const clientSales = sales.filter((item) => item.clientName === client.fullName)
   const canManagePasses = isAdmin(profile?.role)
@@ -296,7 +297,7 @@ export default async function ClientDetailPage({
         <CreatePassForm
           clientId={client.id}
           clients={allClients}
-          passTypes={passTypes}
+          passTypes={activePassTypes}
           trainerProfiles={trainerProfiles}
         />
         <PausePassForm clientId={client.id} passes={passes} />

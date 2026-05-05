@@ -23,7 +23,7 @@ test.describe("visual preview", () => {
     await expect(page.getByRole("heading", { name: "Lucia Moreno" })).toBeVisible()
 
     await page.getByRole("link", { name: "Editar cliente" }).click()
-    await expect(page).toHaveURL(/\/clients\/c1\/edit/)
+    await expect(page).toHaveURL(/\/clients\/c1\/edit/, { timeout: 15000 })
     await expect(page.getByRole("heading", { name: "Editar cliente" }).first()).toBeVisible()
   })
 

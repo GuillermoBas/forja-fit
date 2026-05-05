@@ -4,6 +4,7 @@ import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { getPortalAuthCookies, setPortalAuthCookies } from "@/lib/auth/portal-cookies"
 import { getPreviewPortalAccount } from "@/features/client-portal/preview-data"
 import { isClientPreview } from "@/lib/preview-mode"
+import { getCurrentGym } from "@/lib/tenant"
 import type { ClientPortalAccountSummary } from "@/types/domain"
 
 type PortalAuthUser = {
@@ -17,9 +18,37 @@ type PortalAuthSession = {
   accessToken: string
 }
 
+async function invokePortalSessionRepair(
+  slug: "claim_client_portal_account" | "record_client_portal_login",
+  session: PortalAuthSession,
+  gym: { id: string; slug: string }
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL
+
+  if (!baseUrl) {
+    return false
+  }
+
+  const response = await fetch(`${baseUrl}/functions/${slug}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider: "password",
+      gymId: gym.id,
+      gymSlug: gym.slug
+    })
+  })
+
+  return response.ok
+}
+
 function mapPortalAccountRow(row: Record<string, unknown>): ClientPortalAccountSummary {
   return {
     id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
     clientId: String(row.client_id),
     authUserId: String(row.auth_user_id),
     email: String(row.email ?? ""),
@@ -27,6 +56,41 @@ function mapPortalAccountRow(row: Record<string, unknown>): ClientPortalAccountS
     primaryProvider: String(row.primary_provider ?? "password") as ClientPortalAccountSummary["primaryProvider"],
     claimedAt: String(row.claimed_at ?? ""),
     lastLoginAt: row.last_login_at ? String(row.last_login_at) : null
+  }
+}
+
+async function loadPortalAccountForSession(session: PortalAuthSession, gymId: string) {
+  const client = createServerInsforgeClient() as any
+  const result = await client.database
+    .from("client_portal_accounts")
+    .select("*")
+    .eq("auth_user_id", session.user.id)
+    .eq("gym_id", gymId)
+    .maybeSingle()
+
+  if (result.error || !result.data) {
+    return null
+  }
+
+  return mapPortalAccountRow(result.data as Record<string, unknown>)
+}
+
+async function repairPortalAccountForSession(session: PortalAuthSession, gym: { id: string; slug: string }) {
+  if (!session.user.email) {
+    return null
+  }
+
+  try {
+    const claimed = await invokePortalSessionRepair("claim_client_portal_account", session, gym)
+
+    if (!claimed) {
+      return null
+    }
+
+    await invokePortalSessionRepair("record_client_portal_login", session, gym)
+    return loadPortalAccountForSession(session, gym.id)
+  } catch {
+    return null
   }
 }
 
@@ -115,18 +179,18 @@ export const getCurrentPortalAccount = cache(async function getCurrentPortalAcco
   }
 
   try {
-    const client = createServerInsforgeClient({ accessToken: session.accessToken }) as any
-    const result = await client.database
-      .from("client_portal_accounts")
-      .select("*")
-      .eq("auth_user_id", session.user.id)
-      .maybeSingle()
-
-    if (result.error || !result.data) {
+    const gym = await getCurrentGym()
+    if (!gym) {
       return null
     }
 
-    return mapPortalAccountRow(result.data as Record<string, unknown>)
+    const account = await loadPortalAccountForSession(session, gym.id)
+
+    if (account) {
+      return account
+    }
+
+    return repairPortalAccountForSession(session, gym)
   } catch {
     return null
   }

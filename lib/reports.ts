@@ -4,6 +4,7 @@ import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { demoExpenses, demoPasses, demoProducts, demoSales } from "@/lib/demo-data"
 import { formatPaymentMethod } from "@/lib/utils"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getCurrentGym } from "@/lib/tenant"
 
 type DbRow = Record<string, unknown>
 
@@ -34,16 +35,25 @@ async function createAuthedClient() {
     return null
   }
 
+  const gym = await getCurrentGym()
+  if (!gym) {
+    return null
+  }
+
   const accessToken = await getCurrentAccessToken()
   if (!accessToken) {
     return null
   }
 
   try {
-    return createServerInsforgeClient({ accessToken }) as any
+    return Object.assign(createServerInsforgeClient({ accessToken }) as any, { __gymId: gym.id })
   } catch {
     return null
   }
+}
+
+function getClientGymId(client: any) {
+  return String(client.__gymId ?? "")
 }
 
 function mapEmailQualityClient(row: DbRow): EmailQualityItem {
@@ -153,16 +163,17 @@ export async function getReportsData(options?: {
       clientEmailQuality: buildClientEmailQualityReport([])
     }
   }
+  const gymId = getClientGymId(client)
 
   const [salesResult, saleItemsResult, productsResult, passesResult, passTypesResult, expensesResult, clientsResult] =
     await Promise.all([
-      client.database.from("sales").select("*").order("sold_at", { ascending: false }),
-      client.database.from("sale_items").select("*"),
-      client.database.from("products").select("*"),
-      client.database.from("passes").select("*"),
-      client.database.from("pass_types").select("*"),
-      client.database.from("expenses").select("*").order("spent_on", { ascending: false }),
-      client.database.from("clients").select("id,first_name,last_name,email")
+      client.database.from("sales").select("*").eq("gym_id", gymId).order("sold_at", { ascending: false }),
+      client.database.from("sale_items").select("*").eq("gym_id", gymId),
+      client.database.from("products").select("*").eq("gym_id", gymId),
+      client.database.from("passes").select("*").eq("gym_id", gymId),
+      client.database.from("pass_types").select("*").eq("gym_id", gymId),
+      client.database.from("expenses").select("*").eq("gym_id", gymId).order("spent_on", { ascending: false }),
+      client.database.from("clients").select("id,first_name,last_name,email").eq("gym_id", gymId)
     ])
 
   let portalAccountsResult: { data?: unknown; error?: unknown } | null = null
@@ -170,6 +181,7 @@ export async function getReportsData(options?: {
     portalAccountsResult = await client.database
       .from("client_portal_accounts")
       .select("client_id,auth_user_id,claimed_at,status")
+      .eq("gym_id", gymId)
   } catch {
     portalAccountsResult = null
   }

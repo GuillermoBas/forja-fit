@@ -140,6 +140,7 @@ export async function upsertStaffUserAction(
       const existingProfile = await adminClient.database
         .from("profiles")
         .select("id")
+        .eq("gym_id", profile.gymId)
         .eq("email", email)
         .maybeSingle()
 
@@ -179,6 +180,7 @@ export async function upsertStaffUserAction(
 
       const profileInsert = await adminClient.database.from("profiles").insert([
         {
+          gym_id: profile.gymId,
           auth_user_id: authUserId,
           full_name: fullName,
           email,
@@ -193,6 +195,7 @@ export async function upsertStaffUserAction(
 
       const auditInsert = await adminClient.database.from("audit_logs").insert([
         {
+          gym_id: profile.gymId,
           actor_profile_id: profile.id,
           entity_name: "profiles",
           entity_id: profileInsert.data.id,

@@ -6,6 +6,9 @@ import { getPortalShellData } from "@/features/client-portal/data"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { PushNotificationSettings } from "@/features/client-portal/push/push-notification-settings"
 import { getPortalPushSettingsData } from "@/features/client-portal/push/server"
+import { PortalContentError } from "@/features/client-portal/portal-content-error"
+import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
+import { isNextControlError } from "@/lib/next-control-errors"
 
 function SettingsFallback() {
   return (
@@ -18,11 +21,24 @@ function SettingsFallback() {
 }
 
 async function SettingsData() {
-  const [shellData, nutritionData, pushData] = await Promise.all([
-    getPortalShellData(),
-    getPortalNutritionData(),
-    getPortalPushSettingsData()
-  ])
+  let shellData
+  let nutritionData
+  let pushData
+
+  try {
+    ;[shellData, nutritionData, pushData] = await Promise.all([
+      getPortalShellData(),
+      getPortalNutritionData(),
+      getPortalPushSettingsData()
+    ])
+  } catch (error) {
+    if (isNextControlError(error)) {
+      throw error
+    }
+
+    console.error("Portal settings load failed", error)
+    return <PortalContentError title="No se pudieron cargar los ajustes" />
+  }
 
   return (
     <div className="space-y-5">
@@ -43,6 +59,7 @@ export default function ClientPortalSettingsPage() {
       <Suspense fallback={<SettingsFallback />}>
         <SettingsData />
       </Suspense>
+      <NutritionAssistantSlot />
     </>
   )
 }

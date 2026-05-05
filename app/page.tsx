@@ -5,6 +5,7 @@ import { ArrowRight, ShieldCheck, UserRound } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { getCurrentProfile } from "@/lib/auth/session"
 import { getCurrentPortalAccount } from "@/lib/auth/portal-session"
+import { getCurrentGym } from "@/lib/tenant"
 
 const accessOptions = [
   {
@@ -22,10 +23,38 @@ const accessOptions = [
 ]
 
 export default async function HomePage() {
-  const [profile, portalAccount] = await Promise.all([
+  const [gym, profile, portalAccount] = await Promise.all([
+    getCurrentGym(),
     getCurrentProfile(),
     getCurrentPortalAccount()
   ])
+
+  if (!gym) {
+    return (
+      <main className="mobile-page-shell flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <Card className="w-full max-w-lg rounded-2xl border-border/90 bg-surface p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-primary/15 bg-surface p-2">
+            <Image
+              src="/trainium-logo-full.png"
+              alt="Logo de Trainium"
+              width={160}
+              height={160}
+              priority
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <h1 className="mt-5 font-heading text-2xl font-bold text-text-primary">
+            Elige tu gimnasio
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-text-secondary">
+            Accede desde el subdominio asignado a tu centro, por ejemplo
+            {" "}
+            <span className="font-semibold text-text-primary">eltemplo.trainium.es</span>.
+          </p>
+        </Card>
+      </main>
+    )
+  }
 
   if (profile) {
     redirect("/dashboard")

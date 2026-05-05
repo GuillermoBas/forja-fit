@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,7 +19,7 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any) {
+async function requireStaffActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -29,6 +29,7 @@ async function requireStaffActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -54,9 +55,15 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
     const clientId = typeof body?.clientId === "string" ? body.clientId : ""
     const eventType = typeof body?.eventType === "string" ? body.eventType : ""
     const preferenceKey = PREFERENCE_BY_EVENT[eventType]
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     if (!clientId || !body?.dedupeKey || !body?.title || !body?.body) {
       return json({ code: "INVALID_INPUT", message: "Faltan datos para enviar push al cliente" }, 400)
@@ -64,7 +71,7 @@ export default async function(request: Request) {
 
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
     if ("error" in actor) {
       return actor.error
     }
@@ -72,6 +79,7 @@ export default async function(request: Request) {
     const existingLog = await client.database
       .from("notification_log")
       .select("id,status")
+      .eq("gym_id", gymId)
       .eq("dedupe_key", String(body.dedupeKey))
       .maybeSingle()
 
@@ -82,6 +90,7 @@ export default async function(request: Request) {
     const accountResult = await client.database
       .from("client_portal_accounts")
       .select("id,status")
+      .eq("gym_id", gymId)
       .eq("client_id", clientId)
       .eq("status", "claimed")
       .maybeSingle()
@@ -89,6 +98,7 @@ export default async function(request: Request) {
     if (accountResult.error || !accountResult.data) {
       await client.database.from("notification_log").insert([
         {
+          gym_id: gymId,
           client_id: clientId,
           pass_id: body.passId ?? null,
           channel: "push",
@@ -108,12 +118,14 @@ export default async function(request: Request) {
     const preferenceResult = await client.database
       .from("push_preferences")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("client_portal_account_id", accountResult.data.id)
       .maybeSingle()
 
     if (preferenceKey && preferenceResult.data && preferenceResult.data[preferenceKey] === false) {
       await client.database.from("notification_log").insert([
         {
+          gym_id: gymId,
           client_id: clientId,
           pass_id: body.passId ?? null,
           channel: "push",
@@ -133,6 +145,7 @@ export default async function(request: Request) {
     const subscriptionsResult = await client.database
       .from("push_subscriptions")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("client_portal_account_id", accountResult.data.id)
       .eq("is_active", true)
 
@@ -142,6 +155,8 @@ export default async function(request: Request) {
 
     const sendResult = await client.functions.invoke("send_push_notification", {
       body: {
+        gymId,
+        gymSlug,
         subscriptions: subscriptionsResult.data ?? [],
         title: body.title,
         body: body.body,

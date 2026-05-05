@@ -12,6 +12,7 @@ import type {
 
 export const demoProfile: Profile = {
   id: "demo-admin",
+  gymId: "visual-preview-gym",
   email: "admin@trainium.local",
   fullName: "Admin Trainium",
   role: "admin",

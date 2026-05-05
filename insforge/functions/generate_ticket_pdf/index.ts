@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -54,7 +54,7 @@ function buildSimplePdf(lines: string[]) {
   return new TextEncoder().encode(pdf)
 }
 
-async function getActor(client: any) {
+async function getActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -64,6 +64,7 @@ async function getActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -81,6 +82,7 @@ export default async function(request: Request) {
     }
 
     const body = await request.json()
+    const gymId = String(body?.gymId ?? "")
     if (!body?.saleId) {
       return json({ code: "INVALID_INPUT", message: "La venta es obligatoria" }, 400)
     }
@@ -89,12 +91,12 @@ export default async function(request: Request) {
       edgeFunctionToken: token
     })
 
-    const actor = await getActor(client)
+    const actor = await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
 
-    const saleResult = await client.database.from("sales").select("*").eq("id", body.saleId).maybeSingle()
+    const saleResult = await client.database.from("sales").select("*").eq("gym_id", gymId).eq("id", body.saleId).maybeSingle()
     if (saleResult.error || !saleResult.data) {
       return json({ code: "NOT_FOUND", message: "Venta no encontrada" }, 404)
     }
@@ -102,6 +104,7 @@ export default async function(request: Request) {
     const itemsResult = await client.database
       .from("sale_items")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("sale_id", body.saleId)
       .order("created_at", { ascending: true })
 
@@ -125,7 +128,8 @@ export default async function(request: Request) {
     }
 
     const bytes = buildSimplePdf(lines)
-    const key = `${sale.id}/${Date.now()}-${sale.invoice_code}.pdf`
+    const gymSlug = String(body?.gymSlug ?? actor.profile.gym_slug ?? "eltemplo")
+    const key = `${gymSlug}/${sale.id}/${Date.now()}-${sale.invoice_code}.pdf`
     const file = new File([bytes], `${sale.invoice_code}.pdf`, { type: "application/pdf" })
 
     const uploadResult = await client.storage.from("tickets").upload(key, file)
@@ -140,6 +144,7 @@ export default async function(request: Request) {
         ticket_public_url: uploadResult.data.url
       })
       .eq("id", sale.id)
+      .eq("gym_id", gymId)
 
     if (updateResult.error) {
       return json({ code: "DB_ERROR", message: updateResult.error.message }, 400)
@@ -147,6 +152,7 @@ export default async function(request: Request) {
 
     await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: actor.profile.id,
         entity_name: "sales",
         entity_id: sale.id,

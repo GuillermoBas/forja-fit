@@ -8,6 +8,9 @@ import { ActivityHistoryList } from "@/features/client-portal/activity-history-l
 import { ActivityRangeLinks } from "@/features/client-portal/activity-range-links"
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
 import { getPortalDashboardData } from "@/features/client-portal/data"
+import { PortalContentError } from "@/features/client-portal/portal-content-error"
+import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
+import { isNextControlError } from "@/lib/next-control-errors"
 
 function parseParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value
@@ -27,7 +30,19 @@ function DashboardDataFallback() {
 }
 
 async function DashboardData({ rangeParam }: { rangeParam?: string }) {
-  const data = await getPortalDashboardData(rangeParam)
+  let data
+
+  try {
+    data = await getPortalDashboardData(rangeParam)
+  } catch (error) {
+    if (isNextControlError(error)) {
+      throw error
+    }
+
+    console.error("Portal dashboard load failed", error)
+    return <PortalContentError title="No se pudo cargar la actividad" />
+  }
+
   const monthlyConsistencyPercent = Math.round(data.kpis.monthlyConsistency.ratio * 100)
 
   return (
@@ -115,6 +130,7 @@ export default async function ClientPortalDashboardPage({
       <Suspense fallback={<DashboardDataFallback />}>
         <DashboardData rangeParam={parseParam(resolvedSearchParams?.range)} />
       </Suspense>
+      <NutritionAssistantSlot />
     </>
   )
 }

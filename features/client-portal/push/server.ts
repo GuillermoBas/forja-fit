@@ -1,7 +1,8 @@
-import { getCurrentPortalAccessToken, requirePortalAccount } from "@/lib/auth/portal-session"
+import { requirePortalAccount } from "@/lib/auth/portal-session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isClientPreview } from "@/lib/preview-mode"
 import { getPreviewPortalPushSettingsData } from "@/features/client-portal/preview-data"
+import { requireCurrentGym } from "@/lib/tenant"
 
 export type PortalPushPreferences = {
   passExpiryEnabled: boolean
@@ -26,20 +27,14 @@ export async function getPortalPushSettingsData(): Promise<PortalPushSettingsDat
   }
 
   const portalAccount = await requirePortalAccount()
-  const accessToken = await getCurrentPortalAccessToken()
-
-  if (!accessToken) {
-    return {
-      vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null,
-      preferences: defaultPreferences
-    }
-  }
 
   try {
-    const client = createServerInsforgeClient({ accessToken }) as any
+    const gym = await requireCurrentGym()
+    const client = createServerInsforgeClient() as any
     const result = await client.database
       .from("push_preferences")
       .select("*")
+      .eq("gym_id", gym.id)
       .eq("client_portal_account_id", portalAccount.id)
       .maybeSingle()
 

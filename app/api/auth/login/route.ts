@@ -7,6 +7,7 @@ import {
   refreshCookieMaxAge
 } from "@/lib/auth/cookies"
 import { buildAbsoluteAppUrl, resolvePublicOriginFromRequest } from "@/lib/public-origin"
+import { getCurrentGym } from "@/lib/tenant"
 
 function looksLikePendingEmailVerification(message?: string) {
   const normalized = String(message ?? "").toLowerCase()
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
   }
 
   try {
+    const gym = await getCurrentGym()
+    if (!gym) {
+      const message = encodeURIComponent("Este dominio no tiene un gimnasio activo asociado.")
+      return NextResponse.redirect(buildAbsoluteAppUrl(`/login?error=${message}`, publicOrigin))
+    }
+
     const client = createServerInsforgeClient() as any
     const result = await client.auth.signInWithPassword({ email, password })
 
@@ -56,6 +63,7 @@ export async function POST(request: Request) {
       .from("profiles")
       .select("id,role,is_active")
       .eq("auth_user_id", result.data.user?.id ?? "")
+      .eq("gym_id", gym.id)
       .maybeSingle()
 
     if (profileResult.error || !profileResult.data) {

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -17,6 +17,9 @@ export default async function(request: Request) {
       return json({ code: "UNAUTHORIZED", message: "Falta token" }, 401)
     }
 
+    const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+
     const client = createClient({
       baseUrl: BASE_URL,
       edgeFunctionToken: token
@@ -28,7 +31,8 @@ export default async function(request: Request) {
     }
 
     const rpcResult = await client.database.rpc("app_ensure_client_nutrition_thread", {
-      p_auth_user_id: authResult.data.user.id
+      p_auth_user_id: authResult.data.user.id,
+      p_gym_id: gymId,
     })
 
     if (rpcResult.error || !rpcResult.data) {

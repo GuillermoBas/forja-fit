@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,7 +19,7 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any) {
+async function requireStaffActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -29,6 +29,7 @@ async function requireStaffActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -87,6 +88,7 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const now = parseNow(body?.nowIso)
     if (!now) {
       return json({ code: "INVALID_INPUT", message: "La fecha de referencia no es valida." }, 400)
@@ -96,7 +98,7 @@ export default async function(request: Request) {
     const runForDate = madridDateString(now)
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "system" } } : await requireStaffActor(client)
+    const actor = trusted ? { profile: { id: null, role: "system" } } : await requireStaffActor(client, gymId)
 
     if ("error" in actor) {
       return actor.error
@@ -104,6 +106,7 @@ export default async function(request: Request) {
 
     const startJob = await client.database.from("job_runs").insert([
       {
+        gym_id: gymId,
         job_key: "auto_consume_calendar_sessions",
         run_for_date: runForDate,
         status: "started",
@@ -131,6 +134,7 @@ export default async function(request: Request) {
     const sessionsResult = await client.database
       .from("calendar_sessions")
       .select("id,trainer_profile_id,client_1_id,client_2_id,pass_id,starts_at,ends_at,status")
+      .eq("gym_id", gymId)
       .in("status", ["scheduled", "completed"])
       .lte("ends_at", consumeBefore)
       .order("ends_at", { ascending: true })
@@ -139,7 +143,7 @@ export default async function(request: Request) {
       await client.database.from("job_runs").update({
         status: "failed",
         details: { error: sessionsResult.error.message }
-      }).eq("id", jobRunId)
+      }).eq("id", jobRunId).eq("gym_id", gymId)
       return json({ code: "SESSIONS_LOAD_FAILED", message: sessionsResult.error.message }, 400)
     }
 
@@ -154,7 +158,7 @@ export default async function(request: Request) {
           updated_sessions: 0,
           skipped: 0
         }
-      }).eq("id", jobRunId)
+      }).eq("id", jobRunId).eq("gym_id", gymId)
 
       return json({
         ok: true,
@@ -168,11 +172,12 @@ export default async function(request: Request) {
 
     const sessionIds = sessions.map((session) => String(session.id))
     const [sessionPassesResult, holdersResult, linkedConsumptionsResult] = await Promise.all([
-      client.database.from("calendar_session_passes").select("session_id,pass_id").in("session_id", sessionIds),
-      client.database.from("pass_holders").select("pass_id,client_id,holder_order"),
+      client.database.from("calendar_session_passes").select("session_id,pass_id").eq("gym_id", gymId).in("session_id", sessionIds),
+      client.database.from("pass_holders").select("pass_id,client_id,holder_order").eq("gym_id", gymId),
       client.database
         .from("session_consumptions")
         .select("id,pass_id,calendar_session_id,consumed_at,consumption_source")
+        .eq("gym_id", gymId)
         .in("calendar_session_id", sessionIds)
     ])
 
@@ -186,7 +191,7 @@ export default async function(request: Request) {
             linkedConsumptionsResult.error?.message ??
             "No se pudieron cargar los datos relacionados"
         }
-      }).eq("id", jobRunId)
+      }).eq("id", jobRunId).eq("gym_id", gymId)
       return json(
         {
           code: "RELATED_LOAD_FAILED",
@@ -222,12 +227,13 @@ export default async function(request: Request) {
     )
 
     const [passesResult, passTypesResult, manualConsumptionsResult] = await Promise.all([
-      client.database.from("passes").select("id,pass_type_id,status,sessions_left").in("id", allPassIds),
-      client.database.from("pass_types").select("id,kind"),
+      client.database.from("passes").select("id,pass_type_id,status,sessions_left").eq("gym_id", gymId).in("id", allPassIds),
+      client.database.from("pass_types").select("id,kind").eq("gym_id", gymId),
       allPassIds.length
         ? client.database
             .from("session_consumptions")
             .select("id,pass_id,client_id,consumed_at,calendar_session_id,consumption_source")
+            .eq("gym_id", gymId)
             .in("pass_id", allPassIds)
             .is("calendar_session_id", null)
             .order("consumed_at", { ascending: true })
@@ -244,7 +250,7 @@ export default async function(request: Request) {
             manualConsumptionsResult.error?.message ??
             "No se pudieron cargar los bonos"
         }
-      }).eq("id", jobRunId)
+      }).eq("id", jobRunId).eq("gym_id", gymId)
       return json(
         {
           code: "PASS_DATA_LOAD_FAILED",
@@ -333,12 +339,13 @@ export default async function(request: Request) {
               consumption_source: String(matchedManual.consumption_source ?? "manual") || "manual"
             })
             .eq("id", matchedManual.id)
+            .eq("gym_id", gymId)
 
           if (linkResult.error) {
             await client.database.from("job_runs").update({
               status: "failed",
               details: { error: linkResult.error.message }
-            }).eq("id", jobRunId)
+            }).eq("id", jobRunId).eq("gym_id", gymId)
             return json({ code: "LINK_MANUAL_FAILED", message: linkResult.error.message }, 400)
           }
 
@@ -357,6 +364,7 @@ export default async function(request: Request) {
 
         const insertResult = await client.database.from("session_consumptions").insert([
           {
+            gym_id: gymId,
             pass_id: passId,
             client_id: consumptionClientId,
             consumed_at: String(session.ends_at),
@@ -371,7 +379,7 @@ export default async function(request: Request) {
           await client.database.from("job_runs").update({
             status: "failed",
             details: { error: insertResult.error.message }
-          }).eq("id", jobRunId)
+          }).eq("id", jobRunId).eq("gym_id", gymId)
           return json({ code: "AUTO_CONSUME_FAILED", message: insertResult.error.message }, 400)
         }
 
@@ -388,12 +396,13 @@ export default async function(request: Request) {
             updated_at: now.toISOString()
           })
           .eq("id", sessionId)
+          .eq("gym_id", gymId)
 
         if (completeResult.error) {
           await client.database.from("job_runs").update({
             status: "failed",
             details: { error: completeResult.error.message }
-          }).eq("id", jobRunId)
+          }).eq("id", jobRunId).eq("gym_id", gymId)
           return json({ code: "SESSION_COMPLETE_FAILED", message: completeResult.error.message }, 400)
         }
 
@@ -410,11 +419,12 @@ export default async function(request: Request) {
         updated_sessions: updatedSessions,
         skipped
       }
-    }).eq("id", jobRunId)
+    }).eq("id", jobRunId).eq("gym_id", gymId)
 
     if (actor.profile.id) {
       await client.database.from("audit_logs").insert([
         {
+          gym_id: gymId,
           actor_profile_id: actor.profile.id,
           entity_name: "job_runs",
           entity_id: jobRunId,

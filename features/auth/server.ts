@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { clearAuthCookies, setAuthCookies } from "@/lib/auth/cookies"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
+import { getCurrentGym } from "@/lib/tenant"
 
 export type StaffAuthActionState = {
   error?: string
@@ -18,11 +19,17 @@ type FinalizeStaffAuthParams = {
 
 export async function canBootstrapFirstAdmin() {
   try {
+    const gym = await getCurrentGym()
+    if (!gym) {
+      return false
+    }
+
     const client = createServerInsforgeClient() as any
     const result = await client.database
       .from("profiles")
       .select("id", { count: "exact" })
       .eq("role", "admin")
+      .eq("gym_id", gym.id)
 
     return (result.count ?? 0) === 0
   } catch {
@@ -36,6 +43,12 @@ export async function completeStaffAuthentication({
 }: FinalizeStaffAuthParams): Promise<StaffAuthActionState> {
   try {
     const client = createServerInsforgeClient({ accessToken }) as any
+    const gym = await getCurrentGym()
+    if (!gym) {
+      await clearAuthCookies()
+      return { error: "Este dominio no tiene un gimnasio activo asociado." }
+    }
+
     const currentUser = await client.auth.getCurrentUser()
 
     if (currentUser.error || !currentUser.data?.user?.id) {
@@ -47,6 +60,7 @@ export async function completeStaffAuthentication({
       .from("profiles")
       .select("id,role,is_active")
       .eq("auth_user_id", currentUser.data.user.id)
+      .eq("gym_id", gym.id)
       .maybeSingle()
 
     if (profileResult.error || !profileResult.data) {

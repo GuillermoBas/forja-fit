@@ -4,6 +4,9 @@ import { Card } from "@/components/ui/card"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { WeeklyNutritionPlansList } from "@/features/client-portal/nutrition/weekly-plans-list"
+import { PortalContentError } from "@/features/client-portal/portal-content-error"
+import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
+import { isNextControlError } from "@/lib/next-control-errors"
 
 function NutritionFallback() {
   return (
@@ -15,7 +18,18 @@ function NutritionFallback() {
 }
 
 async function NutritionData() {
-  const data = await getPortalNutritionData()
+  let data
+
+  try {
+    data = await getPortalNutritionData()
+  } catch (error) {
+    if (isNextControlError(error)) {
+      throw error
+    }
+
+    console.error("Portal nutrition load failed", error)
+    return <PortalContentError title="No se pudo cargar nutricion" />
+  }
 
   return (
     <section className="space-y-4">
@@ -52,6 +66,7 @@ export default function ClientPortalNutritionPage() {
       <Suspense fallback={<NutritionFallback />}>
         <NutritionData />
       </Suspense>
+      <NutritionAssistantSlot />
     </>
   )
 }

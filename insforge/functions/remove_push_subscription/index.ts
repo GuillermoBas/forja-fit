@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -14,7 +14,7 @@ function getToken(request: Request) {
   return request.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
 }
 
-async function requirePortalAccount(client: any) {
+async function requirePortalAccount(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user?.id) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -24,6 +24,7 @@ async function requirePortalAccount(client: any) {
     .from("client_portal_accounts")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (accountResult.error || !accountResult.data) {
@@ -58,14 +59,19 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const endpoint = typeof body?.endpoint === "string" ? body.endpoint.trim() : ""
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
 
     if (!endpoint) {
       return json({ code: "INVALID_INPUT", message: "Falta endpoint del dispositivo" }, 400)
     }
 
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const portal = await requirePortalAccount(client)
+    const portal = await requirePortalAccount(client, gymId)
     if (portal.error) {
       return portal.error
     }
@@ -76,6 +82,7 @@ export default async function(request: Request) {
         is_active: false,
         revoked_at: new Date().toISOString()
       })
+      .eq("gym_id", gymId)
       .eq("endpoint", endpoint)
       .eq("client_portal_account_id", portal.account.id)
       .select("id")

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -16,7 +16,7 @@ function normalizeReminderType(reminderType: string) {
   return ""
 }
 
-async function getActor(client: any) {
+async function getActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -26,6 +26,7 @@ async function getActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -47,20 +48,26 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
     const eventType = normalizeReminderType(String(body?.reminderType ?? ""))
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
+
     if (!body?.passId || !eventType) {
       return json({ code: "INVALID_INPUT", message: "Pass y reminderType son obligatorios" }, 400)
     }
 
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = await getActor(client)
+    const actor = await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
 
     const [passResult, holdersResult] = await Promise.all([
-      client.database.from("passes").select("id,pass_type_id,expires_on,sessions_left").eq("id", body.passId).maybeSingle(),
-      client.database.from("pass_holders").select("client_id").eq("pass_id", body.passId)
+      client.database.from("passes").select("id,pass_type_id,expires_on,sessions_left").eq("gym_id", gymId).eq("id", body.passId).maybeSingle(),
+      client.database.from("pass_holders").select("client_id").eq("gym_id", gymId).eq("pass_id", body.passId)
     ])
 
     if (passResult.error || !passResult.data) {
@@ -75,11 +82,14 @@ export default async function(request: Request) {
     const passTypeResult = await client.database
       .from("pass_types")
       .select("name")
+      .eq("gym_id", gymId)
       .eq("id", passResult.data.pass_type_id)
       .maybeSingle()
 
     const sendResult = await client.functions.invoke("send_client_communication", {
       body: {
+        gymId,
+        gymSlug,
         clientIds: holderIds,
         passId: passResult.data.id,
         eventType,

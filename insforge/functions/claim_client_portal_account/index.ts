@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -42,6 +42,7 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const provider = body?.provider
 
     if (!provider) {
@@ -60,6 +61,7 @@ export default async function(request: Request) {
 
     const rpcResult = await client.database.rpc("app_claim_client_portal_account", {
       p_auth_user_id: authResult.data.user.id,
+      p_gym_id: gymId,
       p_email: authResult.data.user.email,
       p_provider: provider
     })

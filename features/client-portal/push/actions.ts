@@ -2,6 +2,7 @@
 
 import { getCurrentPortalAccessToken } from "@/lib/auth/portal-session"
 import { isClientPreview } from "@/lib/preview-mode"
+import { withGymContext } from "@/lib/tenant"
 
 type ActionResult<T = unknown> = {
   ok: boolean
@@ -34,7 +35,7 @@ async function invokePortalPushFunction<T>(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(await withGymContext(body))
   })
 
   const payload = await response.json().catch(() => null)

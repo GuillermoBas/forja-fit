@@ -244,17 +244,14 @@ function AgendaModal({
   const [formState, formAction] = useActionState(upsertCalendarSessionAction, {})
   const [deleteState, deleteAction] = useActionState(cancelCalendarSessionAction, {})
   const editingSession = state?.mode === "edit" ? state.session : null
-  const isReadOnly = editingSession?.status === "completed"
-  const canManage = Boolean(!isReadOnly && (editingSession
+  const canManage = Boolean(editingSession
     ? currentProfile.role === "admin" || editingSession.trainerProfileId === currentProfile.id
-    : canManageSelectedTrainer))
+    : canManageSelectedTrainer)
   const modalIdentity = state?.mode === "create" ? state.slot.startsAt : editingSession?.id
   const initialSelectedPassIds = state?.mode === "edit" ? state.session.passIds : []
   const [selectedPassIds, setSelectedPassIds] = useState<string[]>(initialSelectedPassIds)
   const [passSearch, setPassSearch] = useState("")
-  const eligiblePasses = passes.filter(
-    (pass) => pass.status === "active" || (editingSession?.passIds ?? []).includes(pass.id)
-  )
+  const eligiblePasses = passes
   const normalizedPassSearch = normalizeSearchText(passSearch)
   const visiblePasses = eligiblePasses.filter((pass) => {
     if (!normalizedPassSearch) {
@@ -291,11 +288,6 @@ function AgendaModal({
             <h3 className="mt-2 font-heading text-2xl font-bold text-text-primary">
               {state.mode === "create" ? "Agendar sesión" : "Detalle de sesión"}
             </h3>
-            {isReadOnly ? (
-              <p className="mt-2 text-sm text-text-secondary">
-                Esta cita está marcada como consumida y queda en solo lectura.
-              </p>
-            ) : null}
           </div>
           <Button type="button" variant="ghost" className="rounded-2xl" onClick={onClose}>
             Cerrar

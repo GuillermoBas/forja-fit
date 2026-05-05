@@ -12,6 +12,7 @@ import { appConfig, isInsforgeConfigured } from "@/lib/config"
 import { getCurrentAccessToken, getSessionContext } from "@/lib/auth/session"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getCurrentGym } from "@/lib/tenant"
 import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 import { getEffectivePassStatus } from "@/lib/utils"
 import type {
@@ -55,16 +56,25 @@ async function createAuthedClient() {
     return null
   }
 
+  const gym = await getCurrentGym()
+  if (!gym) {
+    return null
+  }
+
   const accessToken = await getCurrentAccessToken()
   if (!accessToken) {
     return null
   }
 
   try {
-    return createServerInsforgeClient({ accessToken }) as any
+    return Object.assign(createServerInsforgeClient({ accessToken }) as any, { __gymId: gym.id })
   } catch {
     return null
   }
+}
+
+function getClientGymId(client: any) {
+  return String(client.__gymId ?? "")
 }
 
 function decodeHtmlEntities(value: string) {
@@ -139,6 +149,7 @@ function mapBusinessSettingsRow(row: DbRow): BusinessSettings {
 function mapClientPortalAccountRow(row: DbRow): ClientPortalAccountSummary {
   return {
     id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
     clientId: String(row.client_id),
     authUserId: String(row.auth_user_id),
     email: String(row.email ?? ""),
@@ -276,13 +287,14 @@ async function getPassDataFromDb() {
   if (!client) {
     return null
   }
+  const gymId = getClientGymId(client)
 
   const [passesResult, passTypesResult, clientsResult, holdersResult, pausesResult] = await Promise.all([
-    client.database.from("passes").select("*").order("created_at", { ascending: false }),
-    client.database.from("pass_types").select("*"),
-    client.database.from("clients").select("*"),
-    client.database.from("pass_holders").select("*").order("holder_order", { ascending: true }),
-    client.database.from("pass_pauses").select("pass_id,starts_on,ends_on,created_at").order("created_at", { ascending: false })
+    client.database.from("passes").select("*").eq("gym_id", gymId).order("created_at", { ascending: false }),
+    client.database.from("pass_types").select("*").eq("gym_id", gymId),
+    client.database.from("clients").select("*").eq("gym_id", gymId),
+    client.database.from("pass_holders").select("*").eq("gym_id", gymId).order("holder_order", { ascending: true }),
+    client.database.from("pass_pauses").select("pass_id,starts_on,ends_on,created_at").eq("gym_id", gymId).order("created_at", { ascending: false })
   ])
 
   if (
@@ -440,10 +452,12 @@ export async function getClients(): Promise<Client[]> {
   if (!client) {
     return demoClients
   }
+  const gymId = getClientGymId(client)
 
   const result = await client.database
     .from("clients")
     .select("*")
+    .eq("gym_id", gymId)
     .order("last_name", { ascending: true })
     .order("first_name", { ascending: true })
 
@@ -459,8 +473,9 @@ export async function getClientById(id: string): Promise<Client | null> {
   if (!client) {
     return (await getClients()).find((item) => item.id === id) ?? null
   }
+  const gymId = getClientGymId(client)
 
-  const result = await client.database.from("clients").select("*").eq("id", id).maybeSingle()
+  const result = await client.database.from("clients").select("*").eq("gym_id", gymId).eq("id", id).maybeSingle()
   if (result.error || !result.data) {
     return null
   }
@@ -475,11 +490,13 @@ export async function getClientPortalAccountByClientId(
   if (!client) {
     return null
   }
+  const gymId = getClientGymId(client)
 
   try {
     const result = await client.database
       .from("client_portal_accounts")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("client_id", clientId)
       .maybeSingle()
 
@@ -500,10 +517,12 @@ export async function getClientPortalSupportState(
   if (!client) {
     return null
   }
+  const gymId = getClientGymId(client)
 
   const clientResult = await client.database
     .from("clients")
     .select("id,email")
+    .eq("gym_id", gymId)
     .eq("id", clientId)
     .maybeSingle()
 
@@ -542,6 +561,7 @@ export async function getClientPortalSupportState(
   const duplicateResult = await client.database
     .from("clients")
     .select("id", { count: "exact" })
+    .eq("gym_id", gymId)
     .eq("email", email)
 
   const emailMatchCount = duplicateResult.count ?? 0
@@ -591,15 +611,16 @@ export async function getPassTypes(options?: { includeInactive?: boolean }): Pro
     const fallback = options?.includeInactive ? demoPassTypes : demoPassTypes.filter((item) => item.isActive)
     return mapFallbackPassTypes(fallback)
   }
+  const gymId = getClientGymId(client)
 
-  let query = client.database.from("pass_types").select("*").order("sort_order", { ascending: true })
+  let query = client.database.from("pass_types").select("*").eq("gym_id", gymId).order("sort_order", { ascending: true })
   if (!options?.includeInactive) {
     query = query.eq("is_active", true)
   }
 
   const [result, passesResult] = await Promise.all([
     query,
-    client.database.from("passes").select("id,pass_type_id")
+    client.database.from("passes").select("id,pass_type_id").eq("gym_id", gymId)
   ])
 
   if (result.error || !result.data) {
@@ -659,10 +680,11 @@ export async function getProducts(): Promise<Product[]> {
   if (!client) {
     return mapFallbackProducts(demoProducts)
   }
+  const gymId = getClientGymId(client)
 
   const [result, saleItemsResult] = await Promise.all([
-    client.database.from("products").select("*").order("name", { ascending: true }),
-    client.database.from("sale_items").select("product_id").eq("item_type", "product")
+    client.database.from("products").select("*").eq("gym_id", gymId).order("name", { ascending: true }),
+    client.database.from("sale_items").select("product_id").eq("gym_id", gymId).eq("item_type", "product")
   ])
 
   if (result.error || !result.data) {
@@ -699,6 +721,7 @@ export async function getStaffProfiles(): Promise<StaffProfileSummary[]> {
   if (!client) {
     return []
   }
+  const gymId = getClientGymId(client)
 
   const { profile } = await getSessionContext()
   if (!profile) {
@@ -709,6 +732,7 @@ export async function getStaffProfiles(): Promise<StaffProfileSummary[]> {
     client.database
       .from("profiles")
       .select("id,full_name,email,role,is_active")
+      .eq("gym_id", gymId)
       .in("role", ["admin", "trainer"])
       .order("full_name", { ascending: true }),
     client.database.rpc("app_get_staff_verification_states", {
@@ -751,8 +775,9 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
   if (!client) {
     return fallback
   }
+  const gymId = getClientGymId(client)
 
-  const result = await client.database.from("settings").select("*").limit(1).maybeSingle()
+  const result = await client.database.from("settings").select("*").eq("gym_id", gymId).limit(1).maybeSingle()
   if (result.error || !result.data) {
     return fallback
   }
@@ -765,11 +790,12 @@ export async function getSales(): Promise<Sale[]> {
   if (!client) {
     return demoSales
   }
+  const gymId = getClientGymId(client)
 
   const [salesResult, clientsResult, saleItemsResult] = await Promise.all([
-    client.database.from("sales").select("*").order("sold_at", { ascending: false }),
-    client.database.from("clients").select("*"),
-    client.database.from("sale_items").select("sale_id,item_type")
+    client.database.from("sales").select("*").eq("gym_id", gymId).order("sold_at", { ascending: false }),
+    client.database.from("clients").select("*").eq("gym_id", gymId),
+    client.database.from("sale_items").select("sale_id,item_type").eq("gym_id", gymId)
   ])
 
   if (
@@ -824,8 +850,9 @@ export async function getExpenses(): Promise<Expense[]> {
   if (!client) {
     return demoExpenses
   }
+  const gymId = getClientGymId(client)
 
-  const result = await client.database.from("expenses").select("*").order("spent_on", { ascending: false })
+  const result = await client.database.from("expenses").select("*").eq("gym_id", gymId).order("spent_on", { ascending: false })
   if (result.error || !result.data) {
     return demoExpenses
   }
@@ -838,10 +865,11 @@ export async function getNotifications(): Promise<NotificationLogItem[]> {
   if (!client) {
     return demoNotifications
   }
+  const gymId = getClientGymId(client)
 
   const [notificationsResult, clientsResult] = await Promise.all([
-    client.database.from("notification_log").select("*").order("created_at", { ascending: false }),
-    client.database.from("clients").select("*")
+    client.database.from("notification_log").select("*").eq("gym_id", gymId).order("created_at", { ascending: false }),
+    client.database.from("clients").select("*").eq("gym_id", gymId)
   ])
 
   if (
@@ -868,15 +896,16 @@ export async function getCalendarSessions(): Promise<CalendarSession[]> {
   if (!client) {
     return demoCalendarSessions
   }
+  const gymId = getClientGymId(client)
 
   const [sessionsResult, profilesResult, clientsResult, sessionPassesResult, passesResult, passTypesResult, holdersResult] = await Promise.all([
-    client.database.from("calendar_sessions").select("*").order("starts_at", { ascending: true }),
-    client.database.from("profiles").select("id,full_name,calendar_color"),
-    client.database.from("clients").select("id,first_name,last_name"),
-    client.database.from("calendar_session_passes").select("*"),
-    client.database.from("passes").select("id,pass_type_id"),
-    client.database.from("pass_types").select("id,name"),
-    client.database.from("pass_holders").select("*").order("holder_order", { ascending: true })
+    client.database.from("calendar_sessions").select("*").eq("gym_id", gymId).order("starts_at", { ascending: true }),
+    client.database.from("profiles").select("id,full_name,calendar_color").eq("gym_id", gymId),
+    client.database.from("clients").select("id,first_name,last_name").eq("gym_id", gymId),
+    client.database.from("calendar_session_passes").select("*").eq("gym_id", gymId),
+    client.database.from("passes").select("id,pass_type_id").eq("gym_id", gymId),
+    client.database.from("pass_types").select("id,name").eq("gym_id", gymId),
+    client.database.from("pass_holders").select("*").eq("gym_id", gymId).order("holder_order", { ascending: true })
   ])
 
   if (
@@ -962,10 +991,12 @@ export async function getTrainerProfiles(): Promise<Array<{ id: string; fullName
   if (!client) {
     return []
   }
+  const gymId = getClientGymId(client)
 
   const result = await client.database
     .from("profiles")
     .select("id,full_name,role,is_active,calendar_color")
+    .eq("gym_id", gymId)
     .eq("is_active", true)
     .in("role", ["admin", "trainer"])
     .order("full_name", { ascending: true })
@@ -987,10 +1018,12 @@ export async function getClientHistory(clientId: string): Promise<ClientHistoryI
   if (!client) {
     return []
   }
+  const gymId = getClientGymId(client)
 
   const passIdsResult = await client.database
     .from("pass_holders")
     .select("pass_id")
+    .eq("gym_id", gymId)
     .eq("client_id", clientId)
 
   const passIds = (passIdsResult.data ?? []).map((row: any) => String(row.pass_id))
@@ -1000,15 +1033,17 @@ export async function getClientHistory(clientId: string): Promise<ClientHistoryI
       ? client.database
           .from("session_consumptions")
           .select("*")
+          .eq("gym_id", gymId)
           .in("pass_id", passIds)
           .order("consumed_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     passIds.length
-      ? client.database.from("pass_pauses").select("*").in("pass_id", passIds).order("created_at", { ascending: false })
+      ? client.database.from("pass_pauses").select("*").eq("gym_id", gymId).in("pass_id", passIds).order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     client.database
       .from("notification_log")
       .select("*")
+      .eq("gym_id", gymId)
       .eq("client_id", clientId)
       .order("created_at", { ascending: false })
   ])

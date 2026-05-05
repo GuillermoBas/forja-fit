@@ -485,7 +485,6 @@ export function PassEditorForm({
                   name="sessionsLeft"
                   type="number"
                   min={0}
-                  max={maxSessions}
                   defaultValue={pass.sessionsLeft ?? maxSessions}
                 />
               </div>

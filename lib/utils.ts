@@ -8,7 +8,6 @@ import type {
   Pass,
   PaymentMethod
 } from "@/types/domain"
-import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -63,45 +62,10 @@ export function formatPassStatus(value: Pass["status"] | string) {
   }
 }
 
-function getBaseActivePassStatus(
-  pass: Pick<Pass, "passKind" | "sessionsLeft">
-): Extract<Pass["status"], "active" | "out_of_sessions"> {
-  if (pass.passKind === "session" && typeof pass.sessionsLeft === "number" && pass.sessionsLeft <= 0) {
-    return "out_of_sessions"
-  }
-
-  return "active"
-}
-
 export function getEffectivePassStatus(
   pass: Pick<Pass, "status" | "expiresOn" | "passKind" | "sessionsLeft" | "pauseStartsOn" | "pauseEndsOn">,
-  todayKey = getTodayDateKeyInAppTimeZone()
+  _todayKey?: string
 ): Pass["status"] {
-  if (pass.status === "cancelled" || pass.status === "expired") {
-    return pass.status
-  }
-
-  if (pass.expiresOn && pass.expiresOn < todayKey) {
-    return "expired"
-  }
-
-  if (pass.status === "paused") {
-    const hasPauseWindow = Boolean(pass.pauseStartsOn && pass.pauseEndsOn)
-    const isPauseActive = hasPauseWindow
-      && String(pass.pauseStartsOn) <= todayKey
-      && todayKey <= String(pass.pauseEndsOn)
-
-    if (isPauseActive) {
-      return "paused"
-    }
-
-    return getBaseActivePassStatus(pass)
-  }
-
-  if (pass.status === "active" || pass.status === "out_of_sessions") {
-    return getBaseActivePassStatus(pass)
-  }
-
   return pass.status
 }
 

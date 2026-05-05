@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -10,7 +10,7 @@ function json(data: unknown, status = 200) {
   })
 }
 
-async function getActor(client: any) {
+async function getActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -20,6 +20,7 @@ async function getActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -29,15 +30,15 @@ async function getActor(client: any) {
   return { profile: profileResult.data }
 }
 
-async function notifyPassAssigned(client: any, passId: string) {
+async function notifyPassAssigned(client: any, gymId: string, gymSlug: string, passId: string) {
   if (!passId) {
     return
   }
 
   try {
     const [passResult, holdersResult] = await Promise.all([
-      client.database.from("passes").select("id,pass_type_id,expires_on").eq("id", passId).maybeSingle(),
-      client.database.from("pass_holders").select("client_id").eq("pass_id", passId)
+      client.database.from("passes").select("id,pass_type_id,expires_on").eq("gym_id", gymId).eq("id", passId).maybeSingle(),
+      client.database.from("pass_holders").select("client_id").eq("gym_id", gymId).eq("pass_id", passId)
     ])
 
     if (passResult.error || !passResult.data || holdersResult.error || !holdersResult.data) {
@@ -47,6 +48,7 @@ async function notifyPassAssigned(client: any, passId: string) {
     const passTypeResult = await client.database
       .from("pass_types")
       .select("name")
+      .eq("gym_id", gymId)
       .eq("id", passResult.data.pass_type_id)
       .maybeSingle()
 
@@ -55,6 +57,8 @@ async function notifyPassAssigned(client: any, passId: string) {
 
     await client.functions.invoke("send_client_communication", {
       body: {
+        gymId,
+        gymSlug,
         clientIds: holdersResult.data.map((holder) => String(holder.client_id)),
         passId,
         eventType: "pass_assigned",
@@ -79,6 +83,11 @@ export default async function(request: Request) {
     }
 
     const body = await request.json()
+    const gymId = String(body?.gymId ?? "")
+    const gymSlug = String(body?.gymSlug ?? "eltemplo")
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
     if (!body?.passId || !body?.passTypeId || !body?.paymentMethod || !body?.contractedOn) {
       return json({ code: "INVALID_INPUT", message: "Faltan datos de renovacion" }, 400)
     }
@@ -106,7 +115,7 @@ export default async function(request: Request) {
       edgeFunctionToken: token
     })
 
-    const actor = await getActor(client)
+    const actor = await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
@@ -126,7 +135,7 @@ export default async function(request: Request) {
     }
 
     const renewedPassId = rpcResult.data?.pass_id ?? null
-    await notifyPassAssigned(client, renewedPassId)
+    await notifyPassAssigned(client, gymId, gymSlug, renewedPassId)
 
     return json({
       ok: true,

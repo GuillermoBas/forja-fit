@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@insforge/sdk"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -14,7 +14,7 @@ function getToken(request: Request) {
   return request.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
 }
 
-async function requirePortalAccount(client: any) {
+async function requirePortalAccount(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user?.id) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -24,6 +24,7 @@ async function requirePortalAccount(client: any) {
     .from("client_portal_accounts")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (accountResult.error || !accountResult.data) {
@@ -62,6 +63,7 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const updates: Record<string, boolean> = {}
 
     const passExpiry = optionalBoolean(body?.passExpiryEnabled)
@@ -72,12 +74,16 @@ export default async function(request: Request) {
     if (passAssigned !== undefined) updates.pass_assigned_enabled = passAssigned
     if (sessionReminders !== undefined) updates.session_reminders_enabled = sessionReminders
 
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
+
     if (!Object.keys(updates).length) {
       return json({ code: "INVALID_INPUT", message: "No hay preferencias validas para actualizar" }, 400)
     }
 
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const portal = await requirePortalAccount(client)
+    const portal = await requirePortalAccount(client, gymId)
     if (portal.error) {
       return portal.error
     }
@@ -85,6 +91,7 @@ export default async function(request: Request) {
     const existing = await client.database
       .from("push_preferences")
       .select("id")
+      .eq("gym_id", gymId)
       .eq("client_portal_account_id", portal.account.id)
       .maybeSingle()
 
@@ -92,12 +99,13 @@ export default async function(request: Request) {
       ? await client.database
           .from("push_preferences")
           .update(updates)
+          .eq("gym_id", gymId)
           .eq("client_portal_account_id", portal.account.id)
           .select("*")
           .single()
       : await client.database
           .from("push_preferences")
-          .insert([{ client_portal_account_id: portal.account.id, ...updates }])
+          .insert([{ gym_id: gymId, client_portal_account_id: portal.account.id, ...updates }])
           .select("*")
           .single()
 

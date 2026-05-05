@@ -5,6 +5,7 @@ import { isClientPreview } from "@/lib/preview-mode"
 import { getPreviewPortalNutritionData } from "@/features/client-portal/preview-data"
 import type { Client } from "@/types/domain"
 import { nutritionAssistantConfig } from "@/features/client-portal/nutrition/config"
+import { requireCurrentGym, withGymContext } from "@/lib/tenant"
 
 type DbRow = Record<string, unknown>
 type DayKey = "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "sabado" | "domingo"
@@ -225,7 +226,7 @@ async function callPortalFunction<T>(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body ?? {})
+    body: JSON.stringify(await withGymContext(body ?? {}))
   })
 
   const payload = await response.json().catch(() => null) as
@@ -335,8 +336,10 @@ export async function deletePortalWeeklyNutritionPlans(accessToken: string) {
 
 export async function getPortalNutritionQuotaStatus(accessToken: string, authUserId: string) {
   const client = createServerInsforgeClient({ accessToken }) as any
+  const gym = await requireCurrentGym()
   const result = await client.database.rpc("app_get_client_nutrition_quota_status", {
-    p_auth_user_id: authUserId
+    p_auth_user_id: authUserId,
+    p_gym_id: gym.id
   })
 
   if (result.error || !result.data) {
@@ -346,12 +349,14 @@ export async function getPortalNutritionQuotaStatus(accessToken: string, authUse
   return mapQuota(result.data as DbRow)
 }
 
-async function buildRecentTrainingSummary(accessToken: string, clientId: string) {
-  const client = createServerInsforgeClient({ accessToken }) as any
+async function buildRecentTrainingSummary(clientId: string) {
+  const client = createServerInsforgeClient() as any
+  const gym = await requireCurrentGym()
   const since = subDays(new Date(), 30).toISOString()
   const sessionsResult = await client.database
     .from("session_consumptions")
     .select("id,consumed_at,notes")
+    .eq("gym_id", gym.id)
     .eq("client_id", clientId)
     .gte("consumed_at", since)
     .order("consumed_at", { ascending: false })
@@ -385,24 +390,28 @@ export async function loadPortalNutritionConversation(
   threadId: string | null,
   authUserId: string
 ) {
-  const client = createServerInsforgeClient({ accessToken }) as any
+  const client = createServerInsforgeClient() as any
+  const gym = await requireCurrentGym()
 
   const [clientResult, profileResult, quota, trainingSummary, plansResult] = await Promise.all([
     client.database
       .from("clients")
       .select("id,first_name,last_name,email,phone,notes,is_active")
+      .eq("gym_id", gym.id)
       .eq("id", clientId)
       .maybeSingle(),
     client.database
       .from("client_nutrition_profiles")
       .select("*")
+      .eq("gym_id", gym.id)
       .eq("client_id", clientId)
       .maybeSingle(),
     getPortalNutritionQuotaStatus(accessToken, authUserId),
-    buildRecentTrainingSummary(accessToken, clientId),
+    buildRecentTrainingSummary(clientId),
     client.database
       .from("weekly_nutrition_plans")
       .select("*")
+      .eq("gym_id", gym.id)
       .eq("client_id", clientId)
       .order("week_starts_on", { ascending: false })
   ])
@@ -417,6 +426,7 @@ export async function loadPortalNutritionConversation(
     const messagesResult = await client.database
       .from("nutrition_messages")
       .select("*")
+      .eq("gym_id", gym.id)
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true })
 

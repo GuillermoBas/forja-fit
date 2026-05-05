@@ -8,6 +8,7 @@ import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { invokeProtectedFunction, toActionError } from "@/lib/actions"
 import { isStaffPreview } from "@/lib/preview-mode"
 import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
+import { requireCurrentGym } from "@/lib/tenant"
 
 export type ClientActionState = {
   error?: string
@@ -53,7 +54,8 @@ async function createAuthedDatabaseClient() {
     throw new Error("La sesión ha caducado. Vuelve a iniciar sesión.")
   }
 
-  return createServerInsforgeClient({ accessToken }) as any
+  const gym = await requireCurrentGym()
+  return Object.assign(createServerInsforgeClient({ accessToken }) as any, { __gymId: gym.id })
 }
 
 function parseSchedulePattern(formData: FormData) {
@@ -85,9 +87,11 @@ function parseSchedulePattern(formData: FormData) {
 
 async function getPassTypeScheduleMeta(passTypeId: string): Promise<PassTypeScheduleMeta | null> {
   const client = await createAuthedDatabaseClient()
+  const gymId = String(client.__gymId ?? "")
   const result = await client.database
     .from("pass_types")
     .select("kind,sessions_total")
+    .eq("gym_id", gymId)
     .eq("id", passTypeId)
     .maybeSingle()
 
@@ -307,6 +311,7 @@ export async function deleteClientAction(
     }
 
     const accessToken = await getCurrentAccessToken()
+    const gym = await requireCurrentGym()
     const client = accessToken ? (createServerInsforgeClient({ accessToken }) as any) : null
 
     if (!client) {
@@ -315,20 +320,23 @@ export async function deleteClientAction(
 
     const [passesResult, salesResult, notificationsResult, calendarResult] = await Promise.all([
       Promise.all([
-        client.database.from("pass_holders").select("id", { count: "exact" }).eq("client_id", clientId),
-        client.database.from("passes").select("id", { count: "exact" }).eq("purchased_by_client_id", clientId)
+        client.database.from("pass_holders").select("id", { count: "exact" }).eq("gym_id", gym.id).eq("client_id", clientId),
+        client.database.from("passes").select("id", { count: "exact" }).eq("gym_id", gym.id).eq("purchased_by_client_id", clientId)
       ]),
       client.database
         .from("sales")
         .select("id", { count: "exact" })
+        .eq("gym_id", gym.id)
         .eq("client_id", clientId),
       client.database
         .from("notification_log")
         .select("id", { count: "exact" })
+        .eq("gym_id", gym.id)
         .eq("client_id", clientId),
       client.database
         .from("calendar_sessions")
         .select("id", { count: "exact" })
+        .eq("gym_id", gym.id)
         .or(`client_1_id.eq.${clientId},client_2_id.eq.${clientId}`)
     ])
 

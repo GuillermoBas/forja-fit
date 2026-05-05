@@ -26,6 +26,7 @@ const previewClient: Client = {
 
 const previewPortalAccount: ClientPortalAccountSummary = {
   id: "preview-portal-account",
+  gymId: "visual-preview-gym",
   clientId: previewClient.id,
   authUserId: "preview-portal-auth-user",
   email: previewClient.email ?? "cliente.preview@trainium.local",

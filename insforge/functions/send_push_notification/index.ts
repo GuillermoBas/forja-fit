@@ -2,7 +2,7 @@
 import { createClient } from "npm:@insforge/sdk"
 import * as webpush from "jsr:@negrel/webpush"
 
-const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 const ALLOWED_EVENT_TYPES = new Set([
   "pass_expiry_d7",
   "pass_expiry_d0",
@@ -128,7 +128,7 @@ async function sendEncryptedPush({
   }
 }
 
-async function requireStaffActor(client: any) {
+async function requireStaffActor(client: any, gymId: string) {
   const authResult = await client.auth.getCurrentUser()
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
@@ -138,6 +138,7 @@ async function requireStaffActor(client: any) {
     .from("profiles")
     .select("*")
     .eq("auth_user_id", authResult.data.user.id)
+    .eq("gym_id", gymId)
     .maybeSingle()
 
   if (profileResult.error || !profileResult.data) {
@@ -155,6 +156,7 @@ export default async function(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
+    const gymId = String(body?.gymId ?? "")
     const subscriptions = Array.isArray(body?.subscriptions) ? body.subscriptions : []
     const title = typeof body?.title === "string" ? body.title.trim() : ""
     const notificationBody = typeof body?.body === "string" ? body.body.trim() : ""
@@ -164,13 +166,17 @@ export default async function(request: Request) {
     const clientId = typeof body?.clientId === "string" ? body.clientId : null
     const passId = typeof body?.passId === "string" ? body.passId : null
 
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
+    }
+
     if (!title || !notificationBody || !ALLOWED_EVENT_TYPES.has(eventType) || !dedupeKey) {
       return json({ code: "INVALID_INPUT", message: "Notificacion push incompleta" }, 400)
     }
 
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
     if ("error" in actor) {
       return actor.error
     }
@@ -178,6 +184,7 @@ export default async function(request: Request) {
     const existingLog = await client.database
       .from("notification_log")
       .select("id,status")
+      .eq("gym_id", gymId)
       .eq("dedupe_key", dedupeKey)
       .maybeSingle()
 
@@ -188,6 +195,7 @@ export default async function(request: Request) {
     if (!subscriptions.length) {
       await client.database.from("notification_log").insert([
         {
+          gym_id: gymId,
           client_id: clientId,
           pass_id: passId,
           channel: "push",
@@ -235,6 +243,7 @@ export default async function(request: Request) {
             .from("push_subscriptions")
             .update({ is_active: false, revoked_at: new Date().toISOString() })
             .eq("id", subscription.id)
+            .eq("gym_id", gymId)
         }
       }
     }
@@ -242,6 +251,7 @@ export default async function(request: Request) {
     const status = sent > 0 ? "sent" : "failed"
     await client.database.from("notification_log").insert([
       {
+        gym_id: gymId,
         client_id: clientId,
         pass_id: passId,
         channel: "push",
@@ -259,6 +269,7 @@ export default async function(request: Request) {
 
     await client.database.from("audit_logs").insert([
       {
+        gym_id: gymId,
         actor_profile_id: actor.profile.id,
         entity_name: "notification_log",
         entity_id: null,

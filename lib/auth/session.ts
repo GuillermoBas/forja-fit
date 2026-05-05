@@ -4,6 +4,7 @@ import { getAuthCookies, setAuthCookies } from "@/lib/auth/cookies"
 import { demoProfile } from "@/lib/demo-data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
+import { getCurrentGym } from "@/lib/tenant"
 import type { Profile } from "@/types/domain"
 
 type AuthUser = {
@@ -20,6 +21,7 @@ type AuthSession = {
 function mapProfileRow(row: Record<string, unknown>): Profile {
   return {
     id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
     email: String(row.email ?? ""),
     fullName: String(row.full_name ?? ""),
     role: String(row.role ?? "trainer") as Profile["role"],
@@ -127,11 +129,17 @@ async function getProfileForSession(session: AuthSession): Promise<Profile | nul
   }
 
   try {
+    const gym = await getCurrentGym()
+    if (!gym) {
+      return null
+    }
+
     const client = createServerInsforgeClient({ accessToken: session.accessToken }) as any
     const profileResult = await client.database
       .from("profiles")
       .select("*")
       .eq("auth_user_id", session.user.id)
+      .eq("gym_id", gym.id)
       .maybeSingle()
 
     if (profileResult.error || !profileResult.data) {
