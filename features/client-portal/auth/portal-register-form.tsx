@@ -58,7 +58,7 @@ export function PortalRegisterForm() {
       {!verificationRequired ? (
         <>
           <Button asChild variant="outline" className="w-full">
-            <Link href="/api/cliente/auth/oauth/google">Registrarme con Google</Link>
+            <Link href="/api/cliente/auth/oauth/google" prefetch={false}>Registrarme con Google</Link>
           </Button>
 
           <div className="space-y-3">

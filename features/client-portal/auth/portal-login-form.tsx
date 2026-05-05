@@ -63,7 +63,7 @@ export function PortalLoginForm({
       ) : null}
 
       <Button asChild variant="outline" className="w-full">
-        <Link href="/api/cliente/auth/oauth/google">Acceder con Google</Link>
+        <Link href="/api/cliente/auth/oauth/google" prefetch={false}>Acceder con Google</Link>
       </Button>
 
       <div className="space-y-3">

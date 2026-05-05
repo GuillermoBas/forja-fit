@@ -123,7 +123,7 @@ export function LoginForm({
       ) : (
         <>
           <Button asChild variant="outline" className="w-full">
-            <Link href="/api/auth/oauth/google">Acceder con Google</Link>
+            <Link href="/api/auth/oauth/google" prefetch={false}>Acceder con Google</Link>
           </Button>
 
           <div className="space-y-3">
