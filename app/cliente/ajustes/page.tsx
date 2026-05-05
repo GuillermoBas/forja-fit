@@ -7,7 +7,6 @@ import { getPortalNutritionData } from "@/features/client-portal/nutrition/serve
 import { PushNotificationSettings } from "@/features/client-portal/push/push-notification-settings"
 import { getPortalPushSettingsData } from "@/features/client-portal/push/server"
 import { PortalContentError } from "@/features/client-portal/portal-content-error"
-import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
 import { isNextControlError } from "@/lib/next-control-errors"
 
 function SettingsFallback() {
@@ -59,7 +58,6 @@ export default function ClientPortalSettingsPage() {
       <Suspense fallback={<SettingsFallback />}>
         <SettingsData />
       </Suspense>
-      <NutritionAssistantSlot />
     </>
   )
 }

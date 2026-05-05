@@ -9,7 +9,6 @@ import { ActivityRangeLinks } from "@/features/client-portal/activity-range-link
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
 import { getPortalDashboardData } from "@/features/client-portal/data"
 import { PortalContentError } from "@/features/client-portal/portal-content-error"
-import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
 import { isNextControlError } from "@/lib/next-control-errors"
 
 function parseParam(value?: string | string[]) {
@@ -130,7 +129,6 @@ export default async function ClientPortalDashboardPage({
       <Suspense fallback={<DashboardDataFallback />}>
         <DashboardData rangeParam={parseParam(resolvedSearchParams?.range)} />
       </Suspense>
-      <NutritionAssistantSlot />
     </>
   )
 }

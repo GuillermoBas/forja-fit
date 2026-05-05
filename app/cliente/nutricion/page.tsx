@@ -5,7 +5,6 @@ import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { getPortalNutritionData } from "@/features/client-portal/nutrition/server"
 import { WeeklyNutritionPlansList } from "@/features/client-portal/nutrition/weekly-plans-list"
 import { PortalContentError } from "@/features/client-portal/portal-content-error"
-import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
 import { isNextControlError } from "@/lib/next-control-errors"
 
 function NutritionFallback() {
@@ -66,7 +65,6 @@ export default function ClientPortalNutritionPage() {
       <Suspense fallback={<NutritionFallback />}>
         <NutritionData />
       </Suspense>
-      <NutritionAssistantSlot />
     </>
   )
 }

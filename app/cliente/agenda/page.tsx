@@ -5,7 +5,6 @@ import { AgendaCalendar } from "@/features/client-portal/agenda-calendar"
 import { PortalShellMeta } from "@/features/client-portal/persistent-shell"
 import { getClientCalendarSessions, getPortalShellData } from "@/features/client-portal/data"
 import { PortalContentError } from "@/features/client-portal/portal-content-error"
-import { NutritionAssistantSlot } from "@/features/client-portal/nutrition/assistant-slot"
 import { isNextControlError } from "@/lib/next-control-errors"
 
 type AgendaView = "week" | "month"
@@ -121,7 +120,6 @@ export default async function ClientPortalAgendaPage({
       <Suspense fallback={<CalendarSkeleton />}>
         <AgendaData view={view} selectedDate={selectedDate} />
       </Suspense>
-      <NutritionAssistantSlot />
     </>
   )
 }
