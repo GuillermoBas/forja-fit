@@ -85,7 +85,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-muted sm:text-xs">
-              La plataforma inteligente para entrenadores personales
+              Powered by Trainium - La plataforma inteligente para entrenadores personales
             </p>
 
             <div className="mt-8 grid w-full gap-4 sm:mt-10">

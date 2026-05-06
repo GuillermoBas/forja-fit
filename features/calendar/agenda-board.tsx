@@ -300,6 +300,9 @@ function AgendaModal({
         <form action={formAction} className="mt-5 grid gap-4 md:grid-cols-2">
           <input type="hidden" name="id" value={editingSession?.id ?? ""} />
           <input type="hidden" name="returnTo" value={returnTo} />
+          {selectedPassIds.map((passId) => (
+            <input key={passId} type="hidden" name="passIds" value={passId} />
+          ))}
           <div className="space-y-2">
             <label className="text-sm font-medium">Entrenador</label>
             <select
@@ -353,8 +356,6 @@ function AgendaModal({
                     <label key={pass.id} className="flex items-start gap-3 rounded-xl bg-surface px-3 py-2 text-sm">
                       <input
                         type="checkbox"
-                        name="passIds"
-                        value={pass.id}
                         checked={checked}
                         disabled={!canManage}
                         className="mt-1"
