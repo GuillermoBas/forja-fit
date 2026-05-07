@@ -33,6 +33,11 @@ export type BusinessSettingsActionState = {
   success?: string
 }
 
+export type ManualClientPortalActivationActionState = {
+  error?: string
+  success?: string
+}
+
 type GeneratedBrandAsset = {
   variant: BrandAssetVariant
   filename: string
@@ -413,6 +418,45 @@ export async function resendStaffActivationAction(
 
   return {
     success: "Codigo de activacion reenviado correctamente."
+  }
+}
+
+export async function manuallyActivateClientPortalAction(
+  _prevState: ManualClientPortalActivationActionState,
+  formData: FormData
+): Promise<ManualClientPortalActivationActionState> {
+  const clientId = String(formData.get("clientId") ?? "").trim()
+  const password = String(formData.get("password") ?? "")
+  const confirmPassword = String(formData.get("confirmPassword") ?? "")
+
+  if (!clientId) {
+    return { error: "Selecciona un cliente." }
+  }
+
+  if (password.length < 8) {
+    return { error: "La contrasena debe tener al menos 8 caracteres." }
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Las contrasenas no coinciden." }
+  }
+
+  try {
+    const result = await invokeProtectedFunction("manually_activate_client_portal_account", {
+      clientId,
+      password
+    })
+
+    revalidatePath("/settings")
+    revalidatePath(`/clients/${clientId}`)
+
+    const email = result?.portalAccount?.email ? String(result.portalAccount.email) : "el email de su ficha"
+
+    return {
+      success: `Acceso del portal activado manualmente para ${email}. Ya puede entrar con la contrasena indicada.`
+    }
+  } catch (error) {
+    return toActionError(error, "No se pudo activar manualmente el portal cliente")
   }
 }
 

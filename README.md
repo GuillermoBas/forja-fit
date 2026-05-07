@@ -69,6 +69,7 @@ Nota de UX del asistente:
 Estado actual de Fase 2, Fase 6:
 - la ficha staff del cliente ya muestra estado del portal, proveedor, `claimed_at`, `last_login_at` y permite desvincular la cuenta del portal como admin
 - la edicion de cliente ya muestra si la ficha esta lista para portal, si el email esta duplicado o si falta email, y permite desactivar/reactivar un acceso ya reclamado
+- ajustes de admin incluye activacion manual de portal cliente para crear o reparar accesos con contrasena directa sin depender del codigo de email
 - se ha preparado una checklist de smoke test especifica de Fase 2 para validar separacion staff/cliente, nutricion y soporte operativo
 - quedan documentados los pasos de despliegue en InsForge Deployments para migraciones SQL, Functions y build final
 
@@ -457,6 +458,7 @@ npx @insforge/cli db import insforge/sql/015_phase2_nutrition_memory_and_quotas.
 npx @insforge/cli db import insforge/sql/016_phase2_weekly_nutrition_plans.sql
 npx @insforge/cli db import insforge/sql/018_pwa_push_notifications.sql
 npx @insforge/cli db import insforge/sql/026_homogeneous_client_communications.sql
+npx @insforge/cli db import insforge/sql/037_manual_client_portal_activation.sql
 ```
 
 2. Publicar o actualizar las Functions de Fase 2:
@@ -474,6 +476,7 @@ npx @insforge/cli db import insforge/sql/026_homogeneous_client_communications.s
 - `delete_client_weekly_nutrition_plans`
 - `set_client_portal_account_status`
 - `unlink_client_portal_account`
+- `manually_activate_client_portal_account`
 - `save_push_subscription`
 - `remove_push_subscription`
 - `update_push_preferences`

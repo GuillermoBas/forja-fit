@@ -5,10 +5,11 @@ import { DailyExpiryScanForm } from "@/features/notifications/notification-forms
 import { InstallPwaCard } from "@/features/settings/install-pwa-card"
 import { BusinessSettingsCard } from "@/features/settings/business-settings-card"
 import { ManualPushCard } from "@/features/settings/manual-push-card"
+import { ManualClientPortalActivationCard } from "@/features/settings/manual-client-portal-activation-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
 import { StaffManagementCard } from "@/features/settings/staff-management-card"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
-import { getBusinessSettings, getStaffProfiles } from "@/lib/data"
+import { getBusinessSettings, getClients, getStaffProfiles } from "@/lib/data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
 import { getCurrentGym } from "@/lib/tenant"
@@ -101,10 +102,11 @@ export default async function SettingsPage() {
   }
 
   const isAdmin = profile.role === "admin"
-  const [manualPushClients, staffProfiles, businessSettings] = await Promise.all([
+  const [manualPushClients, staffProfiles, businessSettings, clients] = await Promise.all([
     getManualPushClients(),
     isAdmin ? getStaffProfiles() : Promise.resolve([]),
-    isAdmin ? getBusinessSettings() : Promise.resolve(null)
+    isAdmin ? getBusinessSettings() : Promise.resolve(null),
+    isAdmin ? getClients() : Promise.resolve([])
   ])
 
   return (
@@ -132,6 +134,8 @@ export default async function SettingsPage() {
             {businessSettings ? <BusinessSettingsCard settings={businessSettings} /> : null}
 
             <DailyExpiryScanForm />
+
+            <ManualClientPortalActivationCard clients={clients} />
 
             <StaffManagementCard staffProfiles={staffProfiles} />
           </>

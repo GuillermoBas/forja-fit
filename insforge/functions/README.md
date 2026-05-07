@@ -33,6 +33,7 @@ Funciones previstas:
 - `upsert_calendar_session`
 - `delete_calendar_session`
 - `cancel_client_calendar_session`
+- `manually_activate_client_portal_account`
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
 - `run_daily_expiry_scan`
