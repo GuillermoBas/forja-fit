@@ -1,23 +1,21 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { AlertTriangle, ArrowUpRight, BellRing, Box, CalendarClock, Wallet } from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
 import { InstallTrainium } from "@/components/pwa/install-trainium"
 import { KpiGridSkeleton, CardListSkeleton } from "@/components/skeletons"
+import { DashboardKpiListModals } from "@/features/dashboard/dashboard-kpi-list-modals"
 import { getDashboardData } from "@/lib/data"
-import { cn } from "@/lib/utils"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatDate } from "@/lib/utils"
 
 const shortcuts = [
   { href: "/clients", label: "Nuevo cliente" },
   { href: "/passes", label: "Crear bono" },
   { href: "/sales", label: "Registrar venta" },
-  { href: "/agenda", label: "Agendar sesión" }
+  { href: "/agenda", label: "Agendar sesion" }
 ]
-
-const kpiIcons = [CalendarClock, AlertTriangle, ArrowUpRight, Box, Wallet, BellRing, Wallet]
 
 function getChannelBadgeMeta(channel: "internal" | "email" | "push") {
   switch (channel) {
@@ -43,76 +41,17 @@ function DashboardDataFallback() {
 }
 
 async function DashboardData() {
-  const { kpis, notifications } = await getDashboardData()
+  const { kpis, passLists, notifications } = await getDashboardData()
 
   return (
     <>
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {kpis.map((item, index) => {
-          const Icon = kpiIcons[index % kpiIcons.length]
-          const isAlert = item.label.includes("Caducan") || item.label.includes("Stock")
-          const isMoney = item.label.includes("Ventas")
-          const cardTone = isAlert
-            ? "border-warning/18 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,247,237,0.98))]"
-            : isMoney
-              ? "border-success/18 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(240,253,244,0.98))]"
-              : "border-border/90 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.98))]"
-
-          return (
-            <Card key={item.label} className={cn("panel-hover overflow-hidden", cardTone)}>
-              <CardHeader className="relative pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-3">
-                    <p className="metric-label">
-                      {isMoney ? "Facturación" : isAlert ? "Atención" : "Resumen"}
-                    </p>
-                    <CardTitle className="text-[15px] font-semibold text-text-secondary">
-                      {item.label}
-                    </CardTitle>
-                  </div>
-                  <span
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
-                      isAlert
-                        ? "border-warning/18 bg-warning/10 text-warning"
-                        : isMoney
-                          ? "border-success/18 bg-success/10 text-success"
-                          : "border-primary/18 bg-primary-soft text-primary-hover"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="kpi-value">
-                  {item.label.includes("Ventas") ? formatCurrency(Number(item.value)) : item.value}
-                </p>
-                <div className="mt-4 flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      isAlert ? "bg-warning" : isMoney ? "bg-success" : "bg-primary"
-                    )}
-                  />
-                  <p className="kpi-meta">
-                    {isMoney
-                      ? "Facturación registrada"
-                      : isAlert
-                        ? "Requiere seguimiento"
-                        : "Estado operativo"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </section>
+      <DashboardKpiListModals kpis={kpis} passLists={passLists} />
 
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader className="pb-4">
-            <p className="section-kicker">Navegación</p>
-            <CardTitle>Accesos rápidos</CardTitle>
+            <p className="section-kicker">Navegacion</p>
+            <CardTitle>Accesos rapidos</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3.5 sm:grid-cols-2">
             {shortcuts.map((item) => (
@@ -161,9 +100,9 @@ async function DashboardData() {
               ))
             ) : (
               <div className="empty-state">
-                <p className="empty-state-title">Todo al día</p>
+                <p className="empty-state-title">Todo al dia</p>
                 <p className="empty-state-copy">
-                  No hay notificaciones recientes. Las renovaciones y avisos aparecerán aquí.
+                  No hay notificaciones recientes. Las renovaciones y avisos apareceran aqui.
                 </p>
               </div>
             )}

@@ -60,6 +60,20 @@ function madridDateString(date: Date) {
   }).format(date)
 }
 
+function madridHourSlot(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false
+  }).formatToParts(date)
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? ""
+
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}`
+}
+
 function chooseConsumptionClientId(session: Record<string, unknown>, holderIds: string[]) {
   const sessionClients = [session.client_1_id, session.client_2_id].filter(Boolean).map(String)
   for (const clientId of sessionClients) {
@@ -96,6 +110,7 @@ export default async function(request: Request) {
 
     const consumeBefore = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
     const runForDate = madridDateString(now)
+    const runSlot = madridHourSlot(now)
     const trusted = isTrustedToken(token)
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
     const actor = trusted ? { profile: { id: null, role: "system" } } : await requireStaffActor(client, gymId)
@@ -110,8 +125,11 @@ export default async function(request: Request) {
         gym_id: gymId,
         job_key: "auto_consume_calendar_sessions",
         run_for_date: runForDate,
+        run_slot: runSlot,
         status: "started",
         details: {
+          mode: "hourly",
+          run_slot: runSlot,
           consume_before: consumeBefore
         }
       }
@@ -125,6 +143,7 @@ export default async function(request: Request) {
           .eq("gym_id", gymId)
           .eq("job_key", "auto_consume_calendar_sessions")
           .eq("run_for_date", runForDate)
+          .eq("run_slot", runSlot)
           .maybeSingle()
 
         if (existingJob.error) {
@@ -136,6 +155,8 @@ export default async function(request: Request) {
           const restartJob = await client.database.from("job_runs").update({
             status: "started",
             details: {
+              mode: "hourly",
+              run_slot: runSlot,
               consume_before: consumeBefore,
               retried_failed_job: true,
               previous_details: existingJob.data.details ?? null
@@ -151,7 +172,8 @@ export default async function(request: Request) {
             ok: true,
             skipped: true,
             reason: "already_run",
-            runForDate
+            runForDate,
+            runSlot
           })
         }
       } else {
@@ -185,6 +207,9 @@ export default async function(request: Request) {
       await client.database.from("job_runs").update({
         status: "completed",
         details: {
+          mode: "hourly",
+          run_slot: runSlot,
+          consume_before: consumeBefore,
           candidates: 0,
           auto_consumed: 0,
           linked_manual: 0,
@@ -451,6 +476,9 @@ export default async function(request: Request) {
     await client.database.from("job_runs").update({
       status: "completed",
       details: {
+        mode: "hourly",
+        run_slot: runSlot,
+        consume_before: consumeBefore,
         candidates: sessions.length,
         auto_consumed: autoConsumed,
         linked_manual: linkedManual,

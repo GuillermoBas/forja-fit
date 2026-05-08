@@ -405,20 +405,23 @@ export async function getDashboardData() {
   const plus7 = new Date(now)
   plus7.setDate(plus7.getDate() + 7)
   const nextWeek = plus7.toISOString().slice(0, 10)
+  const activePasses = passes.filter((item) => item.status === "active")
+  const expiringSoonPasses = passes.filter((item) => item.expiresOn <= nextWeek && item.status === "active")
+  const outOfSessionsPasses = passes.filter((item) => item.passKind === "session" && item.sessionsLeft === 0)
 
   return {
     kpis: [
       {
         label: "Bonos activos",
-        value: passes.filter((item) => item.status === "active").length.toString()
+        value: activePasses.length.toString()
       },
       {
         label: "Caducan en 7 días",
-        value: passes.filter((item) => item.expiresOn <= nextWeek && item.status === "active").length.toString()
+        value: expiringSoonPasses.length.toString()
       },
       {
         label: "Sin sesiones",
-        value: passes.filter((item) => item.passKind === "session" && item.sessionsLeft === 0).length.toString()
+        value: outOfSessionsPasses.length.toString()
       },
       {
         label: "Stock bajo",
@@ -446,6 +449,11 @@ export async function getDashboardData() {
           .toFixed(2)
       }
     ],
+    passLists: {
+      active: activePasses,
+      expiringSoon: expiringSoonPasses,
+      outOfSessions: outOfSessionsPasses
+    },
     notifications: aggregateDashboardNotifications(notifications).slice(0, 50)
   }
 }

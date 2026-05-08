@@ -59,7 +59,7 @@ Estado actual de agenda cliente:
 - las sesiones canceladas siguen visibles en gris suave y ya no se pueden volver a cancelar
 
 Estado actual de consumo automatico:
-- existe la Function `auto_consume_calendar_sessions` para consumir bonos de sesiones ya finalizadas con 1 hora extra de margen
+- existe la Function `auto_consume_calendar_sessions` para consumir bonos de sesiones ya finalizadas; se ejecuta cada hora y deja una hora de margen antes de consumir
 - el job solo actua sobre sesiones `scheduled` o `completed`; ignora `cancelled` y `no_show`
 - si encuentra un consumo manual compatible, lo vincula a la sesion para no duplicar el descuento
 
@@ -459,6 +459,7 @@ npx @insforge/cli db import insforge/sql/016_phase2_weekly_nutrition_plans.sql
 npx @insforge/cli db import insforge/sql/018_pwa_push_notifications.sql
 npx @insforge/cli db import insforge/sql/026_homogeneous_client_communications.sql
 npx @insforge/cli db import insforge/sql/037_manual_client_portal_activation.sql
+npx @insforge/cli db import insforge/sql/038_hourly_auto_consume_job_runs.sql
 ```
 
 2. Publicar o actualizar las Functions de Fase 2:
