@@ -10,6 +10,15 @@ function json(data: unknown, status = 200) {
   })
 }
 
+function getToken(request: Request) {
+  return request.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
+}
+
+function isTrustedToken(token: string) {
+  const apiKey = Deno.env.get("API_KEY")
+  return Boolean(apiKey && token === apiKey)
+}
+
 function madridDateString(input?: string) {
   if (input) return input
 
@@ -122,7 +131,7 @@ async function sendExpiryCommunication(client: any, gymId: string, gymSlug: stri
 
 export default async function(request: Request) {
   try {
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "")
+    const token = getToken(request)
     if (!token) {
       return json({ code: "UNAUTHORIZED", message: "Falta token" }, 401)
     }
@@ -133,7 +142,8 @@ export default async function(request: Request) {
     const d7Date = addDays(runForDate, 7)
 
     const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = await getActor(client, gymId)
+    const trusted = isTrustedToken(token)
+    const actor = trusted ? { profile: { id: null, role: "system" } } : await getActor(client, gymId)
     if (actor.error) {
       return actor.error
     }
