@@ -63,6 +63,7 @@ Estado actual de consumo automatico:
 - el job solo actua sobre sesiones `scheduled` o `completed`; ignora `cancelled` y `no_show`
 - si encuentra un consumo manual compatible, lo vincula a la sesion para no duplicar el descuento
 - existe la Function `run_daily_expiry_scan` para caducar bonos vencidos y emitir avisos D-7/D-0; debe ejecutarse a diario con el token de sistema
+- los bonos en pausa no caducan mientras la pausa esta activa; la pausa extiende `expires_on` y el job solo caduca tras reanudar el bono
 
 Nota de UX del asistente:
 - las respuestas del chat nutricional ya renderizan markdown basico con estilos visibles, incluyendo negritas, listas y saltos de linea

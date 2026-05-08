@@ -84,13 +84,27 @@ export default async function(request: Request) {
       .select("id,pass_type_id,expires_on,sessions_left,status")
       .eq("gym_id", gymId)
       .eq("expires_on", expiresOn)
-      .in("status", ["active", "paused", "out_of_sessions"])
+      .in("status", ["active", "out_of_sessions"])
 
     if (passesResult.error) {
       return json({ code: "PASSES_LOAD_FAILED", message: passesResult.error.message }, 400)
     }
 
-    const passRows = passesResult.data ?? []
+    const activePausesResult = await client.database
+      .from("pass_pauses")
+      .select("pass_id")
+      .eq("gym_id", gymId)
+      .lte("starts_on", runForDate)
+      .gte("ends_on", runForDate)
+
+    if (activePausesResult.error) {
+      return json({ code: "PAUSES_LOAD_FAILED", message: activePausesResult.error.message }, 400)
+    }
+
+    const activePausedPassIds = new Set(
+      (activePausesResult.data ?? []).map((pause) => String(pause.pass_id))
+    )
+    const passRows = (passesResult.data ?? []).filter((pass) => !activePausedPassIds.has(String(pass.id)))
     const passIds = passRows.map((pass) => String(pass.id))
     const passTypeIds = Array.from(new Set(passRows.map((pass) => String(pass.pass_type_id))))
 

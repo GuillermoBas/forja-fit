@@ -185,29 +185,6 @@ export default async function(request: Request) {
     const jobRunId = String(startJob.data.id)
 
     try {
-      const [d7PassesResult, d0PassesResult] = await Promise.all([
-        client.database
-          .from("passes")
-          .select("id,pass_type_id,expires_on,sessions_left,status")
-          .eq("gym_id", gymId)
-          .eq("expires_on", d7Date)
-          .in("status", ["active", "paused", "out_of_sessions"]),
-        client.database
-          .from("passes")
-          .select("id,pass_type_id,expires_on,sessions_left,status")
-          .eq("gym_id", gymId)
-          .eq("expires_on", runForDate)
-          .in("status", ["active", "paused", "out_of_sessions"])
-      ])
-
-      if (d7PassesResult.error || d0PassesResult.error) {
-        throw new Error(d7PassesResult.error?.message ?? d0PassesResult.error?.message ?? "No se pudieron cargar bonos")
-      }
-
-      const d7Passes = (d7PassesResult.data ?? []) as Array<Record<string, unknown>>
-      const d0Passes = (d0PassesResult.data ?? []) as Array<Record<string, unknown>>
-      const passIds = Array.from(new Set([...d7Passes, ...d0Passes].map((pass) => String(pass.id))))
-      const context = await loadPassContext(client, gymId, passIds)
       const pausedPassesResult = await client.database
         .from("passes")
         .select("id,sessions_left,status")
@@ -232,43 +209,16 @@ export default async function(request: Request) {
         throw new Error(pausesResult.error.message)
       }
 
-      const summary = {
-        d7Candidates: d7Passes.length,
-        d0Candidates: d0Passes.length,
-        sent: 0,
-        skipped: 0,
-        failed: 0,
-        expired: 0,
-        resumed: 0
-      }
-
-      for (const pass of d7Passes) {
-        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d7", context)
-        summary.sent += Number(result.sent ?? 0)
-        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
-        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
-      }
-
-      for (const pass of d0Passes) {
-        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d0", context)
-        summary.sent += Number(result.sent ?? 0)
-        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
-        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
-      }
-
-      const expireResult = await client.database
-        .from("passes")
-        .update({ status: "expired" })
+      const activePausesResult = await client.database
+        .from("pass_pauses")
+        .select("pass_id")
         .eq("gym_id", gymId)
-        .lt("expires_on", runForDate)
-        .in("status", ["active", "paused", "out_of_sessions"])
-        .select("id")
+        .lte("starts_on", runForDate)
+        .gte("ends_on", runForDate)
 
-      if (expireResult.error) {
-        throw new Error(expireResult.error.message)
+      if (activePausesResult.error) {
+        throw new Error(activePausesResult.error.message)
       }
-
-      summary.expired = (expireResult.data ?? []).length
 
       const latestPauseByPassId = new Map<string, { startsOn: string; endsOn: string }>()
       for (const row of (pausesResult.data ?? []) as Array<Record<string, unknown>>) {
@@ -286,6 +236,9 @@ export default async function(request: Request) {
       const pausedPasses = (pausedPassesResult.data ?? []) as Array<Record<string, unknown>>
       const resumeIdsActive: string[] = []
       const resumeIdsOutOfSessions: string[] = []
+      const activePausedPassIds = new Set<string>(
+        ((activePausesResult.data ?? []) as Array<Record<string, unknown>>).map((pause) => String(pause.pass_id))
+      )
 
       for (const pass of pausedPasses) {
         const passId = String(pass.id ?? "")
@@ -295,6 +248,7 @@ export default async function(request: Request) {
           && runForDate <= pauseWindow.endsOn
 
         if (isPauseActive) {
+          activePausedPassIds.add(passId)
           continue
         }
 
@@ -333,7 +287,85 @@ export default async function(request: Request) {
         }
       }
 
-      summary.resumed = resumeIdsActive.length + resumeIdsOutOfSessions.length
+      const [d7PassesResult, d0PassesResult] = await Promise.all([
+        client.database
+          .from("passes")
+          .select("id,pass_type_id,expires_on,sessions_left,status")
+          .eq("gym_id", gymId)
+          .eq("expires_on", d7Date)
+          .in("status", ["active", "out_of_sessions"]),
+        client.database
+          .from("passes")
+          .select("id,pass_type_id,expires_on,sessions_left,status")
+          .eq("gym_id", gymId)
+          .eq("expires_on", runForDate)
+          .in("status", ["active", "out_of_sessions"])
+      ])
+
+      if (d7PassesResult.error || d0PassesResult.error) {
+        throw new Error(d7PassesResult.error?.message ?? d0PassesResult.error?.message ?? "No se pudieron cargar bonos")
+      }
+
+      const d7Passes = ((d7PassesResult.data ?? []) as Array<Record<string, unknown>>)
+        .filter((pass) => !activePausedPassIds.has(String(pass.id)))
+      const d0Passes = ((d0PassesResult.data ?? []) as Array<Record<string, unknown>>)
+        .filter((pass) => !activePausedPassIds.has(String(pass.id)))
+      const passIds = Array.from(new Set([...d7Passes, ...d0Passes].map((pass) => String(pass.id))))
+      const context = await loadPassContext(client, gymId, passIds)
+
+      const summary = {
+        d7Candidates: d7Passes.length,
+        d0Candidates: d0Passes.length,
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        expired: 0,
+        resumed: resumeIdsActive.length + resumeIdsOutOfSessions.length
+      }
+
+      for (const pass of d7Passes) {
+        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d7", context)
+        summary.sent += Number(result.sent ?? 0)
+        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
+        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
+      }
+
+      for (const pass of d0Passes) {
+        const result = await sendExpiryCommunication(client, gymId, String(body?.gymSlug ?? "eltemplo"), pass, "pass_expiry_d0", context)
+        summary.sent += Number(result.sent ?? 0)
+        summary.skipped += Number(result.skipped ?? (result.skipped === true ? 1 : 0))
+        summary.failed += Number(result.failed ?? (result.failed === true ? 1 : 0))
+      }
+
+      const expiredCandidatesResult = await client.database
+        .from("passes")
+        .select("id")
+        .eq("gym_id", gymId)
+        .lt("expires_on", runForDate)
+        .in("status", ["active", "out_of_sessions"])
+
+      if (expiredCandidatesResult.error) {
+        throw new Error(expiredCandidatesResult.error.message)
+      }
+
+      const expiredCandidateIds = ((expiredCandidatesResult.data ?? []) as Array<Record<string, unknown>>)
+        .map((pass) => String(pass.id))
+        .filter((passId) => !activePausedPassIds.has(passId))
+
+      if (expiredCandidateIds.length) {
+        const expireResult = await client.database
+          .from("passes")
+          .update({ status: "expired" })
+          .eq("gym_id", gymId)
+          .in("id", expiredCandidateIds)
+          .select("id")
+
+        if (expireResult.error) {
+          throw new Error(expireResult.error.message)
+        }
+
+        summary.expired = (expireResult.data ?? []).length
+      }
 
       const completeResult = await client.database
         .from("job_runs")
