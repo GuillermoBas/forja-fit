@@ -14,7 +14,7 @@ const shortcuts = [
   { href: "/clients", label: "Nuevo cliente" },
   { href: "/passes", label: "Crear bono" },
   { href: "/sales", label: "Registrar venta" },
-  { href: "/agenda", label: "Agendar sesion" }
+  { href: "/agenda", label: "Agendar sesión" }
 ]
 
 function getChannelBadgeMeta(channel: "internal" | "email" | "push") {
@@ -50,8 +50,8 @@ async function DashboardData() {
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader className="pb-4">
-            <p className="section-kicker">Navegacion</p>
-            <CardTitle>Accesos rapidos</CardTitle>
+            <p className="section-kicker">Navegación</p>
+            <CardTitle>Accesos rápidos</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3.5 sm:grid-cols-2">
             {shortcuts.map((item) => (
@@ -102,7 +102,7 @@ async function DashboardData() {
               <div className="empty-state">
                 <p className="empty-state-title">Todo al dia</p>
                 <p className="empty-state-copy">
-                  No hay notificaciones recientes. Las renovaciones y avisos apareceran aqui.
+                  No hay notificaciones recientes. Las renovaciones y avisos aparecerán aquí.
                 </p>
               </div>
             )}

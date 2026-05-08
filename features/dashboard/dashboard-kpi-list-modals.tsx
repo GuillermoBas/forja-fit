@@ -24,17 +24,17 @@ const passListConfigs: Record<PassListKey, { key: PassListKey; title: string; de
   active: {
     key: "active",
     title: "Bonos activos",
-    description: "Bonos en estado activo con titulares, sesiones, caducidad y datos economicos."
+    description: "Bonos en estado activo con titulares, sesiones, caducidad y datos económicos."
   },
   expiringSoon: {
     key: "expiringSoon",
-    title: "Bonos que caducan en 7 dias",
+    title: "Bonos que caducan en 7 días",
     description: "Bonos activos cuya fecha de caducidad entra en la ventana operativa de seguimiento."
   },
   outOfSessions: {
     key: "outOfSessions",
     title: "Bonos sin sesiones",
-    description: "Bonos de sesiones con saldo a cero para revisar renovacion o cierre."
+    description: "Bonos de sesiones con saldo a cero para revisar renovación o cierre."
   }
 }
 
@@ -75,7 +75,7 @@ function PassDetailList({ passes }: { passes: Pass[] }) {
     return (
       <div className="empty-state">
         <p className="empty-state-title">No hay bonos en este listado</p>
-        <p className="empty-state-copy">Cuando exista algun bono que cumpla el criterio, aparecera aqui.</p>
+        <p className="empty-state-copy">Cuando exista algún bono que cumpla el criterio, aparecerá aquí.</p>
       </div>
     )
   }
@@ -192,7 +192,7 @@ export function DashboardKpiListModals({ kpis, passLists }: { kpis: DashboardKpi
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3 text-left">
                     <p className="metric-label">
-                      {isMoney ? "FacturaciÃ³n" : isAlert ? "AtenciÃ³n" : "Resumen"}
+                      {isMoney ? "Facturación" : isAlert ? "Atención" : "Resumen"}
                     </p>
                     <CardTitle className="text-[15px] font-semibold text-text-secondary">
                       {item.label}
@@ -224,7 +224,7 @@ export function DashboardKpiListModals({ kpis, passLists }: { kpis: DashboardKpi
                   />
                   <p className="kpi-meta">
                     {isMoney
-                      ? "FacturaciÃ³n registrada"
+                      ? "Facturación registrada"
                       : isAlert
                         ? "Requiere seguimiento"
                         : "Estado operativo"}
