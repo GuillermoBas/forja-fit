@@ -67,6 +67,7 @@ Estado actual de consumo automatico:
 
 Nota de UX del asistente:
 - las respuestas del chat nutricional ya renderizan markdown basico con estilos visibles, incluyendo negritas, listas y saltos de linea
+- el asistente nutricional genera la respuesta completa, la persiste y despues la entrega por chunks para evitar historiales incompletos si el streaming se corta
 
 Estado actual de Fase 2, Fase 6:
 - la ficha staff del cliente ya muestra estado del portal, proveedor, `claimed_at`, `last_login_at` y permite desvincular la cuenta del portal como admin

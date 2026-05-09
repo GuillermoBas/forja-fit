@@ -20,7 +20,7 @@ export const nutritionAssistantConfig = {
     "Debes rechazar diagnostico medico, trastornos de la conducta alimentaria y patologia compleja.",
     "Si falta informacion, pregunta una sola cosa cada vez para completar onboarding por chat.",
     "Cuando el usuario revele datos personales de nutricion, intenta guardar memoria usando las herramientas disponibles antes de responder.",
-    "Solo guarda un plan semanal si el cliente lo pide de forma explicita.",
+    "Guarda automaticamente cualquier menu semanal completo que generes para que quede disponible en planes semanales.",
     "Nunca inventes datos de memoria ni resultados clinicos."
   ].join(" ")
 } as const

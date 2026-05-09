@@ -13,6 +13,7 @@ import {
 } from "@/features/calendar/actions"
 import {
   formatDateInAppTimeZone,
+  fromDateTimeLocalInAppTimeZone,
   getHourInAppTimeZone,
   getTodayDateKeyInAppTimeZone,
   toDateKeyInAppTimeZone,
@@ -118,6 +119,17 @@ function makeSlot(day: Date, hour: number): AgendaSlot {
   return {
     startsAt: toDateTimeLocal(starts),
     endsAt: toDateTimeLocal(ends)
+  }
+}
+
+function makeCurrentSlot(): AgendaSlot {
+  const startsAt = `${toDateTimeLocalInAppTimeZone(new Date()).slice(0, 14)}00`
+  const ends = new Date(fromDateTimeLocalInAppTimeZone(startsAt))
+  ends.setHours(ends.getHours() + 1)
+
+  return {
+    startsAt,
+    endsAt: toDateTimeLocalInAppTimeZone(ends)
   }
 }
 
@@ -448,7 +460,6 @@ export function AgendaBoard({
   selectedTrainerId: string
 }) {
   const baseDate = parseDateKey(selectedDate)
-  const [selectedSlot, setSelectedSlot] = useState<AgendaSlot | null>(null)
   const [modalState, setModalState] = useState<ModalState>(null)
   const filteredSessions = useMemo(
     () => sessions
@@ -468,20 +479,58 @@ export function AgendaBoard({
     setModalState({ mode: "create", slot })
   }
 
-  function renderEvents(day: Date, hour?: number) {
-    const items = filteredSessions.filter((session) => {
+  function getEvents(day: Date, hour?: number) {
+    return filteredSessions.filter((session) => {
       if (hour === undefined) {
         return toDateKeyInAppTimeZone(session.startsAt) === toDateKey(day)
       }
       return sameHour(session.startsAt, day, hour)
     })
+  }
 
+  function renderEvents(items: CalendarSession[]) {
     return (
       <div className="space-y-1.5">
         {items.map((session) => (
           <AgendaEventButton key={session.id} session={session} onOpen={(item) => setModalState({ mode: "edit", session: item })} />
         ))}
       </div>
+    )
+  }
+
+  function renderCompactCreateButton(slot: AgendaSlot) {
+    if (!canManageSelectedTrainer) {
+      return null
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => openCreate(slot)}
+        className="mb-1 flex min-h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-transparent px-2 text-[11px] font-semibold text-text-muted transition hover:border-primary/30 hover:bg-primary-soft hover:text-primary-hover focus-visible:border-primary/40 focus-visible:bg-primary-soft focus-visible:text-primary-hover focus-visible:outline-none"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Agendar nueva sesión
+      </button>
+    )
+  }
+
+  function renderFullSlotCreateButton(slot: AgendaSlot) {
+    if (!canManageSelectedTrainer) {
+      return null
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => openCreate(slot)}
+        className="group flex min-h-[4.75rem] w-full items-center justify-center rounded-md border border-dashed border-transparent bg-transparent px-2 text-center text-[12px] font-semibold text-text-muted transition hover:border-primary/30 hover:bg-primary-soft hover:text-primary-hover focus-visible:border-primary/40 focus-visible:bg-primary-soft focus-visible:text-primary-hover focus-visible:outline-none"
+      >
+        <span className="inline-flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <Plus className="h-3.5 w-3.5" />
+          Agendar nueva sesión
+        </span>
+      </button>
     )
   }
 
@@ -561,8 +610,8 @@ export function AgendaBoard({
               type="button"
               className="gap-2 rounded-lg"
               size="sm"
-              disabled={!selectedSlot || !canManageSelectedTrainer}
-              onClick={() => selectedSlot ? openCreate(selectedSlot) : null}
+              disabled={!canManageSelectedTrainer}
+              onClick={() => openCreate(makeCurrentSlot())}
             >
               <Plus className="h-4 w-4" />
               Agendar sesión
@@ -582,22 +631,50 @@ export function AgendaBoard({
             <div className="grid grid-cols-7 bg-border/70">
               {monthDays.map((day) => {
                 const isCurrentMonth = day.getMonth() === baseDate.getMonth()
-                const isSelected = selectedSlot?.startsAt.slice(0, 10) === toDateKey(day)
+                const slot = makeSlot(day, 9)
+                const dayEvents = getEvents(day)
                 return (
-                  <div key={toDateKey(day)} className="min-h-32 bg-surface p-2">
-                    <button
-                      type="button"
-                      disabled={!canManageSelectedTrainer}
-                      onClick={() => setSelectedSlot(makeSlot(day, 9))}
-                      className={cn(
-                        "mb-2 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-                        isSelected ? "bg-primary text-white" : "text-text-secondary hover:bg-surface-alt",
-                        !isCurrentMonth && "opacity-45"
-                      )}
-                    >
-                      {day.getDate()}
-                    </button>
-                    {renderEvents(day)}
+                  <div key={toDateKey(day)} className={cn("min-h-32 bg-surface", dayEvents.length ? "p-2" : "p-0")}>
+                    {dayEvents.length ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={!canManageSelectedTrainer}
+                          onClick={() => openCreate(slot)}
+                          aria-label={`Agendar nueva sesión el día ${day.getDate()}`}
+                          className={cn(
+                            "mb-2 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold text-text-secondary transition hover:bg-surface-alt hover:text-primary-hover focus-visible:bg-primary-soft focus-visible:text-primary-hover focus-visible:outline-none",
+                            !isCurrentMonth && "opacity-45",
+                            !canManageSelectedTrainer && "cursor-default hover:bg-transparent hover:text-text-secondary"
+                          )}
+                        >
+                          {day.getDate()}
+                        </button>
+                        {renderCompactCreateButton(slot)}
+                        {renderEvents(dayEvents)}
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!canManageSelectedTrainer}
+                        onClick={() => openCreate(slot)}
+                        className={cn(
+                          "group flex min-h-32 w-full flex-col items-start gap-3 rounded-none border border-dashed border-transparent bg-surface p-2 text-left transition hover:border-primary/30 hover:bg-primary-soft/65 focus-visible:border-primary/40 focus-visible:bg-primary-soft/70 focus-visible:outline-none",
+                          !isCurrentMonth && "opacity-45",
+                          !canManageSelectedTrainer && "cursor-default hover:border-transparent hover:bg-surface"
+                        )}
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold text-text-secondary">
+                          {day.getDate()}
+                        </span>
+                        {canManageSelectedTrainer ? (
+                          <span className="mt-auto inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-hover opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                            <Plus className="h-3.5 w-3.5" />
+                            Agendar nueva sesión
+                          </span>
+                        ) : null}
+                      </button>
+                    )}
                   </div>
                 )
               })}
@@ -626,24 +703,23 @@ export function AgendaBoard({
                   </div>
                   {daysForTimeGrid.map((day) => {
                     const slot = makeSlot(day, hour)
-                    const isSelected = selectedSlot?.startsAt === slot.startsAt
+                    const slotEvents = getEvents(day, hour)
                     return (
-                      <div key={`${toDateKey(day)}-${hour}`} className="min-h-[4.75rem] border-r border-t border-border/70 bg-surface p-1.5 last:border-r-0">
-                        <button
-                          type="button"
-                          disabled={!canManageSelectedTrainer}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={cn(
-                            "mb-1 h-5 w-full rounded border border-dashed text-[11px] transition",
-                            isSelected
-                              ? "border-primary bg-primary-soft text-primary-hover"
-                              : "border-transparent hover:border-border hover:bg-surface-alt",
-                            !canManageSelectedTrainer && "cursor-not-allowed opacity-40"
-                          )}
-                        >
-                          {isSelected ? "Seleccionado" : ""}
-                        </button>
-                        {renderEvents(day, hour)}
+                      <div
+                        key={`${toDateKey(day)}-${hour}`}
+                        className={cn(
+                          "min-h-[4.75rem] border-r border-t border-border/70 bg-surface last:border-r-0",
+                          slotEvents.length ? "p-1.5" : "p-0"
+                        )}
+                      >
+                        {slotEvents.length ? (
+                          <>
+                            {renderCompactCreateButton(slot)}
+                            {renderEvents(slotEvents)}
+                          </>
+                        ) : (
+                          renderFullSlotCreateButton(slot)
+                        )}
                       </div>
                     )
                   })}

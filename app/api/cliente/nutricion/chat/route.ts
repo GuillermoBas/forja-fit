@@ -65,6 +65,7 @@ const mealsPerDayWordMap: Record<string, number> = {
 const nutritionMemoryToolDefinitions = nutritionToolDefinitions.filter(
   (tool) => tool.function.name !== "save_weekly_plan"
 )
+const normalResponseMaxTokens = 1400
 
 function toClientMessage(message: {
   id: string
@@ -181,7 +182,7 @@ function resolveRequestedMealsPerDay(message: string, memory: PortalNutritionDat
 }
 
 function resolveWeeklyPlanJsonMaxTokens(mealsPerDay: number) {
-  return Math.min(3200, Math.max(1700, 1100 + mealsPerDay * 360))
+  return Math.min(6400, Math.max(3400, 2200 + mealsPerDay * 720))
 }
 
 function buildWeeklyPlanJsonSchemaPrompt(mealsPerDay: number) {
@@ -558,7 +559,7 @@ async function maybeRunNutritionMemoryTools(
     toolChoice: "auto",
     parallelToolCalls: false,
     temperature: 0,
-    maxTokens: 500
+    maxTokens: 1000
   })
 
   const toolCalls = (response?.choices?.[0]?.message?.tool_calls ?? []) as ToolCall[]
@@ -658,7 +659,7 @@ async function maybeRefreshRollingSummary(
       }))
     ],
     temperature: 0.2,
-    maxTokens: 220
+    maxTokens: 440
   })
 
   const summaryText = String(summaryResponse?.choices?.[0]?.message?.content ?? "").trim()
@@ -865,43 +866,54 @@ export async function POST(request: Request) {
           finalContent = buildWeeklyPlanMarkdown(draft)
 
           let saved = false
-          if (weeklyPlanRequested) {
-            try {
-              await saveWeeklyPlanDraft(accessToken, draft)
-              saved = true
-            } catch {
-              saved = false
-            }
-
-            finalContent = `${finalContent}${buildWeeklyPlanSavedNote(saved)}`
+          try {
+            await saveWeeklyPlanDraft(accessToken, draft)
+            saved = true
+          } catch {
+            saved = false
           }
 
-          streamTextAsChunks(send, finalContent)
+          finalContent = `${finalContent}${buildWeeklyPlanSavedNote(saved)}`
+
+          const persistedAssistant = await appendPortalNutritionMessage(accessToken, {
+            role: "assistant",
+            content: finalContent,
+            modelId: nutritionAssistantConfig.modelId,
+            metadata: {
+              source: "client_portal",
+              assistantConfigId: nutritionAssistantConfig.id,
+              streamed: true,
+              weeklyMenuGenerated: true,
+              savedWeeklyPlan: saved,
+              saveRequested: weeklyPlanRequested
+            }
+          })
+
+          const assistantMessage = toClientMessage(persistedAssistant.message)
+          await maybeRefreshRollingSummary(aiClient, accessToken, conversation, [
+            ...conversation.messages,
+            assistantMessage
+          ])
+
+          streamTextAsChunks(send, assistantMessage.content)
+          send({
+            type: "complete",
+            threadId,
+            quota: persistedAssistant.quota ?? persistedUser.quota,
+            userMessage: toClientMessage(persistedUser.message),
+            assistantMessage
+          })
+          return
         } else {
           const completion = await aiClient.ai.chat.completions.create({
             model: nutritionAssistantConfig.modelId,
             messages: buildAssistantContext(conversation),
             temperature: 0.35,
-            maxTokens: 700,
-            stream: true
+            maxTokens: normalResponseMaxTokens
           })
 
-          let responseText = ""
-
-          for await (const chunk of completion) {
-            const delta = chunk?.choices?.[0]?.delta?.content
-
-            if (typeof delta === "string" && delta.length > 0) {
-              responseText += delta
-              send({
-                type: "chunk",
-                content: delta
-              })
-            }
-          }
-
           finalContent =
-            responseText.trim() ||
+            String(completion?.choices?.[0]?.message?.content ?? "").trim() ||
             "No he podido responder bien esta vez. Intentalo de nuevo en unos segundos."
         }
 
@@ -922,10 +934,11 @@ export async function POST(request: Request) {
           assistantMessage
         ])
 
+        streamTextAsChunks(send, assistantMessage.content)
         send({
           type: "complete",
           threadId,
-          quota: persistedUser.quota,
+          quota: persistedAssistant.quota ?? persistedUser.quota,
           userMessage: toClientMessage(persistedUser.message),
           assistantMessage
         })

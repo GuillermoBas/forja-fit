@@ -144,12 +144,12 @@ function mapNutritionMemory(row?: DbRow | null): NutritionMemory {
 
 function mapQuota(row: DbRow): NutritionQuotaStatus {
   return {
-    dailyUsed: Number(row.daily_used ?? 0),
-    dailyLimit: Number(row.daily_limit ?? 20),
-    dailyRemaining: Number(row.daily_remaining ?? 20),
-    monthlyUsed: Number(row.monthly_used ?? 0),
-    monthlyLimit: Number(row.monthly_limit ?? 300),
-    monthlyRemaining: Number(row.monthly_remaining ?? 300),
+    dailyUsed: Number(row.daily_used ?? row.dailyUsed ?? 0),
+    dailyLimit: Number(row.daily_limit ?? row.dailyLimit ?? 20),
+    dailyRemaining: Number(row.daily_remaining ?? row.dailyRemaining ?? 20),
+    monthlyUsed: Number(row.monthly_used ?? row.monthlyUsed ?? 0),
+    monthlyLimit: Number(row.monthly_limit ?? row.monthlyLimit ?? 300),
+    monthlyRemaining: Number(row.monthly_remaining ?? row.monthlyRemaining ?? 300),
     blocked: Boolean(row.blocked)
   }
 }
@@ -262,7 +262,7 @@ export async function appendPortalNutritionMessage(
     metadata?: Record<string, unknown>
   }
 ) {
-  return callPortalFunction<{
+  const result = await callPortalFunction<{
     thread_id?: string
     threadId?: string
     quota?: DbRow
@@ -281,6 +281,11 @@ export async function appendPortalNutritionMessage(
       createdAt?: string
     }
   }>("append_nutrition_message", accessToken, payload)
+
+  return {
+    ...result,
+    quota: result.quota ? mapQuota(result.quota) : undefined
+  }
 }
 
 export async function updatePortalNutritionMemory(
