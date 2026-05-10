@@ -19,6 +19,7 @@ DECLARE
   v_auth_action TEXT := 'updated';
   v_existing_account client_portal_accounts%ROWTYPE;
   v_conflicting_account client_portal_accounts%ROWTYPE;
+  v_conflicting_profile profiles%ROWTYPE;
   v_portal_account_id UUID;
   v_account_action TEXT := 'update';
 BEGIN
@@ -70,13 +71,69 @@ BEGIN
 
   v_client_name := trim(concat(coalesce(v_client.first_name, ''), ' ', coalesce(v_client.last_name, '')));
 
+  SELECT *
+    INTO v_existing_account
+  FROM client_portal_accounts
+  WHERE gym_id = p_gym_id
+    AND client_id = p_client_id
+  LIMIT 1;
+
+  SELECT *
+    INTO v_conflicting_account
+  FROM client_portal_accounts
+  WHERE gym_id = p_gym_id
+    AND email_normalized = v_email_normalized
+    AND client_id <> p_client_id
+  LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'Este email ya esta vinculado a otra cuenta de portal de este gimnasio.';
+  END IF;
+
   SELECT id
     INTO v_auth_user_id
   FROM auth.users
   WHERE lower(email) = v_email_normalized
   LIMIT 1;
 
-  IF v_auth_user_id IS NULL THEN
+  IF v_auth_user_id IS NOT NULL THEN
+    SELECT *
+      INTO v_conflicting_profile
+    FROM profiles
+    WHERE auth_user_id = v_auth_user_id
+    LIMIT 1;
+
+    IF FOUND THEN
+      RAISE EXCEPTION 'Este email ya pertenece a una cuenta de personal. Usa otro email o el flujo de recuperacion de contrasena del propietario.';
+    END IF;
+
+    IF v_existing_account.id IS NULL OR v_existing_account.auth_user_id <> v_auth_user_id THEN
+      RAISE EXCEPTION 'Ya existe una cuenta Auth con este email. Por seguridad, el propietario debe acceder con su cuenta o recuperar su contrasena.';
+    END IF;
+
+    SELECT *
+      INTO v_conflicting_account
+    FROM client_portal_accounts
+    WHERE auth_user_id = v_auth_user_id
+      AND (gym_id <> p_gym_id OR client_id <> p_client_id)
+    LIMIT 1;
+
+    IF FOUND THEN
+      RAISE EXCEPTION 'Este usuario de Auth ya esta vinculado a otro portal cliente.';
+    END IF;
+
+    UPDATE auth.users
+    SET password = p_password_hash,
+        email_verified = TRUE,
+        profile = coalesce(profile, '{}'::jsonb) || jsonb_build_object('name', v_client_name),
+        metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
+          'source', 'manual_client_portal_activation',
+          'gym_id', p_gym_id,
+          'client_id', p_client_id
+        ),
+        updated_at = now()
+    WHERE id = v_auth_user_id;
+  ELSE
     INSERT INTO auth.users (
       email,
       password,
@@ -102,18 +159,6 @@ BEGIN
     RETURNING id INTO v_auth_user_id;
 
     v_auth_action := 'created';
-  ELSE
-    UPDATE auth.users
-    SET password = p_password_hash,
-        email_verified = TRUE,
-        profile = coalesce(profile, '{}'::jsonb) || jsonb_build_object('name', v_client_name),
-        metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
-          'source', 'manual_client_portal_activation',
-          'gym_id', p_gym_id,
-          'client_id', p_client_id
-        ),
-        updated_at = now()
-    WHERE id = v_auth_user_id;
   END IF;
 
   SELECT *
@@ -128,26 +173,7 @@ BEGIN
     RAISE EXCEPTION 'Este usuario de Auth ya esta vinculado a otro cliente de este gimnasio.';
   END IF;
 
-  SELECT *
-    INTO v_conflicting_account
-  FROM client_portal_accounts
-  WHERE gym_id = p_gym_id
-    AND email_normalized = v_email_normalized
-    AND client_id <> p_client_id
-  LIMIT 1;
-
-  IF FOUND THEN
-    RAISE EXCEPTION 'Este email ya esta vinculado a otra cuenta de portal de este gimnasio.';
-  END IF;
-
-  SELECT *
-    INTO v_existing_account
-  FROM client_portal_accounts
-  WHERE gym_id = p_gym_id
-    AND client_id = p_client_id
-  LIMIT 1;
-
-  IF FOUND THEN
+  IF v_existing_account.id IS NOT NULL THEN
     UPDATE client_portal_accounts
     SET auth_user_id = v_auth_user_id,
         email = v_email_normalized,
