@@ -37,13 +37,16 @@ CREATE OR REPLACE FUNCTION app_update_pass(
 DECLARE
   v_pass passes%ROWTYPE;
   v_pass_type pass_types%ROWTYPE;
+  v_gym_id UUID := app_actor_gym_id(p_actor_profile_id);
+  v_holder_count INTEGER := 0;
   v_pause_days INTEGER := 0;
   v_effective_sessions_left INTEGER;
 BEGIN
   SELECT *
     INTO v_pass
   FROM passes
-  WHERE id = p_pass_id;
+  WHERE id = p_pass_id
+    AND gym_id = v_gym_id;
 
   IF v_pass.id IS NULL THEN
     RAISE EXCEPTION 'Bono no encontrado';
@@ -52,10 +55,30 @@ BEGIN
   SELECT *
     INTO v_pass_type
   FROM pass_types
-  WHERE id = p_pass_type_id;
+  WHERE id = p_pass_type_id
+    AND gym_id = v_gym_id;
 
   IF v_pass_type.id IS NULL THEN
     RAISE EXCEPTION 'Tipo de bono no valido';
+  END IF;
+
+  SELECT COUNT(*)
+    INTO v_holder_count
+  FROM clients
+  WHERE id = ANY(COALESCE(p_holder_client_ids, ARRAY[]::UUID[]))
+    AND gym_id = v_gym_id;
+
+  IF v_holder_count <> COALESCE(array_length(p_holder_client_ids, 1), 0) THEN
+    RAISE EXCEPTION 'Todos los titulares deben pertenecer al gimnasio activo';
+  END IF;
+
+  IF p_purchased_by_client_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM clients
+    WHERE id = p_purchased_by_client_id
+      AND gym_id = v_gym_id
+  ) THEN
+    RAISE EXCEPTION 'El comprador no pertenece al gimnasio activo';
   END IF;
 
   IF NOT v_pass_type.shared_allowed AND COALESCE(array_length(p_holder_client_ids, 1), 0) > 1 THEN
@@ -74,7 +97,8 @@ BEGIN
   SELECT COALESCE(SUM(pause_days), 0)
     INTO v_pause_days
   FROM pass_pauses
-  WHERE pass_id = p_pass_id;
+  WHERE pass_id = p_pass_id
+    AND gym_id = v_gym_id;
 
   IF v_pass_type.kind = 'session' THEN
     v_effective_sessions_left := COALESCE(
@@ -103,12 +127,18 @@ BEGIN
          sessions_left = CASE WHEN v_pass_type.kind = 'session' THEN v_effective_sessions_left ELSE NULL END,
          notes = NULLIF(p_notes, ''),
          updated_at = NOW()
-   WHERE id = p_pass_id;
+   WHERE id = p_pass_id
+     AND gym_id = v_gym_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Bono no encontrado';
+  END IF;
 
   PERFORM app_replace_pass_holders(p_pass_id, p_holder_client_ids);
 
-  INSERT INTO audit_logs (actor_profile_id, entity_name, entity_id, action, diff)
+  INSERT INTO audit_logs (gym_id, actor_profile_id, entity_name, entity_id, action, diff)
   VALUES (
+    v_gym_id,
     p_actor_profile_id,
     'passes',
     p_pass_id,
@@ -343,10 +373,12 @@ DECLARE
   v_merged_pass_ids UUID[];
   v_merged_client_ids UUID[];
   v_target_notes TEXT;
+  v_gym_id UUID := app_actor_gym_id(p_actor_profile_id);
 BEGIN
   SELECT * INTO v_actor
     FROM profiles
    WHERE id = p_actor_profile_id
+     AND gym_id = v_gym_id
      AND is_active = TRUE;
 
   IF v_actor.id IS NULL THEN
@@ -360,6 +392,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM profiles
      WHERE id = p_trainer_profile_id
+       AND gym_id = v_gym_id
        AND is_active = TRUE
        AND role IN ('admin', 'trainer')
   ) THEN
@@ -391,7 +424,8 @@ BEGIN
 
   SELECT COUNT(*) INTO v_pass_count
     FROM passes
-   WHERE id = ANY(v_unique_pass_ids);
+   WHERE id = ANY(v_unique_pass_ids)
+     AND gym_id = v_gym_id;
 
   IF v_pass_count <> array_length(v_unique_pass_ids, 1) THEN
     RAISE EXCEPTION 'Todos los bonos seleccionados deben existir';
@@ -401,6 +435,7 @@ BEGIN
     SELECT DISTINCT ph.client_id
       FROM pass_holders ph
      WHERE ph.pass_id = ANY(v_unique_pass_ids)
+       AND ph.gym_id = v_gym_id
      ORDER BY ph.client_id
   ) INTO v_client_ids;
 
@@ -416,6 +451,7 @@ BEGIN
     SELECT * INTO v_existing
       FROM calendar_sessions
      WHERE id = p_session_id
+       AND gym_id = v_gym_id
      FOR UPDATE;
 
     IF v_existing.id IS NULL THEN
@@ -430,6 +466,7 @@ BEGIN
   SELECT * INTO v_slot_session
     FROM calendar_sessions
    WHERE trainer_profile_id = p_trainer_profile_id
+     AND gym_id = v_gym_id
      AND starts_at = p_starts_at
      AND ends_at = p_ends_at
      AND status <> 'cancelled'
@@ -489,7 +526,12 @@ BEGIN
            notes = NULLIF(trim(COALESCE(p_notes, '')), ''),
            updated_at = NOW()
      WHERE id = p_session_id
+       AND gym_id = v_gym_id
      RETURNING id INTO v_session_id;
+
+    IF v_session_id IS NULL THEN
+      RAISE EXCEPTION 'Sesion no encontrada';
+    END IF;
 
     INSERT INTO audit_logs (actor_profile_id, entity_name, entity_id, action, diff)
     VALUES (
@@ -518,10 +560,12 @@ BEGIN
         SELECT csp.pass_id
         FROM calendar_session_passes csp
         WHERE csp.session_id = v_session_id
+          AND csp.gym_id = v_gym_id
         UNION
         SELECT pass_id
         FROM calendar_sessions
         WHERE id = v_session_id
+          AND gym_id = v_gym_id
           AND pass_id IS NOT NULL
       ) merged_passes
       ORDER BY pass_id
@@ -531,6 +575,7 @@ BEGIN
       SELECT DISTINCT ph.client_id
       FROM pass_holders ph
       WHERE ph.pass_id = ANY(COALESCE(v_merged_pass_ids, ARRAY[]::UUID[]))
+        AND ph.gym_id = v_gym_id
       ORDER BY ph.client_id
     ) INTO v_merged_client_ids;
 
@@ -557,20 +602,28 @@ BEGIN
            status = p_status,
            notes = v_target_notes,
            updated_at = NOW()
-     WHERE id = v_session_id;
+     WHERE id = v_session_id
+       AND gym_id = v_gym_id;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Sesion no encontrada';
+    END IF;
 
     DELETE FROM calendar_session_passes
-     WHERE session_id = v_session_id;
+     WHERE session_id = v_session_id
+       AND gym_id = v_gym_id;
 
     INSERT INTO calendar_session_passes (session_id, pass_id)
     SELECT v_session_id, unnest(v_merged_pass_ids);
 
     IF p_session_id IS NOT NULL AND v_slot_session.id IS NOT NULL THEN
       DELETE FROM calendar_session_passes
-       WHERE session_id = p_session_id;
+       WHERE session_id = p_session_id
+         AND gym_id = v_gym_id;
 
       DELETE FROM calendar_sessions
-       WHERE id = p_session_id;
+       WHERE id = p_session_id
+         AND gym_id = v_gym_id;
     END IF;
 
     INSERT INTO audit_logs (actor_profile_id, entity_name, entity_id, action, diff)
@@ -596,7 +649,8 @@ BEGIN
   END IF;
 
   DELETE FROM calendar_session_passes
-   WHERE session_id = v_session_id;
+   WHERE session_id = v_session_id
+     AND gym_id = v_gym_id;
 
   INSERT INTO calendar_session_passes (session_id, pass_id)
   SELECT v_session_id, unnest(v_unique_pass_ids);
