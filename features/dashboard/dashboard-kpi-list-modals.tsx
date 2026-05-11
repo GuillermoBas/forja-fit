@@ -34,7 +34,7 @@ const passListConfigs: Record<PassListKey, { key: PassListKey; title: string; de
   outOfSessions: {
     key: "outOfSessions",
     title: "Bonos sin sesiones",
-    description: "Bonos de sesiones con saldo a cero para revisar renovación o cierre."
+    description: "Bonos agotados cuyo titular no tiene un bono de sesiones posterior activo y sin caducar."
   }
 }
 

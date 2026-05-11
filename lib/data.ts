@@ -48,6 +48,38 @@ function withEffectivePassStatus(pass: Pass, todayKey = getTodayDateKeyInAppTime
   }
 }
 
+function getPassRecencyKey(pass: Pass) {
+  return `${pass.contractedOn || ""}T${pass.createdAt || ""}`
+}
+
+function isNewerPassForSameHolder(candidate: Pass, exhaustedPass: Pass, holderId: string, todayKey: string) {
+  return candidate.id !== exhaustedPass.id &&
+    candidate.passKind === "session" &&
+    candidate.holderClientIds.includes(holderId) &&
+    candidate.status !== "expired" &&
+    candidate.status !== "cancelled" &&
+    candidate.status !== "out_of_sessions" &&
+    candidate.expiresOn >= todayKey &&
+    Number(candidate.sessionsLeft ?? 0) > 0 &&
+    getPassRecencyKey(candidate) > getPassRecencyKey(exhaustedPass)
+}
+
+function getActionableOutOfSessionsPasses(passes: Pass[], todayKey = getTodayDateKeyInAppTimeZone()) {
+  return passes.filter((pass) => {
+    if (pass.passKind !== "session" || Number(pass.sessionsLeft ?? 0) !== 0) {
+      return false
+    }
+
+    if (pass.holderClientIds.length === 0) {
+      return true
+    }
+
+    return pass.holderClientIds.some((holderId) => (
+      !passes.some((candidate) => isNewerPassForSameHolder(candidate, pass, holderId, todayKey))
+    ))
+  })
+}
+
 async function createAuthedClient() {
   if (await isStaffPreview()) {
     return null
@@ -400,14 +432,14 @@ export async function getDashboardData() {
   const notifications = await getNotifications()
 
   const now = new Date()
-  const today = now.toISOString().slice(0, 10)
+  const today = getTodayDateKeyInAppTimeZone()
   const monthPrefix = today.slice(0, 7)
   const plus7 = new Date(now)
   plus7.setDate(plus7.getDate() + 7)
   const nextWeek = plus7.toISOString().slice(0, 10)
   const activePasses = passes.filter((item) => item.status === "active")
   const expiringSoonPasses = passes.filter((item) => item.expiresOn <= nextWeek && item.status === "active")
-  const outOfSessionsPasses = passes.filter((item) => item.passKind === "session" && item.sessionsLeft === 0)
+  const outOfSessionsPasses = getActionableOutOfSessionsPasses(passes, today)
 
   return {
     kpis: [
