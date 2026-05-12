@@ -1,6 +1,4 @@
 // @ts-nocheck
-import { createClient } from "npm:@insforge/sdk"
-
 const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
 
 function json(data: unknown, status = 200) {
@@ -19,35 +17,16 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any, gymId: string) {
-  const authResult = await client.auth.getCurrentUser()
-  if (authResult.error || !authResult.data?.user) {
-    return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
+function parseDateInput(value?: string) {
+  if (!value) {
+    return null
   }
 
-  const profileResult = await client.database
-    .from("profiles")
-    .select("*")
-    .eq("auth_user_id", authResult.data.user.id)
-    .eq("gym_id", gymId)
-    .maybeSingle()
-
-  if (profileResult.error || !profileResult.data) {
-    return { error: json({ code: "PROFILE_REQUIRED", message: "Perfil no encontrado" }, 403) }
-  }
-
-  if (!["admin", "trainer"].includes(String(profileResult.data.role ?? ""))) {
-    return { error: json({ code: "FORBIDDEN", message: "No tienes permisos para lanzar este job" }, 403) }
-  }
-
-  return { profile: profileResult.data }
-}
-
-function parseNow(value?: string) {
-  const parsed = value ? new Date(value) : new Date()
+  const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
     return null
   }
+
   return parsed
 }
 
@@ -74,24 +53,55 @@ function madridHourSlot(date: Date) {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}`
 }
 
-function chooseConsumptionClientId(session: Record<string, unknown>, holderIds: string[]) {
-  const sessionClients = [session.client_1_id, session.client_2_id].filter(Boolean).map(String)
-  for (const clientId of sessionClients) {
-    if (holderIds.includes(clientId)) {
-      return clientId
+function rangeSlot(from: Date, before: Date) {
+  return `range-${madridHourSlot(from)}-${madridHourSlot(before)}`
+}
+
+async function insforgeFetch(path: string, token: string, init: RequestInit = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {})
+    }
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    return {
+      data: null,
+      error: data?.message || data?.error || response.statusText
     }
   }
 
-  return holderIds[0] ?? (session.client_1_id ? String(session.client_1_id) : null)
+  return { data, error: null }
 }
 
-function canMatchManualConsumption(consumedAt: string, session: Record<string, unknown>) {
-  const consumedAtTime = new Date(consumedAt).getTime()
-  const startsAtTime = new Date(String(session.starts_at)).getTime()
-  const endsAtTime = new Date(String(session.ends_at)).getTime()
+async function requireStaffActor(token: string, gymId: string) {
+  const authResult = await insforgeFetch("/api/auth/sessions/current", token)
+  if (authResult.error || !authResult.data?.user) {
+    return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
+  }
 
-  return consumedAtTime >= startsAtTime - 6 * 60 * 60 * 1000 &&
-    consumedAtTime <= endsAtTime + 12 * 60 * 60 * 1000
+  const params = new URLSearchParams({
+    select: "*",
+    auth_user_id: `eq.${authResult.data.user.id}`,
+    gym_id: `eq.${gymId}`,
+    limit: "1"
+  })
+  const profileResult = await insforgeFetch(`/api/database/records/profiles?${params}`, token)
+  const profile = Array.isArray(profileResult.data) ? profileResult.data[0] : null
+
+  if (profileResult.error || !profile) {
+    return { error: json({ code: "PROFILE_REQUIRED", message: "Perfil no encontrado" }, 403) }
+  }
+
+  if (profile.role !== "admin" && profile.role !== "trainer") {
+    return { error: json({ code: "FORBIDDEN", message: "No tienes permisos para lanzar este job" }, 403) }
+  }
+
+  return { profile }
 }
 
 export default async function(request: Request) {
@@ -103,417 +113,53 @@ export default async function(request: Request) {
 
     const body = await request.json().catch(() => ({}))
     const gymId = String(body?.gymId ?? "")
-    const now = parseNow(body?.nowIso)
-    if (!now) {
-      return json({ code: "INVALID_INPUT", message: "La fecha de referencia no es valida." }, 400)
+    const now = parseDateInput(body?.nowIso) ?? new Date()
+    const requestedConsumeBefore = parseDateInput(body?.consumeBeforeIso)
+    const requestedConsumeFrom = parseDateInput(body?.consumeFromIso)
+    const consumeBeforeDate = requestedConsumeBefore ?? new Date(now.getTime() - 60 * 60 * 1000)
+    const consumeFromDate = requestedConsumeFrom ?? new Date(consumeBeforeDate.getTime() - 60 * 60 * 1000)
+
+    if (!gymId) {
+      return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
     }
 
-    const consumeBefore = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
-    const runForDate = madridDateString(now)
-    const runSlot = madridHourSlot(now)
+    if (consumeFromDate >= consumeBeforeDate) {
+      return json({ code: "INVALID_INPUT", message: "La ventana de consumo no es valida." }, 400)
+    }
+
     const trusted = isTrustedToken(token)
-    const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "system" } } : await requireStaffActor(client, gymId)
+    const actor = trusted ? { profile: { id: null, role: "system" } } : await requireStaffActor(token, gymId)
 
     if ("error" in actor) {
       return actor.error
     }
 
-    let jobRunId: string | null = null
-    const startJob = await client.database.from("job_runs").insert([
+    const runSlot = requestedConsumeBefore || requestedConsumeFrom
+      ? rangeSlot(consumeFromDate, consumeBeforeDate)
+      : madridHourSlot(now)
+
+    const rpcResult = await insforgeFetch(
+      "/api/database/rpc/app_auto_consume_calendar_sessions",
+      token,
       {
-        gym_id: gymId,
-        job_key: "auto_consume_calendar_sessions",
-        run_for_date: runForDate,
-        run_slot: runSlot,
-        status: "started",
-        details: {
-          mode: "hourly",
-          run_slot: runSlot,
-          consume_before: consumeBefore
-        }
+        method: "POST",
+        body: JSON.stringify({
+          p_gym_id: gymId,
+          p_consume_from: consumeFromDate.toISOString(),
+          p_consume_before: consumeBeforeDate.toISOString(),
+          p_run_for_date: madridDateString(now),
+          p_run_slot: runSlot,
+          p_now: now.toISOString(),
+          p_actor_profile_id: actor.profile.id
+        })
       }
-    ]).select("id").single()
-
-    if (startJob.error) {
-      if (String(startJob.error.message ?? "").toLowerCase().includes("duplicate")) {
-        const existingJob = await client.database
-          .from("job_runs")
-          .select("id,status,details")
-          .eq("gym_id", gymId)
-          .eq("job_key", "auto_consume_calendar_sessions")
-          .eq("run_for_date", runForDate)
-          .eq("run_slot", runSlot)
-          .maybeSingle()
-
-        if (existingJob.error) {
-          return json({ code: "JOB_LOOKUP_FAILED", message: existingJob.error.message }, 400)
-        }
-
-        if (String(existingJob.data?.status ?? "") === "failed") {
-          jobRunId = String(existingJob.data.id)
-          const restartJob = await client.database.from("job_runs").update({
-            status: "started",
-            details: {
-              mode: "hourly",
-              run_slot: runSlot,
-              consume_before: consumeBefore,
-              retried_failed_job: true,
-              previous_details: existingJob.data.details ?? null
-            },
-            updated_at: now.toISOString()
-          }).eq("id", jobRunId).eq("gym_id", gymId)
-
-          if (restartJob.error) {
-            return json({ code: "JOB_RESTART_FAILED", message: restartJob.error.message }, 400)
-          }
-        } else {
-          return json({
-            ok: true,
-            skipped: true,
-            reason: "already_run",
-            runForDate,
-            runSlot
-          })
-        }
-      } else {
-        return json({
-          code: "JOB_START_FAILED",
-          message: startJob.error.message
-        }, 400)
-      }
-    }
-
-    jobRunId = jobRunId ?? String(startJob.data.id)
-
-    const sessionsResult = await client.database
-      .from("calendar_sessions")
-      .select("id,trainer_profile_id,client_1_id,client_2_id,pass_id,starts_at,ends_at,status")
-      .eq("gym_id", gymId)
-      .in("status", ["scheduled", "completed"])
-      .lte("ends_at", consumeBefore)
-      .order("ends_at", { ascending: true })
-
-    if (sessionsResult.error) {
-      await client.database.from("job_runs").update({
-        status: "failed",
-        details: { error: sessionsResult.error.message }
-      }).eq("id", jobRunId).eq("gym_id", gymId)
-      return json({ code: "SESSIONS_LOAD_FAILED", message: sessionsResult.error.message }, 400)
-    }
-
-    const sessions = sessionsResult.data ?? []
-    if (!sessions.length) {
-      await client.database.from("job_runs").update({
-        status: "completed",
-        details: {
-          mode: "hourly",
-          run_slot: runSlot,
-          consume_before: consumeBefore,
-          candidates: 0,
-          auto_consumed: 0,
-          linked_manual: 0,
-          updated_sessions: 0,
-          skipped: 0
-        }
-      }).eq("id", jobRunId).eq("gym_id", gymId)
-
-      return json({
-        ok: true,
-        candidates: 0,
-        autoConsumed: 0,
-        linkedManual: 0,
-        updatedSessions: 0,
-        skipped: 0
-      })
-    }
-
-    const sessionIds = sessions.map((session) => String(session.id))
-    const [sessionPassesResult, holdersResult, linkedConsumptionsResult] = await Promise.all([
-      client.database.from("calendar_session_passes").select("session_id,pass_id").eq("gym_id", gymId).in("session_id", sessionIds),
-      client.database.from("pass_holders").select("pass_id,client_id,holder_order").eq("gym_id", gymId),
-      client.database
-        .from("session_consumptions")
-        .select("id,pass_id,calendar_session_id,consumed_at,consumption_source")
-        .eq("gym_id", gymId)
-        .in("calendar_session_id", sessionIds)
-    ])
-
-    if (sessionPassesResult.error || holdersResult.error || linkedConsumptionsResult.error) {
-      await client.database.from("job_runs").update({
-        status: "failed",
-        details: {
-          error:
-            sessionPassesResult.error?.message ??
-            holdersResult.error?.message ??
-            linkedConsumptionsResult.error?.message ??
-            "No se pudieron cargar los datos relacionados"
-        }
-      }).eq("id", jobRunId).eq("gym_id", gymId)
-      return json(
-        {
-          code: "RELATED_LOAD_FAILED",
-          message:
-            sessionPassesResult.error?.message ??
-            holdersResult.error?.message ??
-            linkedConsumptionsResult.error?.message ??
-            "No se pudieron cargar los datos relacionados"
-        },
-        400
-      )
-    }
-
-    const passIdsBySession = new Map<string, string[]>()
-    for (const row of sessionPassesResult.data ?? []) {
-      const sessionId = String(row.session_id ?? "")
-      const current = passIdsBySession.get(sessionId) ?? []
-      current.push(String(row.pass_id ?? ""))
-      passIdsBySession.set(sessionId, current)
-    }
-
-    for (const session of sessions) {
-      const sessionId = String(session.id)
-      if (!passIdsBySession.has(sessionId) && session.pass_id) {
-        passIdsBySession.set(sessionId, [String(session.pass_id)])
-      }
-    }
-
-    const allPassIds = Array.from(
-      new Set(
-        Array.from(passIdsBySession.values()).flatMap((passIds) => passIds.filter(Boolean))
-      )
     )
 
-    const [passesResult, passTypesResult, manualConsumptionsResult] = await Promise.all([
-      client.database.from("passes").select("id,pass_type_id,status,sessions_left").eq("gym_id", gymId).in("id", allPassIds),
-      client.database.from("pass_types").select("id,kind").eq("gym_id", gymId),
-      allPassIds.length
-        ? client.database
-            .from("session_consumptions")
-            .select("id,pass_id,client_id,consumed_at,calendar_session_id,consumption_source")
-            .eq("gym_id", gymId)
-            .in("pass_id", allPassIds)
-            .is("calendar_session_id", null)
-            .order("consumed_at", { ascending: true })
-        : Promise.resolve({ data: [], error: null })
-    ])
-
-    if (passesResult.error || passTypesResult.error || manualConsumptionsResult.error) {
-      await client.database.from("job_runs").update({
-        status: "failed",
-        details: {
-          error:
-            passesResult.error?.message ??
-            passTypesResult.error?.message ??
-            manualConsumptionsResult.error?.message ??
-            "No se pudieron cargar los bonos"
-        }
-      }).eq("id", jobRunId).eq("gym_id", gymId)
-      return json(
-        {
-          code: "PASS_DATA_LOAD_FAILED",
-          message:
-            passesResult.error?.message ??
-            passTypesResult.error?.message ??
-            manualConsumptionsResult.error?.message ??
-            "No se pudieron cargar los bonos"
-        },
-        400
-      )
+    if (rpcResult.error) {
+      return json({ code: "AUTO_CONSUME_FAILED", message: rpcResult.error }, 400)
     }
 
-    const passKindById = new Map(
-      (passTypesResult.data ?? []).map((row: Record<string, unknown>) => [
-        String(row.id),
-        String(row.kind ?? "session")
-      ])
-    )
-    const passById = new Map(
-      (passesResult.data ?? []).map((row: Record<string, unknown>) => [
-        String(row.id),
-        {
-          id: String(row.id),
-          kind: passKindById.get(String(row.pass_type_id)) ?? "session",
-          status: String(row.status ?? "active"),
-          sessionsLeft: Number(row.sessions_left ?? 0)
-        }
-      ])
-    )
-
-    const holderIdsByPass = new Map<string, string[]>()
-    for (const row of holdersResult.data ?? []) {
-      const passId = String(row.pass_id ?? "")
-      const current = holderIdsByPass.get(passId) ?? []
-      current.push(String(row.client_id ?? ""))
-      holderIdsByPass.set(passId, current)
-    }
-
-    const linkedKeySet = new Set(
-      (linkedConsumptionsResult.data ?? []).map((row: Record<string, unknown>) => `${String(row.calendar_session_id)}:${String(row.pass_id)}`)
-    )
-
-    const manualConsumptionsByPass = new Map<string, Array<Record<string, unknown> & { matched?: boolean }>>()
-    for (const row of manualConsumptionsResult.data ?? []) {
-      const passId = String(row.pass_id ?? "")
-      const current = manualConsumptionsByPass.get(passId) ?? []
-      current.push({ ...row, matched: false })
-      manualConsumptionsByPass.set(passId, current)
-    }
-
-    let autoConsumed = 0
-    let linkedManual = 0
-    let updatedSessions = 0
-    let skipped = 0
-
-    for (const session of sessions) {
-      const sessionId = String(session.id)
-      const passIds = passIdsBySession.get(sessionId) ?? []
-      let consumedForSession = false
-
-      for (const passId of passIds) {
-        const linkedKey = `${sessionId}:${passId}`
-        if (linkedKeySet.has(linkedKey)) {
-          consumedForSession = true
-          continue
-        }
-
-        const pass = passById.get(passId)
-        if (
-          !pass ||
-          pass.kind !== "session" ||
-          pass.status !== "active" ||
-          pass.sessionsLeft <= 0
-        ) {
-          skipped += 1
-          continue
-        }
-
-        const manualMatches = manualConsumptionsByPass.get(passId) ?? []
-        const matchedManual = manualMatches.find((consumption) =>
-          !consumption.matched &&
-          canMatchManualConsumption(String(consumption.consumed_at ?? ""), session)
-        )
-
-        if (matchedManual) {
-          const linkResult = await client.database
-            .from("session_consumptions")
-            .update({
-              calendar_session_id: sessionId,
-              consumption_source: String(matchedManual.consumption_source ?? "manual") || "manual"
-            })
-            .eq("id", matchedManual.id)
-            .eq("gym_id", gymId)
-
-          if (linkResult.error) {
-            await client.database.from("job_runs").update({
-              status: "failed",
-              details: { error: linkResult.error.message }
-            }).eq("id", jobRunId).eq("gym_id", gymId)
-            return json({ code: "LINK_MANUAL_FAILED", message: linkResult.error.message }, 400)
-          }
-
-          matchedManual.matched = true
-          linkedKeySet.add(linkedKey)
-          linkedManual += 1
-          consumedForSession = true
-          continue
-        }
-
-        const consumptionClientId = chooseConsumptionClientId(session, holderIdsByPass.get(passId) ?? [])
-        if (!consumptionClientId) {
-          skipped += 1
-          continue
-        }
-
-        const insertResult = await client.database.from("session_consumptions").insert([
-          {
-            gym_id: gymId,
-            pass_id: passId,
-            client_id: consumptionClientId,
-            consumed_at: String(session.ends_at),
-            recorded_by_profile_id: session.trainer_profile_id,
-            notes: "Consumo automatico desde agenda",
-            calendar_session_id: sessionId,
-            consumption_source: "auto"
-          }
-        ])
-
-        if (insertResult.error) {
-          await client.database.from("job_runs").update({
-            status: "failed",
-            details: { error: insertResult.error.message }
-          }).eq("id", jobRunId).eq("gym_id", gymId)
-          return json({ code: "AUTO_CONSUME_FAILED", message: insertResult.error.message }, 400)
-        }
-
-        linkedKeySet.add(linkedKey)
-        autoConsumed += 1
-        consumedForSession = true
-      }
-
-      if (consumedForSession && String(session.status) === "scheduled") {
-        const completeResult = await client.database
-          .from("calendar_sessions")
-          .update({
-            status: "completed",
-            updated_at: now.toISOString()
-          })
-          .eq("id", sessionId)
-          .eq("gym_id", gymId)
-
-        if (completeResult.error) {
-          await client.database.from("job_runs").update({
-            status: "failed",
-            details: { error: completeResult.error.message }
-          }).eq("id", jobRunId).eq("gym_id", gymId)
-          return json({ code: "SESSION_COMPLETE_FAILED", message: completeResult.error.message }, 400)
-        }
-
-        updatedSessions += 1
-      }
-    }
-
-    await client.database.from("job_runs").update({
-      status: "completed",
-      details: {
-        mode: "hourly",
-        run_slot: runSlot,
-        consume_before: consumeBefore,
-        candidates: sessions.length,
-        auto_consumed: autoConsumed,
-        linked_manual: linkedManual,
-        updated_sessions: updatedSessions,
-        skipped
-      }
-    }).eq("id", jobRunId).eq("gym_id", gymId)
-
-    if (actor.profile.id) {
-      await client.database.from("audit_logs").insert([
-        {
-          gym_id: gymId,
-          actor_profile_id: actor.profile.id,
-          entity_name: "job_runs",
-          entity_id: jobRunId,
-          action: "update",
-          diff: {
-            candidates: sessions.length,
-            auto_consumed: autoConsumed,
-            linked_manual: linkedManual,
-            updated_sessions: updatedSessions,
-            skipped
-          }
-        }
-      ])
-    }
-
-    return json({
-      ok: true,
-      candidates: sessions.length,
-      autoConsumed,
-      linkedManual,
-      updatedSessions,
-      skipped
-    })
+    return json(rpcResult.data ?? { ok: true })
   } catch (error) {
     return json(
       { code: "UNEXPECTED", message: error instanceof Error ? error.message : "Error interno" },
