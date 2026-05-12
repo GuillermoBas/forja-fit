@@ -205,3 +205,39 @@ export const createInternalNotificationSchema = z.object({
 export const generateTicketPdfSchema = z.object({
   saleId: z.string().uuid()
 })
+
+const oneDecimalWeightSchema = z
+  .number()
+  .nonnegative()
+  .refine((value) => Math.abs(value * 10 - Math.round(value * 10)) < Number.EPSILON, "El peso solo puede tener un decimal")
+
+const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+export const upsertStrengthMetricSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1),
+  unit: z.string().trim().min(1).default("kg"),
+  displayOrder: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional()
+})
+
+export const recordClientMaxWeightEntriesSchema = z.object({
+  clientId: z.string().uuid(),
+  entryDate: dateKeySchema,
+  entries: z.array(z.object({
+    metricId: z.string().uuid(),
+    valueKg: oneDecimalWeightSchema,
+    notes: z.string().optional()
+  }))
+})
+
+export const updateClientMaxWeightEntrySchema = z.object({
+  entryId: z.string().uuid(),
+  valueKg: oneDecimalWeightSchema,
+  entryDate: dateKeySchema,
+  notes: z.string().optional()
+})
+
+export const deleteClientMaxWeightEntrySchema = z.object({
+  entryId: z.string().uuid()
+})

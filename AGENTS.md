@@ -299,6 +299,10 @@ Create and maintain these InsForge Functions:
 - `manually_activate_client_portal_account`
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
+- `upsert_strength_metric`
+- `record_client_max_weight_entries`
+- `update_client_max_weight_entry`
+- `delete_client_max_weight_entry`
 - `create_staff_user`
 - `resend_staff_activation`
 - `run_daily_expiry_scan`

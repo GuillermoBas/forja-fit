@@ -1,12 +1,14 @@
 import {
   demoCalendarSessions,
+  demoClientMaxWeightEntries,
   demoClients,
   demoExpenses,
   demoNotifications,
   demoPassTypes,
   demoPasses,
   demoProducts,
-  demoSales
+  demoSales,
+  demoStrengthMetrics
 } from "@/lib/demo-data"
 import { appConfig, isInsforgeConfigured } from "@/lib/config"
 import { getCurrentAccessToken, getSessionContext } from "@/lib/auth/session"
@@ -20,6 +22,8 @@ import type {
   BusinessSettings,
   CalendarSession,
   Client,
+  ClientMaxWeightEntry,
+  ClientMaxWeightLatest,
   ClientPortalAccountSummary,
   ClientPortalSupportState,
   Expense,
@@ -28,7 +32,8 @@ import type {
   PassType,
   Product,
   Sale,
-  StaffProfileSummary
+  StaffProfileSummary,
+  StrengthMetric
 } from "@/types/domain"
 
 export type ClientHistoryItem = {
@@ -178,6 +183,45 @@ function mapBusinessSettingsRow(row: DbRow): BusinessSettings {
     defaultVatRate: Number(row.default_vat_rate ?? 21),
     brandAssetVersion: row.brand_asset_version ? String(row.brand_asset_version) : null,
     brandAssets: mergeBrandAssets(normalizeBrandAssets(row.brand_assets))
+  }
+}
+
+function mapStrengthMetricRow(row: DbRow): StrengthMetric {
+  return {
+    id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
+    name: String(row.name ?? ""),
+    unit: String(row.unit ?? "kg"),
+    displayOrder: Number(row.display_order ?? 0),
+    isActive: Boolean(row.is_active),
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
+  }
+}
+
+function mapClientMaxWeightEntryRow(
+  row: DbRow,
+  metricById: Map<string, StrengthMetric>,
+  profileNameById: Map<string, string>
+): ClientMaxWeightEntry {
+  const metricId = String(row.metric_id ?? "")
+  const metric = metricById.get(metricId)
+  const createdByProfileId = row.created_by_profile_id ? String(row.created_by_profile_id) : null
+
+  return {
+    id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
+    clientId: String(row.client_id ?? ""),
+    metricId,
+    metricName: metric?.name ?? String(row.metric_name ?? "Metrica"),
+    unit: metric?.unit ?? String(row.unit ?? "kg"),
+    valueKg: Number(row.value_kg ?? 0),
+    entryDate: String(row.entry_date ?? ""),
+    createdByProfileId,
+    createdByName: createdByProfileId ? profileNameById.get(createdByProfileId) ?? null : null,
+    notes: row.notes ? String(row.notes) : null,
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
   }
 }
 
@@ -828,6 +872,129 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
   }
 
   return mapBusinessSettingsRow(result.data as DbRow)
+}
+
+export async function getStrengthMetrics(options?: { includeInactive?: boolean }): Promise<StrengthMetric[]> {
+  const client = await createAuthedClient()
+  if (!client) {
+    return options?.includeInactive ? demoStrengthMetrics : demoStrengthMetrics.filter((metric) => metric.isActive)
+  }
+  const gymId = getClientGymId(client)
+
+  let query = client.database
+    .from("strength_metrics")
+    .select("*")
+    .eq("gym_id", gymId)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true })
+
+  if (!options?.includeInactive) {
+    query = query.eq("is_active", true)
+  }
+
+  const result = await query
+
+  if (result.error || !result.data) {
+    return []
+  }
+
+  return (result.data as DbRow[]).map(mapStrengthMetricRow)
+}
+
+export async function getClientMaxWeightEntries(clientId: string): Promise<ClientMaxWeightEntry[]> {
+  const client = await createAuthedClient()
+  if (!client) {
+    return demoClientMaxWeightEntries
+      .filter((entry) => entry.clientId === clientId)
+      .sort((left, right) => `${right.entryDate}|${right.createdAt}`.localeCompare(`${left.entryDate}|${left.createdAt}`))
+  }
+  const gymId = getClientGymId(client)
+
+  const [entriesResult, metricsResult, profilesResult] = await Promise.all([
+    client.database
+      .from("client_max_weight_entries")
+      .select("*")
+      .eq("gym_id", gymId)
+      .eq("client_id", clientId)
+      .order("entry_date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    client.database.from("strength_metrics").select("*").eq("gym_id", gymId),
+    client.database.from("profiles").select("id,full_name").eq("gym_id", gymId)
+  ])
+
+  if (
+    entriesResult.error ||
+    !entriesResult.data ||
+    metricsResult.error ||
+    !metricsResult.data ||
+    profilesResult.error ||
+    !profilesResult.data
+  ) {
+    return []
+  }
+
+  const metricById = new Map(
+    (metricsResult.data as DbRow[]).map((row) => {
+      const metric = mapStrengthMetricRow(row)
+      return [metric.id, metric] as const
+    })
+  )
+  const profileNameById = new Map(
+    (profilesResult.data as DbRow[]).map((row) => [String(row.id), String(row.full_name ?? "")])
+  )
+
+  return (entriesResult.data as DbRow[]).map((row) =>
+    mapClientMaxWeightEntryRow(row, metricById, profileNameById)
+  )
+}
+
+export async function getClientMaxWeightLatestByMetric(clientId: string): Promise<ClientMaxWeightLatest[]> {
+  const client = await createAuthedClient()
+  if (!client) {
+    const latestEntryByMetricId = new Map<string, ClientMaxWeightEntry>()
+    for (const entry of demoClientMaxWeightEntries
+      .filter((item) => item.clientId === clientId)
+      .sort((left, right) => `${right.entryDate}|${right.createdAt}`.localeCompare(`${left.entryDate}|${left.createdAt}`))) {
+      if (!latestEntryByMetricId.has(entry.metricId)) {
+        latestEntryByMetricId.set(entry.metricId, entry)
+      }
+    }
+
+    return demoStrengthMetrics.map((metric) => ({
+      metric,
+      latestEntry: latestEntryByMetricId.get(metric.id) ?? null
+    }))
+  }
+
+  const [metrics, entries] = await Promise.all([
+    getStrengthMetrics({ includeInactive: true }),
+    getClientMaxWeightEntries(clientId)
+  ])
+  const latestEntryByMetricId = new Map<string, ClientMaxWeightEntry>()
+
+  for (const entry of entries) {
+    if (!latestEntryByMetricId.has(entry.metricId)) {
+      latestEntryByMetricId.set(entry.metricId, entry)
+    }
+  }
+
+  return metrics
+    .filter((metric) => metric.isActive || latestEntryByMetricId.has(metric.id))
+    .map((metric) => ({
+      metric,
+      latestEntry: latestEntryByMetricId.get(metric.id) ?? null
+    }))
+}
+
+export async function getClientMaxWeightHistory(
+  clientId: string,
+  metricId: string
+): Promise<ClientMaxWeightEntry[]> {
+  const entries = await getClientMaxWeightEntries(clientId)
+
+  return entries
+    .filter((entry) => entry.metricId === metricId)
+    .sort((left, right) => `${left.entryDate}|${left.createdAt}`.localeCompare(`${right.entryDate}|${right.createdAt}`))
 }
 
 export async function getSales(): Promise<Sale[]> {

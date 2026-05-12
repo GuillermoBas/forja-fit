@@ -21,10 +21,18 @@ import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 import { getEffectivePassStatus } from "@/lib/utils"
 import {
   getPreviewClientCalendarSessions,
+  getPreviewPortalMaxWeightHistory,
+  getPreviewPortalMaxWeightLatest,
   getPreviewPortalDashboardData
 } from "@/features/client-portal/preview-data"
 import { requireCurrentGym } from "@/lib/tenant"
-import type { CalendarStatus, Client, Pass } from "@/types/domain"
+import type {
+  CalendarStatus,
+  Client,
+  ClientMaxWeightEntry,
+  Pass,
+  StrengthMetric
+} from "@/types/domain"
 
 type DbRow = Record<string, unknown>
 
@@ -64,6 +72,11 @@ export type PortalPassSummary = {
   expiresOn: string
   sessionsLeft: number | null
   holderSummary: string
+}
+
+export type PortalMaxWeightData = {
+  metrics: StrengthMetric[]
+  entries: ClientMaxWeightEntry[]
 }
 
 export type PortalDashboardData = {
@@ -198,6 +211,40 @@ function mapPortalPass(row: DbRow, passTypeName: string, holderIds: string[], ho
   return {
     ...pass,
     status: getEffectivePassStatus(pass, getTodayDateKeyInAppTimeZone())
+  }
+}
+
+function mapPortalStrengthMetric(row: DbRow): StrengthMetric {
+  return {
+    id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
+    name: String(row.name ?? ""),
+    unit: String(row.unit ?? "kg"),
+    displayOrder: Number(row.display_order ?? 0),
+    isActive: Boolean(row.is_active),
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
+  }
+}
+
+function mapPortalMaxWeightEntry(row: DbRow, metricById: Map<string, StrengthMetric>): ClientMaxWeightEntry {
+  const metricId = String(row.metric_id ?? "")
+  const metric = metricById.get(metricId)
+
+  return {
+    id: String(row.id),
+    gymId: String(row.gym_id ?? ""),
+    clientId: String(row.client_id ?? ""),
+    metricId,
+    metricName: metric?.name ?? "Metrica",
+    unit: metric?.unit ?? "kg",
+    valueKg: Number(row.value_kg ?? 0),
+    entryDate: String(row.entry_date ?? ""),
+    createdByProfileId: row.created_by_profile_id ? String(row.created_by_profile_id) : null,
+    createdByName: null,
+    notes: row.notes ? String(row.notes) : null,
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
   }
 }
 
@@ -613,6 +660,49 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
     chart: buildChartPoints(sessions, rangeDays, today),
     history: buildHistory(sessions, pauses, renewals, rangeDays, today),
     activePasses
+  }
+})
+
+export const getPortalMaxWeightData = cache(async function getPortalMaxWeightData(): Promise<PortalMaxWeightData> {
+  if (await isClientPreview()) {
+    return {
+      metrics: getPreviewPortalMaxWeightLatest().map((item) => item.metric),
+      entries: getPreviewPortalMaxWeightLatest()
+        .flatMap((item) => getPreviewPortalMaxWeightHistory(item.metric.id))
+    }
+  }
+
+  const portalAccount = await requirePortalAccount()
+  const gym = await requireCurrentGym()
+  const client = createServerInsforgeClient() as any
+
+  const [metricsResult, entriesResult] = await Promise.all([
+    client.database
+      .from("strength_metrics")
+      .select("*")
+      .eq("gym_id", gym.id)
+      .order("display_order", { ascending: true })
+      .order("name", { ascending: true }),
+    client.database
+      .from("client_max_weight_entries")
+      .select("*")
+      .eq("gym_id", gym.id)
+      .eq("client_id", portalAccount.clientId)
+      .order("entry_date", { ascending: false })
+      .order("created_at", { ascending: false })
+  ])
+
+  if (metricsResult.error || !metricsResult.data || entriesResult.error || !entriesResult.data) {
+    throw new Error("No se pudieron cargar los maximos de fuerza del portal.")
+  }
+
+  const metrics = (metricsResult.data as DbRow[]).map(mapPortalStrengthMetric)
+  const metricById = new Map(metrics.map((metric) => [metric.id, metric]))
+  const entries = (entriesResult.data as DbRow[]).map((row) => mapPortalMaxWeightEntry(row, metricById))
+
+  return {
+    metrics,
+    entries
   }
 })
 

@@ -36,6 +36,10 @@ Funciones previstas:
 - `manually_activate_client_portal_account`
 - `auto_consume_calendar_sessions`
 - `update_profile_calendar_color`
+- `upsert_strength_metric`
+- `record_client_max_weight_entries`
+- `update_client_max_weight_entry`
+- `delete_client_max_weight_entry`
 - `run_daily_expiry_scan`
 - `send_client_communication`
 - `send_expiry_email`

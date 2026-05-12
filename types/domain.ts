@@ -214,3 +214,35 @@ export interface CalendarSession {
   status: CalendarStatus
   notes?: string | null
 }
+
+export interface StrengthMetric {
+  id: string
+  gymId: string
+  name: string
+  unit: string
+  displayOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ClientMaxWeightEntry {
+  id: string
+  gymId: string
+  clientId: string
+  metricId: string
+  metricName: string
+  unit: string
+  valueKg: number
+  entryDate: string
+  createdByProfileId: string | null
+  createdByName: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ClientMaxWeightLatest {
+  metric: StrengthMetric
+  latestEntry: ClientMaxWeightEntry | null
+}

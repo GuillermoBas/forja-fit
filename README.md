@@ -76,6 +76,15 @@ Estado actual de Fase 2, Fase 6:
 - se ha preparado una checklist de smoke test especifica de Fase 2 para validar separacion staff/cliente, nutricion y soporte operativo
 - quedan documentados los pasos de despliegue en InsForge Deployments para migraciones SQL, Functions y build final
 
+Estado actual de fuerza:
+- anadidas las tablas `strength_metrics` y `client_max_weight_entries` para configurar metricas de fuerza por gimnasio y guardar maximos de peso por cliente
+- la migracion `insforge/sql/040_client_max_weight_tracking.sql` siembra `Pecho`, `Espalda` y `Pierna` como metricas iniciales por gimnasio sin hardcodearlas en la logica de negocio
+- las escrituras staff usan Functions protegidas: `upsert_strength_metric`, `record_client_max_weight_entries`, `update_client_max_weight_entry` y `delete_client_max_weight_entry`
+- `/settings` incluye la seccion admin `Pesos maximos` para crear, editar, activar/desactivar y ordenar metricas
+- la ficha staff del cliente incluye resumen, formulario de registro parcial, grafica e historial de `Pesos maximos`; las metricas inactivas no aparecen para nuevos registros, pero su historial sigue consultable
+- el portal cliente muestra `Mis pesos maximos` en dashboard y la vista `/cliente/pesos-maximos` con resumen, grafica e historial de solo lectura
+- los clientes del portal solo tienen lectura de sus propios maximos; no existe escritura desde `/cliente/*`
+
 ## Fase 1 multitenant por subdominio
 
 Trainium resuelve el gimnasio activo desde el host. El gimnasio inicial es `eltemplo`, accesible en `eltemplo.trainium.es`; el dominio raiz `trainium.es` no resuelve gimnasio y no debe mostrar datos operativos. En local y preview se usa `TRAINIUM_DEFAULT_GYM_SLUG=eltemplo` como fallback explicito.

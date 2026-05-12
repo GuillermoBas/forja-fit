@@ -7,7 +7,8 @@ import { ActivityChart } from "@/features/client-portal/activity-chart"
 import { ActivityHistoryList } from "@/features/client-portal/activity-history-list"
 import { ActivityRangeLinks } from "@/features/client-portal/activity-range-links"
 import { ActivePassesList } from "@/features/client-portal/active-passes-list"
-import { getPortalDashboardData } from "@/features/client-portal/data"
+import { getPortalDashboardData, getPortalMaxWeightData } from "@/features/client-portal/data"
+import { PortalMaxWeightsDashboardCard } from "@/features/client-portal/max-weights"
 import { PortalContentError } from "@/features/client-portal/portal-content-error"
 import { isNextControlError } from "@/lib/next-control-errors"
 
@@ -30,9 +31,13 @@ function DashboardDataFallback() {
 
 async function DashboardData({ rangeParam }: { rangeParam?: string }) {
   let data
+  let maxWeightData
 
   try {
-    data = await getPortalDashboardData(rangeParam)
+    ;[data, maxWeightData] = await Promise.all([
+      getPortalDashboardData(rangeParam),
+      getPortalMaxWeightData()
+    ])
   } catch (error) {
     if (isNextControlError(error)) {
       throw error
@@ -107,6 +112,11 @@ async function DashboardData({ rangeParam }: { rangeParam?: string }) {
         />
         <ActivePassesList passes={data.activePasses} />
       </section>
+
+      <PortalMaxWeightsDashboardCard
+        metrics={maxWeightData.metrics}
+        entries={maxWeightData.entries}
+      />
 
       <ActivityHistoryList
         title="Historial reciente"

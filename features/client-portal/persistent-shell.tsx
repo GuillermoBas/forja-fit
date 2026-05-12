@@ -51,6 +51,11 @@ const pageCopy = [
     description: "Gestiona tus datos personales, datos del historial de nutrición y los ajustes de notificaciones push."
   },
   {
+    matches: ["/cliente/pesos-maximos"],
+    title: "Evolución de pesos máximos",
+    description: "Consulta tus marcas registradas por tu entrenador y su progresión."
+  },
+  {
     matches: ["/cliente/dashboard", "/cliente/actividad"],
     title: "Actividad",
     description: "Resumen de entrenamientos, regularidad y bonos vigentes."

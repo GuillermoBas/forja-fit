@@ -14,6 +14,8 @@ import {
   getPassTypes,
   getPasses,
   getSales,
+  getClientMaxWeightEntries,
+  getStrengthMetrics,
   getTrainerProfiles
 } from "@/lib/data"
 import { getCurrentProfile } from "@/lib/auth/session"
@@ -28,6 +30,7 @@ import {
 } from "@/features/clients/pass-operation-forms"
 import { Button } from "@/components/ui/button"
 import { ClientPortalAdminForm } from "@/features/clients/client-portal-admin-form"
+import { ClientMaxWeightsCard } from "@/features/clients/client-max-weights-card"
 
 export default async function ClientDetailPage({
   params
@@ -51,6 +54,8 @@ export default async function ClientDetailPage({
     profile,
     portalAccount,
     portalSupport,
+    strengthMetrics,
+    maxWeightEntries,
     allTrainerProfiles
   ] = await Promise.all([
     getClients(),
@@ -62,6 +67,8 @@ export default async function ClientDetailPage({
     getCurrentProfile(),
     getClientPortalAccountByClientId(id),
     getClientPortalSupportState(id),
+    getStrengthMetrics({ includeInactive: true }),
+    getClientMaxWeightEntries(id),
     getTrainerProfiles()
   ])
 
@@ -285,6 +292,12 @@ export default async function ClientDetailPage({
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ClientMaxWeightsCard
+        clientId={client.id}
+        metrics={strengthMetrics}
+        entries={maxWeightEntries}
+      />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ConsumeSessionForm clientId={client.id} passes={passes} />

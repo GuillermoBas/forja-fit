@@ -1,5 +1,11 @@
 import { addDays, format, startOfWeek, subDays } from "date-fns"
-import type { Client, ClientPortalAccountSummary } from "@/types/domain"
+import type {
+  Client,
+  ClientMaxWeightEntry,
+  ClientMaxWeightLatest,
+  ClientPortalAccountSummary,
+  StrengthMetric
+} from "@/types/domain"
 import type {
   ClientCalendarSession,
   PortalActivityRange,
@@ -46,6 +52,112 @@ const previewQuota: NutritionQuotaStatus = {
   blocked: false
 }
 
+const previewStrengthMetrics: StrengthMetric[] = [
+  {
+    id: "preview-strength-pecho",
+    gymId: "visual-preview-gym",
+    name: "Pecho",
+    unit: "kg",
+    displayOrder: 1,
+    isActive: true,
+    createdAt: subDays(new Date(), 30).toISOString(),
+    updatedAt: subDays(new Date(), 30).toISOString()
+  },
+  {
+    id: "preview-strength-espalda",
+    gymId: "visual-preview-gym",
+    name: "Espalda",
+    unit: "kg",
+    displayOrder: 2,
+    isActive: true,
+    createdAt: subDays(new Date(), 30).toISOString(),
+    updatedAt: subDays(new Date(), 30).toISOString()
+  },
+  {
+    id: "preview-strength-pierna",
+    gymId: "visual-preview-gym",
+    name: "Pierna",
+    unit: "kg",
+    displayOrder: 3,
+    isActive: true,
+    createdAt: subDays(new Date(), 30).toISOString(),
+    updatedAt: subDays(new Date(), 30).toISOString()
+  },
+  {
+    id: "preview-strength-hombro",
+    gymId: "visual-preview-gym",
+    name: "Hombro",
+    unit: "kg",
+    displayOrder: 4,
+    isActive: false,
+    createdAt: subDays(new Date(), 30).toISOString(),
+    updatedAt: subDays(new Date(), 10).toISOString()
+  }
+]
+
+const previewMaxWeightEntries: ClientMaxWeightEntry[] = [
+  {
+    id: "preview-max-weight-1",
+    gymId: "visual-preview-gym",
+    clientId: previewClient.id,
+    metricId: "preview-strength-pecho",
+    metricName: "Pecho",
+    unit: "kg",
+    valueKg: 42.5,
+    entryDate: toIsoDay(subDays(new Date(), 21)),
+    createdByProfileId: "visual-preview-staff",
+    createdByName: "Admin Trainium",
+    notes: null,
+    createdAt: subDays(new Date(), 21).toISOString(),
+    updatedAt: subDays(new Date(), 21).toISOString()
+  },
+  {
+    id: "preview-max-weight-2",
+    gymId: "visual-preview-gym",
+    clientId: previewClient.id,
+    metricId: "preview-strength-pecho",
+    metricName: "Pecho",
+    unit: "kg",
+    valueKg: 45,
+    entryDate: toIsoDay(subDays(new Date(), 5)),
+    createdByProfileId: "visual-preview-staff",
+    createdByName: "Admin Trainium",
+    notes: "Mejor marca tecnica",
+    createdAt: subDays(new Date(), 5).toISOString(),
+    updatedAt: subDays(new Date(), 5).toISOString()
+  },
+  {
+    id: "preview-max-weight-3",
+    gymId: "visual-preview-gym",
+    clientId: previewClient.id,
+    metricId: "preview-strength-espalda",
+    metricName: "Espalda",
+    unit: "kg",
+    valueKg: 55.5,
+    entryDate: toIsoDay(subDays(new Date(), 7)),
+    createdByProfileId: "visual-preview-staff",
+    createdByName: "Admin Trainium",
+    notes: null,
+    createdAt: subDays(new Date(), 7).toISOString(),
+    updatedAt: subDays(new Date(), 7).toISOString()
+  },
+  {
+    id: "preview-max-weight-4",
+    gymId: "visual-preview-gym",
+    clientId: previewClient.id,
+    metricId: "preview-strength-hombro",
+    metricName: "Hombro",
+    unit: "kg",
+    valueKg: 18,
+    entryDate: toIsoDay(subDays(new Date(), 12)),
+    createdByProfileId: "visual-preview-staff",
+    createdByName: "Admin Trainium",
+    notes: "Metrica archivada",
+    createdAt: subDays(new Date(), 12).toISOString(),
+    updatedAt: subDays(new Date(), 12).toISOString()
+  }
+]
+
 const previewMemory: NutritionMemory = {
   heightCm: 178,
   weightKg: 78,
@@ -75,6 +187,29 @@ function parseRange(value?: string): PortalActivityRange {
 
 export function getPreviewPortalAccount() {
   return previewPortalAccount
+}
+
+export function getPreviewPortalMaxWeightLatest(): ClientMaxWeightLatest[] {
+  const latestByMetricId = new Map<string, ClientMaxWeightEntry>()
+
+  for (const entry of [...previewMaxWeightEntries].sort((left, right) =>
+    `${right.entryDate}|${right.createdAt}`.localeCompare(`${left.entryDate}|${left.createdAt}`)
+  )) {
+    if (!latestByMetricId.has(entry.metricId)) {
+      latestByMetricId.set(entry.metricId, entry)
+    }
+  }
+
+  return previewStrengthMetrics.map((metric) => ({
+    metric,
+    latestEntry: latestByMetricId.get(metric.id) ?? null
+  }))
+}
+
+export function getPreviewPortalMaxWeightHistory(metricId: string): ClientMaxWeightEntry[] {
+  return previewMaxWeightEntries
+    .filter((entry) => entry.metricId === metricId)
+    .sort((left, right) => `${left.entryDate}|${left.createdAt}`.localeCompare(`${right.entryDate}|${right.createdAt}`))
 }
 
 export function getPreviewPortalDashboardData(rangeParam?: string): PortalDashboardData {

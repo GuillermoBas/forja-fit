@@ -8,8 +8,9 @@ import { ManualPushCard } from "@/features/settings/manual-push-card"
 import { ManualClientPortalActivationCard } from "@/features/settings/manual-client-portal-activation-card"
 import { ProfileColorForm } from "@/features/settings/profile-color-form"
 import { StaffManagementCard } from "@/features/settings/staff-management-card"
+import { StrengthMetricsSettingsCard } from "@/features/settings/strength-metrics-settings-card"
 import { getCurrentAccessToken, requireAuthenticatedProfile } from "@/lib/auth/session"
-import { getBusinessSettings, getClients, getStaffProfiles } from "@/lib/data"
+import { getBusinessSettings, getClients, getStaffProfiles, getStrengthMetrics } from "@/lib/data"
 import { createServerInsforgeClient } from "@/lib/insforge/server"
 import { isStaffPreview } from "@/lib/preview-mode"
 import { getCurrentGym } from "@/lib/tenant"
@@ -102,11 +103,12 @@ export default async function SettingsPage() {
   }
 
   const isAdmin = profile.role === "admin"
-  const [manualPushClients, staffProfiles, businessSettings, clients] = await Promise.all([
+  const [manualPushClients, staffProfiles, businessSettings, clients, strengthMetrics] = await Promise.all([
     getManualPushClients(),
     isAdmin ? getStaffProfiles() : Promise.resolve([]),
     isAdmin ? getBusinessSettings() : Promise.resolve(null),
-    isAdmin ? getClients() : Promise.resolve([])
+    isAdmin ? getClients() : Promise.resolve([]),
+    isAdmin ? getStrengthMetrics({ includeInactive: true }) : Promise.resolve([])
   ])
 
   return (
@@ -136,6 +138,8 @@ export default async function SettingsPage() {
             <DailyExpiryScanForm />
 
             <ManualClientPortalActivationCard clients={clients} />
+
+            <StrengthMetricsSettingsCard metrics={strengthMetrics} />
 
             <StaffManagementCard staffProfiles={staffProfiles} />
           </>

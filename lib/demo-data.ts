@@ -1,13 +1,16 @@
 import type {
   CalendarSession,
   Client,
+  ClientMaxWeightEntry,
+  ClientMaxWeightLatest,
   Expense,
   NotificationLogItem,
   Pass,
   PassType,
   Product,
   Profile,
-  Sale
+  Sale,
+  StrengthMetric
 } from "@/types/domain"
 
 export const demoProfile: Profile = {
@@ -313,3 +316,117 @@ export const demoCalendarSessions: CalendarSession[] = [
     notes: null
   }
 ]
+
+export const demoStrengthMetrics: StrengthMetric[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    gymId: "visual-preview-gym",
+    name: "Pecho",
+    unit: "kg",
+    displayOrder: 1,
+    isActive: true,
+    createdAt: "2026-04-01T08:00:00.000Z",
+    updatedAt: "2026-04-01T08:00:00.000Z"
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    gymId: "visual-preview-gym",
+    name: "Espalda",
+    unit: "kg",
+    displayOrder: 2,
+    isActive: true,
+    createdAt: "2026-04-01T08:00:00.000Z",
+    updatedAt: "2026-04-01T08:00:00.000Z"
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    gymId: "visual-preview-gym",
+    name: "Pierna",
+    unit: "kg",
+    displayOrder: 3,
+    isActive: true,
+    createdAt: "2026-04-01T08:00:00.000Z",
+    updatedAt: "2026-04-01T08:00:00.000Z"
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    gymId: "visual-preview-gym",
+    name: "Hombro",
+    unit: "kg",
+    displayOrder: 4,
+    isActive: false,
+    createdAt: "2026-04-01T08:00:00.000Z",
+    updatedAt: "2026-04-20T08:00:00.000Z"
+  }
+]
+
+export const demoClientMaxWeightEntries: ClientMaxWeightEntry[] = [
+  {
+    id: "mw-1",
+    gymId: "visual-preview-gym",
+    clientId: "c1",
+    metricId: "11111111-1111-4111-8111-111111111111",
+    metricName: "Pecho",
+    unit: "kg",
+    valueKg: 42.5,
+    entryDate: "2026-04-03",
+    createdByProfileId: "demo-admin",
+    createdByName: "Admin Trainium",
+    notes: null,
+    createdAt: "2026-04-03T10:00:00.000Z",
+    updatedAt: "2026-04-03T10:00:00.000Z"
+  },
+  {
+    id: "mw-2",
+    gymId: "visual-preview-gym",
+    clientId: "c1",
+    metricId: "11111111-1111-4111-8111-111111111111",
+    metricName: "Pecho",
+    unit: "kg",
+    valueKg: 45,
+    entryDate: "2026-04-17",
+    createdByProfileId: "demo-admin",
+    createdByName: "Admin Trainium",
+    notes: "Mejor marca tecnica",
+    createdAt: "2026-04-17T10:00:00.000Z",
+    updatedAt: "2026-04-17T10:00:00.000Z"
+  },
+  {
+    id: "mw-3",
+    gymId: "visual-preview-gym",
+    clientId: "c1",
+    metricId: "22222222-2222-4222-8222-222222222222",
+    metricName: "Espalda",
+    unit: "kg",
+    valueKg: 55.5,
+    entryDate: "2026-04-17",
+    createdByProfileId: "demo-admin",
+    createdByName: "Admin Trainium",
+    notes: null,
+    createdAt: "2026-04-17T10:15:00.000Z",
+    updatedAt: "2026-04-17T10:15:00.000Z"
+  },
+  {
+    id: "mw-4",
+    gymId: "visual-preview-gym",
+    clientId: "c1",
+    metricId: "44444444-4444-4444-8444-444444444444",
+    metricName: "Hombro",
+    unit: "kg",
+    valueKg: 18,
+    entryDate: "2026-04-10",
+    createdByProfileId: "demo-admin",
+    createdByName: "Admin Trainium",
+    notes: "Metrica archivada",
+    createdAt: "2026-04-10T10:15:00.000Z",
+    updatedAt: "2026-04-10T10:15:00.000Z"
+  }
+]
+
+export const demoClientMaxWeightLatest: ClientMaxWeightLatest[] = demoStrengthMetrics.map((metric) => ({
+  metric,
+  latestEntry:
+    demoClientMaxWeightEntries
+      .filter((entry) => entry.metricId === metric.id)
+      .sort((left, right) => `${right.entryDate}|${right.createdAt}`.localeCompare(`${left.entryDate}|${left.createdAt}`))[0] ?? null
+}))
