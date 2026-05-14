@@ -11,6 +11,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: appName,
     short_name: appName,
+    lang: "es-ES",
+    dir: "ltr",
     description: "La plataforma inteligente para entrenadores personales",
     start_url: "/",
     scope: "/",

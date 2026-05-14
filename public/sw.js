@@ -42,6 +42,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || fallback.title, {
       body: payload.body || fallback.body,
+      lang: "es-ES",
+      dir: "ltr",
       icon: payload.icon || fallback.icon,
       badge: payload.badge || fallback.badge,
       data: {
