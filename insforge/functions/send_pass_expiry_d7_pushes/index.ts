@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { createClient } from "npm:@insforge/sdk"
-
 const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
+const FUNCTIONS_URL = Deno.env.get("INSFORGE_FUNCTIONS_URL") ?? "https://4nc39nmu.functions.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,24 +18,69 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any, gymId: string) {
-  const authResult = await client.auth.getCurrentUser()
+async function insforgeFetch(path: string, token: string, init: RequestInit = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {})
+    }
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
+  }
+
+  return { data, error: null }
+}
+
+async function invokeFunction(slug: string, token: string, body: Record<string, unknown>) {
+  const response = await fetch(`${FUNCTIONS_URL}/${slug}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok || data?.code) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
+  }
+
+  return { data, error: null }
+}
+
+async function selectRecords(table: string, token: string, params: Record<string, string>) {
+  return insforgeFetch(`/api/database/records/${table}?${new URLSearchParams(params)}`, token)
+}
+
+function idIn(values: string[]) {
+  return `in.(${values.join(",")})`
+}
+
+async function requireStaffActor(token: string, gymId: string) {
+  const authResult = await insforgeFetch("/api/auth/sessions/current", token)
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
   }
 
-  const profileResult = await client.database
-    .from("profiles")
-    .select("*")
-    .eq("auth_user_id", authResult.data.user.id)
-    .eq("gym_id", gymId)
-    .maybeSingle()
+  const profileResult = await selectRecords("profiles", token, {
+    select: "*",
+    auth_user_id: `eq.${authResult.data.user.id}`,
+    gym_id: `eq.${gymId}`,
+    limit: "1"
+  })
+  const profile = Array.isArray(profileResult.data) ? profileResult.data[0] : null
 
-  if (profileResult.error || !profileResult.data) {
+  if (profileResult.error || !profile) {
     return { error: json({ code: "PROFILE_REQUIRED", message: "Perfil no encontrado" }, 403) }
   }
 
-  return { profile: profileResult.data }
+  return { profile }
 }
 
 function madridDateString(input?: string) {
@@ -56,6 +100,14 @@ function addDays(dateString: string, days: number) {
   return date.toISOString().slice(0, 10)
 }
 
+function canSendExpiryReminder(pass: Record<string, unknown>) {
+  if (pass.sessions_left === null || pass.sessions_left === undefined) {
+    return true
+  }
+
+  return Number(pass.sessions_left) > 0
+}
+
 export default async function(request: Request) {
   try {
     const token = getToken(request)
@@ -73,47 +125,55 @@ export default async function(request: Request) {
     }
 
     const trusted = isTrustedToken(token)
-    const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(token, gymId)
     if ("error" in actor) {
       return actor.error
     }
 
-    const passesResult = await client.database
-      .from("passes")
-      .select("id,pass_type_id,expires_on,sessions_left,status")
-      .eq("gym_id", gymId)
-      .eq("expires_on", expiresOn)
-      .in("status", ["active", "out_of_sessions"])
+    const passesResult = await selectRecords("passes", token, {
+      select: "id,pass_type_id,expires_on,sessions_left,status",
+      gym_id: `eq.${gymId}`,
+      expires_on: `eq.${expiresOn}`,
+      status: "in.(active,out_of_sessions)"
+    })
 
     if (passesResult.error) {
-      return json({ code: "PASSES_LOAD_FAILED", message: passesResult.error.message }, 400)
+      return json({ code: "PASSES_LOAD_FAILED", message: passesResult.error }, 400)
     }
 
-    const activePausesResult = await client.database
-      .from("pass_pauses")
-      .select("pass_id")
-      .eq("gym_id", gymId)
-      .lte("starts_on", runForDate)
-      .gte("ends_on", runForDate)
+    const activePausesResult = await selectRecords("pass_pauses", token, {
+      select: "pass_id",
+      gym_id: `eq.${gymId}`,
+      starts_on: `lte.${runForDate}`,
+      ends_on: `gte.${runForDate}`
+    })
 
     if (activePausesResult.error) {
-      return json({ code: "PAUSES_LOAD_FAILED", message: activePausesResult.error.message }, 400)
+      return json({ code: "PAUSES_LOAD_FAILED", message: activePausesResult.error }, 400)
     }
 
     const activePausedPassIds = new Set(
       (activePausesResult.data ?? []).map((pause) => String(pause.pass_id))
     )
-    const passRows = (passesResult.data ?? []).filter((pass) => !activePausedPassIds.has(String(pass.id)))
+    const passRows = (passesResult.data ?? [])
+      .filter((pass) => !activePausedPassIds.has(String(pass.id)) && canSendExpiryReminder(pass))
     const passIds = passRows.map((pass) => String(pass.id))
     const passTypeIds = Array.from(new Set(passRows.map((pass) => String(pass.pass_type_id))))
 
     const [holdersResult, passTypesResult] = await Promise.all([
       passIds.length
-        ? client.database.from("pass_holders").select("pass_id,client_id").eq("gym_id", gymId).in("pass_id", passIds)
+        ? selectRecords("pass_holders", token, {
+            select: "pass_id,client_id",
+            gym_id: `eq.${gymId}`,
+            pass_id: idIn(passIds)
+          })
         : { data: [], error: null },
       passTypeIds.length
-        ? client.database.from("pass_types").select("id,name").eq("gym_id", gymId).in("id", passTypeIds)
+        ? selectRecords("pass_types", token, {
+            select: "id,name",
+            gym_id: `eq.${gymId}`,
+            id: idIn(passTypeIds)
+          })
         : { data: [], error: null }
     ])
 
@@ -121,7 +181,7 @@ export default async function(request: Request) {
       return json(
         {
           code: "D7_CONTEXT_LOAD_FAILED",
-          message: holdersResult.error?.message ?? passTypesResult.error?.message
+          message: holdersResult.error ?? passTypesResult.error
         },
         400
       )
@@ -147,20 +207,18 @@ export default async function(request: Request) {
         continue
       }
 
-      const result = await client.functions.invoke("send_client_communication", {
-        body: {
-          gymId,
-          gymSlug,
-          clientIds: holderIds,
-          passId: pass.id,
-          eventType: "pass_expiry_d7",
-          channels: ["push"],
-          dedupeSeed: `${pass.id}:${pass.expires_on}`,
-          templateData: {
-            passTypeName: passTypeNames.get(String(pass.pass_type_id)) ?? "Bono",
-            expiresOn: pass.expires_on,
-            sessionsLeft: pass.sessions_left
-          }
+      const result = await invokeFunction("send_client_communication", token, {
+        gymId,
+        gymSlug,
+        clientIds: holderIds,
+        passId: pass.id,
+        eventType: "pass_expiry_d7",
+        channels: ["push"],
+        dedupeSeed: `${pass.id}:${pass.expires_on}`,
+        templateData: {
+          passTypeName: passTypeNames.get(String(pass.pass_type_id)) ?? "Bono",
+          expiresOn: pass.expires_on,
+          sessionsLeft: pass.sessions_left
         }
       })
 
