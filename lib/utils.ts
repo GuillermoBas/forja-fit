@@ -125,7 +125,7 @@ export function formatNotificationType(value: NotificationType | string) {
     case "pass_assigned":
       return "Bono asignado"
     case "calendar_session_24h":
-      return "Recordatorio de sesión 24 h"
+      return "Recordatorio de sesión del día"
     case "pass_expiry_d7":
       return "Caducidad de bono D-7"
     case "pass_expiry_d0":

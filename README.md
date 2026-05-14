@@ -257,7 +257,7 @@ La Fase 2 de PWA usa Web Push estandar sobre InsForge Database, Auth, Functions 
 - `pass_expiry_d7`: aviso 7 dias antes de caducar un bono.
 - `pass_expiry_d0`: aviso el dia de caducidad de un bono.
 - `pass_assigned`: confirmacion de nuevo bono o renovacion.
-- `calendar_session_24h`: recordatorio 24 horas antes de una sesion agendada.
+- `calendar_session_24h`: recordatorio el mismo dia de una sesion agendada, pensado para ejecutarse de madrugada antes de las 7:00 en `Europe/Madrid`.
 - `manual_note`: aviso manual o confirmacion operativa.
 
 No hay notificaciones push de nutricion, stock, informes ni alertas genericas de staff.
@@ -324,7 +324,7 @@ Publicar o actualizar:
 Crear estos Schedules en InsForge:
 
 - Diario, despues de medianoche en `Europe/Madrid`: `send_pass_expiry_d7_pushes`
-- Cada hora: `send_calendar_session_24h_reminders`
+- Diario, de madrugada y siempre antes de las 7:00 en `Europe/Madrid`: `send_calendar_session_24h_reminders`
 
 Ejemplo de creacion usando la `API_KEY` reservada de InsForge como credencial estable para jobs programados:
 
@@ -338,7 +338,7 @@ npx @insforge/cli schedules create \
   --body '{}'
 
 npx @insforge/cli schedules create \
-  --name "Push recordatorio sesiones 24h" \
+  --name "Recordatorio sesiones del dia" \
   --cron "0 * * * *" \
   --url "<INSFORGE_BASE_URL>/functions/send_calendar_session_24h_reminders" \
   --method POST \
@@ -369,7 +369,7 @@ Los envios usan dedupe por evento, canal, cliente y entidad:
 2. Abrir Trainium desde el icono instalado.
 3. Entrar en `/cliente/ajustes`.
 4. Activar notificaciones y confirmar permisos.
-5. Crear una cita para el cliente y ejecutar `send_calendar_session_24h_reminders` con una cita dentro de la ventana de 23-25 horas.
+5. Crear una cita para el cliente y ejecutar `send_calendar_session_24h_reminders` antes de las 7:00 con una cita programada para ese mismo dia.
 
 ### Probar en iPhone/iPad
 

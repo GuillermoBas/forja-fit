@@ -251,7 +251,7 @@ export function PushNotificationSettings({ vapidPublicKey, initialPreferences }:
             onChange={(checked) => updatePreference("passAssignedEnabled", checked)}
           />
           <PreferenceToggle
-            label="Recordatorio de sesión 24 horas antes"
+            label="Recordatorio de sesión el mismo día"
             checked={preferences.sessionRemindersEnabled}
             disabled={isPending}
             onChange={(checked) => updatePreference("sessionRemindersEnabled", checked)}

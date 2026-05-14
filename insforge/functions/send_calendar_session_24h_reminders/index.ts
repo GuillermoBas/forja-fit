@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { createClient } from "npm:@insforge/sdk"
-
 const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
+const FUNCTIONS_URL = Deno.env.get("INSFORGE_FUNCTIONS_URL") ?? "https://4nc39nmu.functions.insforge.app"
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,24 +18,84 @@ function isTrustedToken(token: string) {
   return Boolean(apiKey && token === apiKey)
 }
 
-async function requireStaffActor(client: any, gymId: string) {
-  const authResult = await client.auth.getCurrentUser()
+async function insforgeFetch(path: string, token: string, init: RequestInit = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {})
+    }
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
+  }
+
+  return { data, error: null }
+}
+
+async function invokeFunction(slug: string, token: string, body: Record<string, unknown>) {
+  const response = await fetch(`${FUNCTIONS_URL}/${slug}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok || data?.code) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
+  }
+
+  return { data, error: null }
+}
+
+async function selectRecords(table: string, token: string, params: Record<string, string>) {
+  return insforgeFetch(`/api/database/records/${table}?${new URLSearchParams(params)}`, token)
+}
+
+function idIn(values: string[]) {
+  return `in.(${values.join(",")})`
+}
+
+function madridDateString(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date)
+}
+
+function addDays(dateString: string, days: number) {
+  const date = new Date(`${dateString}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+async function requireStaffActor(token: string, gymId: string) {
+  const authResult = await insforgeFetch("/api/auth/sessions/current", token)
   if (authResult.error || !authResult.data?.user) {
     return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
   }
 
-  const profileResult = await client.database
-    .from("profiles")
-    .select("*")
-    .eq("auth_user_id", authResult.data.user.id)
-    .eq("gym_id", gymId)
-    .maybeSingle()
+  const profileResult = await selectRecords("profiles", token, {
+    select: "*",
+    auth_user_id: `eq.${authResult.data.user.id}`,
+    gym_id: `eq.${gymId}`,
+    limit: "1"
+  })
+  const profile = Array.isArray(profileResult.data) ? profileResult.data[0] : null
 
-  if (profileResult.error || !profileResult.data) {
+  if (profileResult.error || !profile) {
     return { error: json({ code: "PROFILE_REQUIRED", message: "Perfil no encontrado" }, 403) }
   }
 
-  return { profile: profileResult.data }
+  return { profile }
 }
 
 export default async function(request: Request) {
@@ -49,34 +108,40 @@ export default async function(request: Request) {
     const body = await request.json().catch(() => ({}))
     const gymId = String(body?.gymId ?? "")
     const gymSlug = String(body?.gymSlug ?? "eltemplo")
+    const dryRun = body?.dryRun === true
     if (!gymId) {
       return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
     }
 
-    const now = new Date()
-    const windowStart = new Date(now.getTime() + 23 * 60 * 60 * 1000).toISOString()
-    const windowEnd = new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString()
+    const now = body?.nowIso ? new Date(String(body.nowIso)) : new Date()
+    const runForDate = String(body?.runOn ?? madridDateString(now))
+    const previousDate = addDays(runForDate, -1)
+    const nextDate = addDays(runForDate, 1)
+    const broadWindowStart = new Date(`${previousDate}T21:00:00Z`).toISOString()
+    const broadWindowEnd = new Date(`${nextDate}T03:00:00Z`).toISOString()
 
     const trusted = isTrustedToken(token)
-    const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(token, gymId)
     if ("error" in actor) {
       return actor.error
     }
 
-    const sessionsResult = await client.database
-      .from("calendar_sessions")
-      .select("id,starts_at,trainer_profile_id,client_1_id,client_2_id,status")
-      .eq("gym_id", gymId)
-      .eq("status", "scheduled")
-      .gte("starts_at", windowStart)
-      .lt("starts_at", windowEnd)
+    const sessionsResult = await selectRecords("calendar_sessions", token, {
+      select: "id,starts_at,trainer_profile_id,client_1_id,client_2_id,status",
+      gym_id: `eq.${gymId}`,
+      status: "eq.scheduled",
+      starts_at: `gte.${broadWindowStart}`
+    })
 
     if (sessionsResult.error) {
-      return json({ code: "SESSIONS_LOAD_FAILED", message: sessionsResult.error.message }, 400)
+      return json({ code: "SESSIONS_LOAD_FAILED", message: sessionsResult.error }, 400)
     }
 
-    const sessions = sessionsResult.data ?? []
+    const sessions = (sessionsResult.data ?? [])
+      .filter((session) => madridDateString(new Date(String(session.starts_at))) === runForDate)
+      .filter((session) => new Date(String(session.starts_at)).getTime() < new Date(broadWindowEnd).getTime())
+      .filter((session) => new Date(String(session.starts_at)).getTime() > now.getTime())
+      .sort((left, right) => String(left.starts_at).localeCompare(String(right.starts_at)))
     const sessionIds = sessions.map((session) => String(session.id))
     const trainerProfileIds = Array.from(
       new Set(
@@ -87,36 +152,40 @@ export default async function(request: Request) {
     )
 
     const trainerProfilesResult = trainerProfileIds.length
-      ? await client.database
-          .from("profiles")
-          .select("id,full_name")
-          .eq("gym_id", gymId)
-          .in("id", trainerProfileIds)
+      ? await selectRecords("profiles", token, {
+          select: "id,full_name",
+          gym_id: `eq.${gymId}`,
+          id: idIn(trainerProfileIds)
+        })
       : { data: [], error: null }
 
     if (trainerProfilesResult.error) {
-      return json({ code: "TRAINERS_LOAD_FAILED", message: trainerProfilesResult.error.message }, 400)
+      return json({ code: "TRAINERS_LOAD_FAILED", message: trainerProfilesResult.error }, 400)
     }
 
     const sessionPasses = sessionIds.length
-      ? await client.database
-          .from("calendar_session_passes")
-          .select("session_id,pass_id")
-          .eq("gym_id", gymId)
-          .in("session_id", sessionIds)
+      ? await selectRecords("calendar_session_passes", token, {
+          select: "session_id,pass_id",
+          gym_id: `eq.${gymId}`,
+          session_id: idIn(sessionIds)
+        })
       : { data: [], error: null }
 
     if (sessionPasses.error) {
-      return json({ code: "SESSION_PASSES_LOAD_FAILED", message: sessionPasses.error.message }, 400)
+      return json({ code: "SESSION_PASSES_LOAD_FAILED", message: sessionPasses.error }, 400)
     }
 
     const passIds = Array.from(new Set((sessionPasses.data ?? []).map((row) => String(row.pass_id))))
     const holdersResult = passIds.length
-      ? await client.database.from("pass_holders").select("pass_id,client_id").eq("gym_id", gymId).in("pass_id", passIds)
+      ? await selectRecords("pass_holders", token, {
+          select: "pass_id,client_id",
+          gym_id: `eq.${gymId}`,
+          pass_id: idIn(passIds)
+        })
       : { data: [], error: null }
 
     if (holdersResult.error) {
-      return json({ code: "PASS_HOLDERS_LOAD_FAILED", message: holdersResult.error.message }, 400)
+      return json({ code: "PASS_HOLDERS_LOAD_FAILED", message: holdersResult.error }, 400)
     }
 
     const passIdsBySession = new Map<string, string[]>()
@@ -157,21 +226,24 @@ export default async function(request: Request) {
       }
 
       for (const clientId of clients) {
-        const result = await client.functions.invoke("send_client_communication", {
-          body: {
-            gymId,
-            gymSlug,
-            clientIds: [clientId],
-            eventType: "calendar_session_24h",
-            channels: ["email", "push"],
-            dedupeSeed: String(session.id),
-            templateData: {
-              calendarSessionId: session.id,
-              startsAt: session.starts_at,
-              trainerName: session.trainer_profile_id
-                ? trainerNamesById.get(String(session.trainer_profile_id)) ?? ""
-                : ""
-            }
+        if (dryRun) {
+          skipped += 1
+          continue
+        }
+
+        const result = await invokeFunction("send_client_communication", token, {
+          gymId,
+          gymSlug,
+          clientIds: [clientId],
+          eventType: "calendar_session_24h",
+          channels: ["email", "push"],
+          dedupeSeed: String(session.id),
+          templateData: {
+            calendarSessionId: session.id,
+            startsAt: session.starts_at,
+            trainerName: session.trainer_profile_id
+              ? trainerNamesById.get(String(session.trainer_profile_id)) ?? ""
+              : ""
           }
         })
 
@@ -187,9 +259,11 @@ export default async function(request: Request) {
 
     return json({
       ok: true,
-      windowStart,
-      windowEnd,
+      runForDate,
+      windowStart: broadWindowStart,
+      windowEnd: broadWindowEnd,
       candidates: sessions.length,
+      dryRun,
       sent,
       skipped,
       failed
