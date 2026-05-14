@@ -165,6 +165,14 @@ function buildHolderSummary(pass: Pass, clientId: string) {
   return "Compartido con Otro titular"
 }
 
+function hasConsumableSessions(pass: Pick<PortalPassSummary, "passKind" | "sessionsLeft" | "status">) {
+  if (pass.passKind !== "session") {
+    return true
+  }
+
+  return pass.status !== "out_of_sessions" && Number(pass.sessionsLeft ?? 0) > 0
+}
+
 function mapPortalClient(row: DbRow): Client {
   const firstName = String(row.first_name ?? "").trim()
   const lastName = String(row.last_name ?? "").trim()
@@ -637,6 +645,7 @@ export const getPortalDashboardData = cache(async function getPortalDashboardDat
   }, 0)
 
   const futureExpiries = activePasses
+    .filter(hasConsumableSessions)
     .map((pass) => parseISO(pass.expiresOn))
     .filter((date) => date >= startOfDay(today))
 
