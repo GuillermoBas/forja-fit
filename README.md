@@ -323,8 +323,10 @@ Publicar o actualizar:
 
 Crear estos Schedules en InsForge:
 
-- Diario, despues de medianoche en `Europe/Madrid`: `send_pass_expiry_d7_pushes`
-- Diario, de madrugada y siempre antes de las 7:00 en `Europe/Madrid`: `send_calendar_session_24h_reminders`
+- Diario, despues de medianoche en `Europe/Madrid`: `/api/jobs/pass-expiry-d7-pushes`
+- Diario, de madrugada y siempre antes de las 7:00 en `Europe/Madrid`: `/api/jobs/session-reminders`
+
+Los jobs programados se ejecutan contra rutas HTTP de Next para evitar encadenar InsForge Functions desde otra Function. Las rutas invocan `send_client_communication` con el token estable del schedule.
 
 Ejemplo de creacion usando la `API_KEY` reservada de InsForge como credencial estable para jobs programados:
 
@@ -332,18 +334,18 @@ Ejemplo de creacion usando la `API_KEY` reservada de InsForge como credencial es
 npx @insforge/cli schedules create \
   --name "Push caducidad bonos D-7" \
   --cron "10 0 * * *" \
-  --url "<INSFORGE_BASE_URL>/functions/send_pass_expiry_d7_pushes" \
+  --url "<APP_URL>/api/jobs/pass-expiry-d7-pushes" \
   --method POST \
   --headers '{"Authorization":"Bearer ${{secrets.API_KEY}}","Content-Type":"application/json"}' \
-  --body '{}'
+  --body '{"gymId":"<GYM_ID>","gymSlug":"eltemplo"}'
 
 npx @insforge/cli schedules create \
   --name "Recordatorio sesiones del dia" \
-  --cron "0 * * * *" \
-  --url "<INSFORGE_BASE_URL>/functions/send_calendar_session_24h_reminders" \
+  --cron "30 4 * * *" \
+  --url "<APP_URL>/api/jobs/session-reminders" \
   --method POST \
   --headers '{"Authorization":"Bearer ${{secrets.API_KEY}}","Content-Type":"application/json"}' \
-  --body '{}'
+  --body '{"gymId":"<GYM_ID>","gymSlug":"eltemplo"}'
 ```
 
 Los envios usan dedupe por evento, canal, cliente y entidad:
@@ -351,7 +353,7 @@ Los envios usan dedupe por evento, canal, cliente y entidad:
 - `pass_expiry_d7:email:{client_id}:{pass_id}:{expires_on}`
 - `pass_expiry_d7:push:{client_id}:{pass_id}:{expires_on}`
 - `pass_assigned:{channel}:{client_id}:{pass_id}`
-- `calendar_session_24h:{channel}:{client_id}:{calendar_session_id}`
+- `calendar_session_24h:{channel}:{client_id}:{calendar_session_id}:{run_for_date}`
 
 ### Probar en Chrome desktop
 
@@ -369,7 +371,7 @@ Los envios usan dedupe por evento, canal, cliente y entidad:
 2. Abrir Trainium desde el icono instalado.
 3. Entrar en `/cliente/ajustes`.
 4. Activar notificaciones y confirmar permisos.
-5. Crear una cita para el cliente y ejecutar `send_calendar_session_24h_reminders` antes de las 7:00 con una cita programada para ese mismo dia.
+5. Crear una cita para el cliente y ejecutar `/api/jobs/session-reminders` antes de las 7:00 con una cita programada para ese mismo dia.
 
 ### Probar en iPhone/iPad
 
