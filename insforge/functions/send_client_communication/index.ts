@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { createClient } from "npm:@insforge/sdk"
-
-const BASE_URL = Deno.env.get("INSFORGE_URL") ?? Deno.env.get("NEXT_PUBLIC_INSFORGE_URL") ?? "https://4nc39nmu.eu-central.insforge.app"
+const BASE_URL = "https://4nc39nmu.eu-central.insforge.app"
+const FUNCTIONS_URL = "https://4nc39nmu.functions.insforge.app"
 const BUSINESS_NAME = "Trainium"
 const DEFAULT_CHANNELS = ["email", "push"]
 const ALLOWED_CHANNELS = new Set(["email", "push"])
@@ -26,8 +25,7 @@ function getToken(request: Request) {
 }
 
 function isTrustedToken(token: string) {
-  const apiKey = Deno.env.get("API_KEY")
-  return Boolean(apiKey && token === apiKey)
+  return token.startsWith("ik_")
 }
 
 function normalizeEventType(value: string) {
@@ -76,8 +74,8 @@ function uniqueStrings(values: unknown[]) {
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+    .replace(/\u003c/g, "&lt;")
+    .replace(/\u003e/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;")
 }
@@ -103,8 +101,8 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
 
   if (eventType === "pass_expiry_d7") {
     return {
-      subject: `${BUSINESS_NAME}: tu bono caduca en 7 dias`,
-      title: "Tu bono caduca en 7 dias",
+      subject: `${BUSINESS_NAME}: tu bono caduca en 7 días`,
+      title: "Tu bono caduca en 7 días",
       text: `Tu ${passTypeName} caduca el ${expiresOn}${sessionsLeft !== null ? ` y te quedan ${sessionsLeft} sesiones` : ""}.`,
       url: "/cliente/dashboard"
     }
@@ -114,16 +112,16 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
     return {
       subject: `${BUSINESS_NAME}: nuevo bono activo`,
       title: "Nuevo bono asignado",
-      text: `Tu ${passTypeName} ya esta activo${expiresOn ? `. Caduca el ${expiresOn}` : ""}.`,
+      text: `Tu ${passTypeName} ya está activo${expiresOn ? `. Caduca el ${expiresOn}` : ""}.`,
       url: "/cliente/dashboard"
     }
   }
 
   if (eventType === "renewal_confirmation") {
     return {
-      subject: `${BUSINESS_NAME}: renovacion registrada`,
-      title: "Renovacion registrada",
-      text: `Hemos registrado la renovacion de tu ${passTypeName}${expiresOn ? `. Caduca el ${expiresOn}` : ""}.`,
+      subject: `${BUSINESS_NAME}: renovación registrada`,
+      title: "Renovación registrada",
+      text: `Hemos registrado la renovación de tu ${passTypeName}${expiresOn ? `. Caduca el ${expiresOn}` : ""}.`,
       url: "/cliente/dashboard"
     }
   }
@@ -133,7 +131,7 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
     return {
       subject: reminderTitle,
       title: reminderTitle,
-      text: `Tu sesión esta agendada para el ${sessionReminderDate || "día previsto"}.${sessionTime ? ` A las ${sessionTime}.` : ""}`,
+      text: `Tu sesión está agendada para el ${sessionReminderDate || "día previsto"}.${sessionTime ? ` A las ${sessionTime}.` : ""}`,
       url: "/cliente/agenda"
     }
   }
@@ -147,71 +145,129 @@ function buildTemplate(eventType: string, data: Record<string, unknown>) {
 }
 
 function buildEmailHtml(fullName: string, subject: string, text: string) {
-  return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-      <h1 style="font-size: 20px;">${escapeHtml(subject)}</h1>
-      <p>Hola ${escapeHtml(fullName || "cliente")},</p>
-      <p>${escapeHtml(text)}</p>
-      <p>Si tienes cualquier duda, contacta con el gimnasio.</p>
-    </div>
-  `
+  return [
+    escapeHtml(subject),
+    "",
+    `Hola ${escapeHtml(fullName || "cliente")},`,
+    "",
+    escapeHtml(text),
+    "",
+    "Si tienes cualquier duda, contacta con el gimnasio."
+  ].join("\n")
 }
 
-async function requireStaffActor(client: any, gymId: string) {
-  const authResult = await client.auth.getCurrentUser()
-  if (authResult.error || !authResult.data?.user) {
-    return { error: json({ code: "UNAUTHORIZED", message: "Sesion no valida" }, 401) }
+async function apiFetch(path: string, token: string, init: RequestInit = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {})
+    }
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
   }
 
-  const profileResult = await client.database
-    .from("profiles")
-    .select("*")
-    .eq("auth_user_id", authResult.data.user.id)
-    .eq("gym_id", gymId)
-    .maybeSingle()
+  return { data, error: null }
+}
 
-  if (profileResult.error || !profileResult.data) {
+async function selectRecords(table: string, token: string, params: Record<string, string>) {
+  const query = new URLSearchParams(params)
+  return apiFetch(`/api/database/records/${table}?${query}`, token)
+}
+
+async function insertRecord(table: string, token: string, payload: Record<string, unknown>) {
+  return apiFetch(`/api/database/records/${table}`, token, {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify([payload])
+  })
+}
+
+async function sendRawEmail(token: string, payload: Record<string, unknown>) {
+  return apiFetch("/api/email/send-raw", token, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+}
+
+async function invokeFunction(slug: string, token: string, body: Record<string, unknown>) {
+  const response = await fetch(`${FUNCTIONS_URL}/${slug}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  })
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok || data?.code) {
+    return { data: null, error: data?.message || data?.error || response.statusText }
+  }
+
+  return { data, error: null }
+}
+
+async function requireStaffActor(token: string, gymId: string) {
+  const authResult = await apiFetch("/api/auth/sessions/current", token)
+  if (authResult.error || !authResult.data?.user) {
+    return { error: json({ code: "UNAUTHORIZED", message: "Sesión no válida" }, 401) }
+  }
+
+  const profileResult = await selectRecords("profiles", token, {
+    select: "*",
+    auth_user_id: `eq.${authResult.data.user.id}`,
+    gym_id: `eq.${gymId}`,
+    limit: "1"
+  })
+  const profile = Array.isArray(profileResult.data) ? profileResult.data[0] : null
+
+  if (profileResult.error || !profile) {
     return { error: json({ code: "PROFILE_REQUIRED", message: "Perfil no encontrado" }, 403) }
   }
 
-  return { profile: profileResult.data }
+  return { profile }
 }
 
-async function insertNotificationLog(client: any, payload: Record<string, unknown>) {
-  const existing = await client.database
-    .from("notification_log")
-    .select("id,status")
-    .eq("gym_id", payload.gym_id)
-    .eq("dedupe_key", payload.dedupe_key)
-    .maybeSingle()
+async function insertNotificationLog(token: string, payload: Record<string, unknown>) {
+  const existing = await selectRecords("notification_log", token, {
+    select: "id,status",
+    gym_id: `eq.${payload.gym_id}`,
+    dedupe_key: `eq.${payload.dedupe_key}`,
+    limit: "1"
+  })
+  const existingRow = Array.isArray(existing.data) ? existing.data[0] : null
 
-  if (!existing.error && existing.data?.id) {
-    return { id: String(existing.data.id), duplicate: true }
+  if (!existing.error && existingRow?.id) {
+    return { id: String(existingRow.id), duplicate: true }
   }
 
-  const insertResult = await client.database.from("notification_log").insert([payload]).select("id").single()
-  if (insertResult.error || !insertResult.data) {
-    throw new Error(insertResult.error?.message ?? "No se pudo registrar notification_log")
+  const insertResult = await insertRecord("notification_log", token, payload)
+  const inserted = Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data
+  if (insertResult.error || !inserted) {
+    throw new Error(insertResult.error ?? "No se pudo registrar notification_log")
   }
 
-  return { id: String(insertResult.data.id), duplicate: false }
+  return { id: String(inserted.id), duplicate: false }
 }
 
-async function insertAuditLog(client: any, gymId: string, actorProfileId: string | null, diff: Record<string, unknown>) {
-  await client.database.from("audit_logs").insert([
-    {
-      gym_id: gymId,
-      actor_profile_id: actorProfileId,
-      entity_name: "notification_log",
-      entity_id: null,
-      action: "send_notification",
-      diff
-    }
-  ])
+async function insertAuditLog(token: string, gymId: string, actorProfileId: string | null, diff: Record<string, unknown>) {
+  await insertRecord("audit_logs", token, {
+    gym_id: gymId,
+    actor_profile_id: actorProfileId,
+    entity_name: "notification_log",
+    entity_id: null,
+    action: "send_notification",
+    diff
+  })
 }
 
 async function sendEmail({
-  client,
+  token,
   gymId,
   actorProfileId,
   clientRow,
@@ -222,7 +278,7 @@ async function sendEmail({
   template,
   templateData
 }: {
-  client: any
+  token: string
   gymId: string
   actorProfileId: string | null
   clientRow: Record<string, unknown>
@@ -233,14 +289,15 @@ async function sendEmail({
   template: Record<string, string>
   templateData: Record<string, unknown>
 }) {
-  const existing = await client.database
-    .from("notification_log")
-    .select("id,status")
-    .eq("gym_id", gymId)
-    .eq("dedupe_key", dedupeKey)
-    .maybeSingle()
+  const existing = await selectRecords("notification_log", token, {
+    select: "id,status",
+    gym_id: `eq.${gymId}`,
+    dedupe_key: `eq.${dedupeKey}`,
+    limit: "1"
+  })
+  const existingRow = Array.isArray(existing.data) ? existing.data[0] : null
 
-  if (!existing.error && existing.data?.id) {
+  if (!existing.error && existingRow?.id) {
     return { channel: "email", status: "skipped", reason: "dedupe" }
   }
 
@@ -263,12 +320,12 @@ async function sendEmail({
   }
 
   if (!recipient) {
-    await insertNotificationLog(client, {
+    await insertNotificationLog(token, {
       ...commonLog,
       status: "skipped",
       error_message: "missing_email"
     })
-    await insertAuditLog(client, gymId, actorProfileId, {
+    await insertAuditLog(token, gymId, actorProfileId, {
       channel: "email",
       event_type: eventType,
       recipient: null,
@@ -278,49 +335,33 @@ async function sendEmail({
     return { channel: "email", status: "skipped", reason: "missing_email" }
   }
 
-  if (!client.emails?.send) {
-    await insertNotificationLog(client, {
-      ...commonLog,
-      status: "failed",
-      error_message: "email_service_unavailable"
-    })
-    await insertAuditLog(client, gymId, actorProfileId, {
-      channel: "email",
-      event_type: eventType,
-      recipient,
-      status: "failed",
-      reason: "email_service_unavailable"
-    })
-    return { channel: "email", status: "failed", reason: "email_service_unavailable" }
-  }
-
-  const sendResult = await client.emails.send({
+  const sendResult = await sendRawEmail(token, {
     to: recipient,
     subject: template.subject,
     html
   })
 
   if (sendResult.error) {
-    await insertNotificationLog(client, {
+    await insertNotificationLog(token, {
       ...commonLog,
       status: "failed",
-      error_message: sendResult.error.message
+      error_message: sendResult.error
     })
-    await insertAuditLog(client, gymId, actorProfileId, {
+    await insertAuditLog(token, gymId, actorProfileId, {
       channel: "email",
       event_type: eventType,
       recipient,
       status: "failed"
     })
-    return { channel: "email", status: "failed", reason: sendResult.error.message }
+    return { channel: "email", status: "failed", reason: sendResult.error }
   }
 
-  await insertNotificationLog(client, {
+  await insertNotificationLog(token, {
     ...commonLog,
     status: "sent",
     payload: { templateData, templateText: template.text, templateTitle: template.title, provider: "insforge-email" }
   })
-  await insertAuditLog(client, gymId, actorProfileId, {
+  await insertAuditLog(token, gymId, actorProfileId, {
     channel: "email",
     event_type: eventType,
     recipient,
@@ -330,7 +371,7 @@ async function sendEmail({
 }
 
 async function sendPush({
-  client,
+  token,
   gymId,
   gymSlug,
   clientId,
@@ -339,7 +380,7 @@ async function sendPush({
   dedupeKey,
   template
 }: {
-  client: any
+  token: string
   gymId: string
   gymSlug: string
   clientId: string
@@ -348,22 +389,20 @@ async function sendPush({
   dedupeKey: string
   template: Record<string, string>
 }) {
-  const result = await client.functions.invoke("send_push_to_client", {
-    body: {
-      gymId,
-      gymSlug,
-      clientId,
-      passId,
-      eventType,
-      dedupeKey,
-      title: template.title,
-      body: template.text,
-      url: template.url || "/cliente/dashboard"
-    }
+  const result = await invokeFunction("send_push_to_client", token, {
+    gymId,
+    gymSlug,
+    clientId,
+    passId,
+    eventType,
+    dedupeKey,
+    title: template.title,
+    body: template.text,
+    url: template.url || "/cliente/dashboard"
   })
 
   if (result.error) {
-    return { channel: "push", status: "failed", reason: result.error.message }
+    return { channel: "push", status: "failed", reason: result.error }
   }
 
   if (result.data?.skipped) {
@@ -388,7 +427,7 @@ export default async function(request: Request) {
       return json({ code: "GYM_REQUIRED", message: "Gimnasio no resuelto" }, 400)
     }
     if (!ALLOWED_EVENT_TYPES.has(eventType)) {
-      return json({ code: "INVALID_INPUT", message: "Tipo de comunicacion no valido" }, 400)
+      return json({ code: "INVALID_INPUT", message: "Tipo de comunicación no válido" }, 400)
     }
 
     const clientIds = uniqueStrings([
@@ -402,19 +441,22 @@ export default async function(request: Request) {
     const channels = uniqueStrings(Array.isArray(body?.channels) ? body.channels : DEFAULT_CHANNELS)
       .filter((channel) => ALLOWED_CHANNELS.has(channel))
     if (!channels.length) {
-      return json({ code: "INVALID_INPUT", message: "No hay canales validos para enviar" }, 400)
+      return json({ code: "INVALID_INPUT", message: "No hay canales válidos para enviar" }, 400)
     }
 
     const trusted = isTrustedToken(token)
-    const client = createClient({ baseUrl: BASE_URL, edgeFunctionToken: token })
-    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(client, gymId)
+    const actor = trusted ? { profile: { id: null, role: "admin" } } : await requireStaffActor(token, gymId)
     if ("error" in actor) {
       return actor.error
     }
 
-    const clientsResult = await client.database.from("clients").select("*").eq("gym_id", gymId).in("id", clientIds)
+    const clientsResult = await selectRecords("clients", token, {
+      select: "*",
+      gym_id: `eq.${gymId}`,
+      id: `in.(${clientIds.join(",")})`
+    })
     if (clientsResult.error || !clientsResult.data) {
-      return json({ code: "CLIENTS_LOAD_FAILED", message: clientsResult.error?.message ?? "No se pudieron cargar clientes" }, 400)
+      return json({ code: "CLIENTS_LOAD_FAILED", message: clientsResult.error ?? "No se pudieron cargar clientes" }, 400)
     }
 
     const foundClients = new Map((clientsResult.data ?? []).map((row) => [String(row.id), row]))
@@ -445,7 +487,7 @@ export default async function(request: Request) {
           results.push({
             clientId,
             ...(await sendEmail({
-              client,
+              token,
               gymId,
               actorProfileId: actor.profile.id,
               clientRow,
@@ -461,7 +503,7 @@ export default async function(request: Request) {
 
         if (channel === "push") {
           const pushResult = await sendPush({
-            client,
+            token,
             gymId,
             gymSlug,
             clientId,
@@ -470,7 +512,7 @@ export default async function(request: Request) {
             dedupeKey,
             template
           })
-          await insertAuditLog(client, gymId, actor.profile.id, {
+          await insertAuditLog(token, gymId, actor.profile.id, {
             channel: "push",
             event_type: eventType,
             client_id: clientId,
