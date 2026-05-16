@@ -20,6 +20,7 @@ import {
 } from "@/lib/data"
 import { getCurrentProfile } from "@/lib/auth/session"
 import { isAdmin } from "@/lib/permissions/roles"
+import { getTodayDateKeyInAppTimeZone } from "@/lib/timezone"
 import { formatCurrency, formatDate, formatPassStatus } from "@/lib/utils"
 import {
   ConsumeSessionForm,
@@ -31,6 +32,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { ClientPortalAdminForm } from "@/features/clients/client-portal-admin-form"
 import { ClientMaxWeightsCard } from "@/features/clients/client-max-weights-card"
+import type { Pass } from "@/types/domain"
+
+function canScheduleExistingPass(pass: Pass, todayKey: string) {
+  return pass.passKind === "session" &&
+    pass.status === "active" &&
+    String(pass.expiresOn).slice(0, 10) >= todayKey &&
+    Number(pass.sessionsLeft ?? 0) > 0
+}
 
 export default async function ClientDetailPage({
   params
@@ -77,6 +86,7 @@ export default async function ClientDetailPage({
   const clientNotifications = notifications.filter((item) => item.clientName === client.fullName)
   const clientSales = sales.filter((item) => item.clientName === client.fullName)
   const canManagePasses = isAdmin(profile?.role)
+  const todayKey = getTodayDateKeyInAppTimeZone()
   const trainerProfiles = profile?.role === "admin"
     ? allTrainerProfiles
     : allTrainerProfiles.filter((trainer) => trainer.id === profile?.id)
@@ -234,11 +244,13 @@ export default async function ClientDetailPage({
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/passes/${item.id}/edit`}>Editar bono</Link>
                       </Button>
-                      <ScheduleExistingPassForm
-                        clientId={client.id}
-                        pass={item}
-                        trainerProfiles={trainerProfiles}
-                      />
+                      {canScheduleExistingPass(item, todayKey) ? (
+                        <ScheduleExistingPassForm
+                          clientId={client.id}
+                          pass={item}
+                          trainerProfiles={trainerProfiles}
+                        />
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
